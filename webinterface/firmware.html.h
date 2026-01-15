@@ -46,6 +46,8 @@ const char firmware_html[] PROGMEM = R"=====(
 		<div id="body" class="container">
 			<h1>Firmware Upgrade</h1>
 
+			<strong>Current Firmware: <span id="firmware">...</span></strong>
+
 			<p>
 				Here you can install the latest OTA firmware update.
 			</p>

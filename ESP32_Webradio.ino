@@ -38,13 +38,15 @@
 
 // Define the version number, also used for webserver as Last-Modified header and to
 // check version for update.  The format must be exactly as specified by the HTTP standard!
-#define VERSION     "v2.3 2026-01-15"
+#define FIRMWARE     "v2.3 2026-01-15"
 /*
-Version Changes:
-2.0   2025-03-06  Reload time changes on problems with the data connection
-2.1   2025-03-27  Responsive Design meta tag added to adapt the content on differenz screen sizes
-2.2   2025-05-07  Bugfix HTTP server for root directory "/". HTML tags and stylesheets adapted for menu
-2.3   2026-01-15  Song title API for webinterface implemented. Now we can see icystreamtitle and icyname
+Firmware Changes:
+2.0   2025-03-06  Reload time changes on problems with the data connection.
+2.1   2025-03-27  Responsive Design meta tag added to adapt the content on differenz screen sizes.
+2.2   2025-05-07  Bugfix HTTP server for root directory "/". HTML tags and stylesheets adapted for menu.
+2.3   2026-01-15  Song title API for webinterface implemented. Now we can see icystreamtitle and icyname.
+                  Sleep-Time implemented to stop mp3 stream after a defined time.
+                  Const VERSION renamed to FIRMWARE
 */
 
 // ESP32-Radio can be updated (OTA) to the latest version from a remote server.
@@ -803,7 +805,7 @@ void setup()
 
       dsp_println("Loresoft, www.loresoft.de");
 
-      p = dbgprint("Version %s", VERSION);
+      p = dbgprint("Firmware %s", FIRMWARE);
       dsp_println(p);
 
       // Print some memory and sketch info
@@ -951,6 +953,7 @@ void loop()
 {
   static bool wasConnected = NetworkFound;  // Initialzustand merken, 10sec adaption
 
+  handleSleepTimer();
   mp3loop();                                       // Do mp3 related actions
   if(updatereq)                                 // Software update requested?
   {

@@ -44,239 +44,260 @@ const char config_html[] PROGMEM = R"=====(
 			<input id="command_log" type="text" style="width:100%" placeholder="Waiting for a command...." disabled><br>
 		</nav>
 		
-	
-		<div id="body" class="container">
-			<h1>Webradio Start/Stop Timer</h1>
-			<div class="row">
-				<div class="form-group col-xs-12 col-sm-6 col-md-3 col-lg-3">
-					<label>Timer Start (hour)</label>
-					<select class="form-control" id="from_hour">
-						<option name="0">0</option>
-						<option name="1">1</option>
-						<option name="2">2</option>
-						<option name="3">3</option>
-						<option name="4">4</option>
-						<option name="5">5</option>
-						<option name="6">6</option>
-						<option name="7">7</option>
-						<option name="8">8</option>
-						<option name="9">9</option>
-						<option name="10">10</option>
-						<option name="11">11</option>
-						<option name="12">12</option>
-						<option name="13">13</option>
-						<option name="14">14</option>
-						<option name="15">15</option>
-						<option name="16">16</option>
-						<option name="17">17</option>
-						<option name="18">18</option>
-						<option name="19">19</option>
-						<option name="20">20</option>
-						<option name="21">21</option>
-						<option name="22">22</option>
-						<option name="23">23</option>
-					</select>
-				</div>
-				<div class="form-group col-xs-12 col-sm-6 col-md-3 col-lg-3">
-					<label>Timer Start (minute)</label>
-					<select class="form-control" id="from_minute">
-						<option name="00">00</option>
-						<option name="01">01</option>
-						<option name="02">02</option>
-						<option name="03">03</option>
-						<option name="04">04</option>
-						<option name="05">05</option>
-						<option name="06">06</option>
-						<option name="07">07</option>
-						<option name="08">08</option>
-						<option name="09">09</option>
-						<option name="10">10</option>
-						<option name="11">11</option>
-						<option name="12">12</option>
-						<option name="13">13</option>
-						<option name="14">14</option>
-						<option name="15">15</option>
-						<option name="16">16</option>
-						<option name="17">17</option>
-						<option name="18">18</option>
-						<option name="19">19</option>
-						<option name="20">20</option>
-						<option name="21">21</option>
-						<option name="22">22</option>
-						<option name="23">23</option>
-						<option name="24">24</option>
-						<option name="25">25</option>
-						<option name="26">26</option>
-						<option name="27">27</option>
-						<option name="28">28</option>
-						<option name="29">29</option>
-						<option name="30">30</option>
-						<option name="31">31</option>
-						<option name="32">32</option>
-						<option name="33">33</option>
-						<option name="34">34</option>
-						<option name="35">35</option>
-						<option name="36">36</option>
-						<option name="37">37</option>
-						<option name="38">38</option>
-						<option name="39">39</option>
-						<option name="40">40</option>
-						<option name="41">41</option>
-						<option name="42">42</option>
-						<option name="43">43</option>
-						<option name="44">44</option>
-						<option name="45">45</option>
-						<option name="46">46</option>
-						<option name="47">47</option>
-						<option name="48">48</option>
-						<option name="49">49</option>
-						<option name="50">50</option>
-						<option name="51">51</option>
-						<option name="52">52</option>
-						<option name="53">53</option>
-						<option name="54">54</option>
-						<option name="55">55</option>
-						<option name="56">56</option>
-						<option name="57">57</option>
-						<option name="58">58</option>
-						<option name="59">59</option>
-					</select>
-				</div>
-				
-				<div class="form-group col-xs-12 col-sm-6 col-md-3 col-lg-3">
-					<label>Timer End (hour)</label>
-					<select class="form-control" id="to_hour">
-						<option name="0">0</option>
-						<option name="1">1</option>
-						<option name="2">2</option>
-						<option name="3">3</option>
-						<option name="4">4</option>
-						<option name="5">5</option>
-						<option name="6">6</option>
-						<option name="7">7</option>
-						<option name="8">8</option>
-						<option name="9">9</option>
-						<option name="10">10</option>
-						<option name="11">11</option>
-						<option name="12">12</option>
-						<option name="13">13</option>
-						<option name="14">14</option>
-						<option name="15">15</option>
-						<option name="16">16</option>
-						<option name="17">17</option>
-						<option name="18">18</option>
-						<option name="19">19</option>
-						<option name="20">20</option>
-						<option name="21">21</option>
-						<option name="22">22</option>
-						<option name="23">23</option>
-					</select>
-				</div>
-				<div class="form-group col-xs-12 col-sm-6 col-md-3 col-lg-3">
-					<label>Timer End (minute)</label>
-					<select class="form-control" id="to_minute">
-						<option name="00">00</option>
-						<option name="01">01</option>
-						<option name="02">02</option>
-						<option name="03">03</option>
-						<option name="04">04</option>
-						<option name="05">05</option>
-						<option name="06">06</option>
-						<option name="07">07</option>
-						<option name="08">08</option>
-						<option name="09">09</option>
-						<option name="10">10</option>
-						<option name="11">11</option>
-						<option name="12">12</option>
-						<option name="13">13</option>
-						<option name="14">14</option>
-						<option name="15">15</option>
-						<option name="16">16</option>
-						<option name="17">17</option>
-						<option name="18">18</option>
-						<option name="19">19</option>
-						<option name="20">20</option>
-						<option name="21">21</option>
-						<option name="22">22</option>
-						<option name="23">23</option>
-						<option name="24">24</option>
-						<option name="25">25</option>
-						<option name="26">26</option>
-						<option name="27">27</option>
-						<option name="28">28</option>
-						<option name="29">29</option>
-						<option name="30">30</option>
-						<option name="31">31</option>
-						<option name="32">32</option>
-						<option name="33">33</option>
-						<option name="34">34</option>
-						<option name="35">35</option>
-						<option name="36">36</option>
-						<option name="37">37</option>
-						<option name="38">38</option>
-						<option name="39">39</option>
-						<option name="40">40</option>
-						<option name="41">41</option>
-						<option name="42">42</option>
-						<option name="43">43</option>
-						<option name="44">44</option>
-						<option name="45">45</option>
-						<option name="46">46</option>
-						<option name="47">47</option>
-						<option name="48">48</option>
-						<option name="49">49</option>
-						<option name="50">50</option>
-						<option name="51">51</option>
-						<option name="52">52</option>
-						<option name="53">53</option>
-						<option name="54">54</option>
-						<option name="55">55</option>
-						<option name="56">56</option>
-						<option name="57">57</option>
-						<option name="58">58</option>
-						<option name="59">59</option>
-					</select>
-				</div>
-				
-			</div>
-		</div>	
 
-			
 		<div id="body" class="container">
 			<h1>Configuration</h1>
-			
+
+
+			<div class="row panel panel-default">
+				<div class="panel-heading">Sleep-Timer</div>
+				<div class="panel-body">
+					<div class="row">
+						<div class="form-group col-xs-12 col-sm-6 col-md-3 col-lg-3">
+							<select class="form-control" id="sleeptime">
+								<option value="0">Aus</option>
+								<option value="1">1 Minute</option>
+								<option value="5">5 Minuten</option>
+								<option value="10">10 Minuten</option>
+								<option value="15">15 Minuten</option>
+								<option value="20">20 Minuten</option>
+								<option value="25">25 Minuten</option>
+								<option value="30">30 Minuten</option>
+								<option value="45">45 Minuten</option>
+								<option value="60">60 Minuten</option>
+							</select>
+						</div>
+					</div>
+				</div>
+			</div>
+
+
+			<div class="row panel panel-default">
+				<div class="panel-heading">Alarm-Clock (with shut-off)</div>
+				<div class="panel-body">
+					<div class="row">
+						<div class="form-group col-xs-12 col-sm-6 col-md-3 col-lg-3">
+							<label>Start (hour)</label>
+							<select class="form-control" id="from_hour">
+								<option name="0">0</option>
+								<option name="1">1</option>
+								<option name="2">2</option>
+								<option name="3">3</option>
+								<option name="4">4</option>
+								<option name="5">5</option>
+								<option name="6">6</option>
+								<option name="7">7</option>
+								<option name="8">8</option>
+								<option name="9">9</option>
+								<option name="10">10</option>
+								<option name="11">11</option>
+								<option name="12">12</option>
+								<option name="13">13</option>
+								<option name="14">14</option>
+								<option name="15">15</option>
+								<option name="16">16</option>
+								<option name="17">17</option>
+								<option name="18">18</option>
+								<option name="19">19</option>
+								<option name="20">20</option>
+								<option name="21">21</option>
+								<option name="22">22</option>
+								<option name="23">23</option>
+							</select>
+						</div>
+						<div class="form-group col-xs-12 col-sm-6 col-md-3 col-lg-3">
+							<label>Start (minute)</label>
+							<select class="form-control" id="from_minute">
+								<option name="00">00</option>
+								<option name="01">01</option>
+								<option name="02">02</option>
+								<option name="03">03</option>
+								<option name="04">04</option>
+								<option name="05">05</option>
+								<option name="06">06</option>
+								<option name="07">07</option>
+								<option name="08">08</option>
+								<option name="09">09</option>
+								<option name="10">10</option>
+								<option name="11">11</option>
+								<option name="12">12</option>
+								<option name="13">13</option>
+								<option name="14">14</option>
+								<option name="15">15</option>
+								<option name="16">16</option>
+								<option name="17">17</option>
+								<option name="18">18</option>
+								<option name="19">19</option>
+								<option name="20">20</option>
+								<option name="21">21</option>
+								<option name="22">22</option>
+								<option name="23">23</option>
+								<option name="24">24</option>
+								<option name="25">25</option>
+								<option name="26">26</option>
+								<option name="27">27</option>
+								<option name="28">28</option>
+								<option name="29">29</option>
+								<option name="30">30</option>
+								<option name="31">31</option>
+								<option name="32">32</option>
+								<option name="33">33</option>
+								<option name="34">34</option>
+								<option name="35">35</option>
+								<option name="36">36</option>
+								<option name="37">37</option>
+								<option name="38">38</option>
+								<option name="39">39</option>
+								<option name="40">40</option>
+								<option name="41">41</option>
+								<option name="42">42</option>
+								<option name="43">43</option>
+								<option name="44">44</option>
+								<option name="45">45</option>
+								<option name="46">46</option>
+								<option name="47">47</option>
+								<option name="48">48</option>
+								<option name="49">49</option>
+								<option name="50">50</option>
+								<option name="51">51</option>
+								<option name="52">52</option>
+								<option name="53">53</option>
+								<option name="54">54</option>
+								<option name="55">55</option>
+								<option name="56">56</option>
+								<option name="57">57</option>
+								<option name="58">58</option>
+								<option name="59">59</option>
+							</select>
+						</div>
+						
+						<div class="form-group col-xs-12 col-sm-6 col-md-3 col-lg-3">
+							<label>Shut-off (hour)</label>
+							<select class="form-control" id="to_hour">
+								<option name="0">0</option>
+								<option name="1">1</option>
+								<option name="2">2</option>
+								<option name="3">3</option>
+								<option name="4">4</option>
+								<option name="5">5</option>
+								<option name="6">6</option>
+								<option name="7">7</option>
+								<option name="8">8</option>
+								<option name="9">9</option>
+								<option name="10">10</option>
+								<option name="11">11</option>
+								<option name="12">12</option>
+								<option name="13">13</option>
+								<option name="14">14</option>
+								<option name="15">15</option>
+								<option name="16">16</option>
+								<option name="17">17</option>
+								<option name="18">18</option>
+								<option name="19">19</option>
+								<option name="20">20</option>
+								<option name="21">21</option>
+								<option name="22">22</option>
+								<option name="23">23</option>
+							</select>
+						</div>
+						<div class="form-group col-xs-12 col-sm-6 col-md-3 col-lg-3">
+							<label>Shut-off (minute)</label>
+							<select class="form-control" id="to_minute">
+								<option name="00">00</option>
+								<option name="01">01</option>
+								<option name="02">02</option>
+								<option name="03">03</option>
+								<option name="04">04</option>
+								<option name="05">05</option>
+								<option name="06">06</option>
+								<option name="07">07</option>
+								<option name="08">08</option>
+								<option name="09">09</option>
+								<option name="10">10</option>
+								<option name="11">11</option>
+								<option name="12">12</option>
+								<option name="13">13</option>
+								<option name="14">14</option>
+								<option name="15">15</option>
+								<option name="16">16</option>
+								<option name="17">17</option>
+								<option name="18">18</option>
+								<option name="19">19</option>
+								<option name="20">20</option>
+								<option name="21">21</option>
+								<option name="22">22</option>
+								<option name="23">23</option>
+								<option name="24">24</option>
+								<option name="25">25</option>
+								<option name="26">26</option>
+								<option name="27">27</option>
+								<option name="28">28</option>
+								<option name="29">29</option>
+								<option name="30">30</option>
+								<option name="31">31</option>
+								<option name="32">32</option>
+								<option name="33">33</option>
+								<option name="34">34</option>
+								<option name="35">35</option>
+								<option name="36">36</option>
+								<option name="37">37</option>
+								<option name="38">38</option>
+								<option name="39">39</option>
+								<option name="40">40</option>
+								<option name="41">41</option>
+								<option name="42">42</option>
+								<option name="43">43</option>
+								<option name="44">44</option>
+								<option name="45">45</option>
+								<option name="46">46</option>
+								<option name="47">47</option>
+								<option name="48">48</option>
+								<option name="49">49</option>
+								<option name="50">50</option>
+								<option name="51">51</option>
+								<option name="52">52</option>
+								<option name="53">53</option>
+								<option name="54">54</option>
+								<option name="55">55</option>
+								<option name="56">56</option>
+								<option name="57">57</option>
+								<option name="58">58</option>
+								<option name="59">59</option>
+							</select>
+						</div>
+					</div>
+				</div>
+			</div>
+
+
 			<div class="row panel panel-default">
 				<div class="panel-heading">Configuration File</div>
-				<div class="row panel-body">
-					<textarea id="prefs" rows="20" style="width: 100%;"></textarea> 
-
-					<div class="btn_border col-xs-12 col-sm-6 col-md-3 col-lg-3">
-						<button id="savePref" class="btn btn-lg btn-success">
-							<img class="icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAaCAYAAACtv5zzAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA+5pVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyIgeG1wTU06T3JpZ2luYWxEb2N1bWVudElEPSJ1dWlkOjY1RTYzOTA2ODZDRjExREJBNkUyRDg4N0NFQUNCNDA3IiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOkI0N0JDRjg1MDY5MTExRTI5OUZEQTZGODg4RDc1ODdCIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOkI0N0JDRjg0MDY5MTExRTI5OUZEQTZGODg4RDc1ODdCIiB4bXA6Q3JlYXRvclRvb2w9IkFkb2JlIFBob3Rvc2hvcCBDUzYgKE1hY2ludG9zaCkiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDowMTgwMTE3NDA3MjA2ODExODA4M0ZFMkJBM0M1RUU2NSIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDowNjgwMTE3NDA3MjA2ODExODA4M0U3NkRBMDNEMDVDMSIvPiA8ZGM6dGl0bGU+IDxyZGY6QWx0PiA8cmRmOmxpIHhtbDpsYW5nPSJ4LWRlZmF1bHQiPmdseXBoaWNvbnM8L3JkZjpsaT4gPC9yZGY6QWx0PiA8L2RjOnRpdGxlPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PlXYqDAAAAEjSURBVHja7FXREYIwDKUuYEdgBEZwBEboCI7gCIzACIzACIzACO0E2HqphhDaIPbP3r1Tm+S9a/Js1bIslWQppaz/uMJP5+u0qO6AwCrR1ylJ3aUqvcIJIvxqwxYFxLJ7ALPiJALDDwQmVsAvvVNwVCCgjrx4Bi36HlyiIhLtxTkOhW7ckLHAEK0Z3EMdFF0FsLhmw7XTnhb2Gw+baEVAs2MQ/Z5BmDwKWDJ4kyA3JNfSGOeeHhdB/MGQd0xej+JD/BOz7ZEUMzmbNtEWzFwhIpgAOpEz4zbR9nQZAZ0ih5wOn7TiHHEG4DzMmbSgERCaDEcyOAoExjMCq3uFIa9z9ZL34P5l7HNbZGATJ8hdI69bcCn5oBV/Mv8CIgFXkN89BRgAy9xaTz00S4MAAAAASUVORK5CYII=" />
-							Save Configuration
-						</button>
-					</div>
-
-					<div class="btn_border col-xs-12 col-sm-6 col-md-3 col-lg-3">
-						<button id="getdefs" class="btn btn-lg btn-primary">
-							<img class="icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAAZCAYAAADE6YVjAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA+5pVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyIgeG1wTU06T3JpZ2luYWxEb2N1bWVudElEPSJ1dWlkOjY1RTYzOTA2ODZDRjExREJBNkUyRDg4N0NFQUNCNDA3IiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjRBRTJCQzE1MDZDQzExRTI5OUZEQTZGODg4RDc1ODdCIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjRBRTJCQzE0MDZDQzExRTI5OUZEQTZGODg4RDc1ODdCIiB4bXA6Q3JlYXRvclRvb2w9IkFkb2JlIFBob3Rvc2hvcCBDUzYgKE1hY2ludG9zaCkiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDowMTgwMTE3NDA3MjA2ODExODA4M0ZFMkJBM0M1RUU2NSIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDowNjgwMTE3NDA3MjA2ODExODA4M0U3NkRBMDNEMDVDMSIvPiA8ZGM6dGl0bGU+IDxyZGY6QWx0PiA8cmRmOmxpIHhtbDpsYW5nPSJ4LWRlZmF1bHQiPmdseXBoaWNvbnM8L3JkZjpsaT4gPC9yZGY6QWx0PiA8L2RjOnRpdGxlPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/Pv82KJ8AAAFhSURBVHjavJWBlYMgDIa1E7BB2aBucI7gCDcCIziCI3QERmAER6AbcBPkwr3fexGR2h4e7/2t5mE+SCBpiKh5Jh4jy7FI2OLPzDLPvr80O6Nt2451x6tmfWSm3Vge80dWn3VWWDlBA6tb3pOdeDwrVoBts7M9yCwgDjYTgWJOXHWP508RPlWE8JgwUeM/HIk5IG4BYGdmA8HKSKwogvSRg5EAlYhEn0K8gIR3APDj4CMemu4XguSSkHkHICKiNzkBleSJqSEAx1yopgrOOxG2IM88yWTV1IVvqW5OHrmyEqpDeDs+samzdvIlbMNZEPcfECtsVz4MpiqlUFa6g3fCJleANhU8qaT0KggXL+xAplyptxmQ+cNufhbZYtLSchUOwS2J6gOObGIfoGsmEw/2rbPtF/ekFOejmortV+TIv+DUoUWvQlWEJDC7k9wZbaJPWviqXaxyUmvEoivL1bcAAwA9bUObR3jgfgAAAABJRU5ErkJggg==" />
-							Load Default Values
-						</button>
-					</div>
-					
-				</div>
-			</div>
-
-			<div class="row panel panel-default">
-				<div class="panel-heading">Available WiFi Networks</div>
 				<div class="panel-body">
-					<select id="ssid" class="select selectw" style="width: 100%" size="5" disabled>
-					</select>
+					<div class="row panel-body">
+						<textarea id="prefs" rows="20" style="width: 100%;"></textarea> 
+
+						<div class="btn_border col-xs-12 col-sm-6 col-md-3 col-lg-3">
+							<button id="savePref" class="btn btn-lg btn-success">
+								<img class="icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAaCAYAAACtv5zzAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA+5pVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyIgeG1wTU06T3JpZ2luYWxEb2N1bWVudElEPSJ1dWlkOjY1RTYzOTA2ODZDRjExREJBNkUyRDg4N0NFQUNCNDA3IiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOkI0N0JDRjg1MDY5MTExRTI5OUZEQTZGODg4RDc1ODdCIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOkI0N0JDRjg0MDY5MTExRTI5OUZEQTZGODg4RDc1ODdCIiB4bXA6Q3JlYXRvclRvb2w9IkFkb2JlIFBob3Rvc2hvcCBDUzYgKE1hY2ludG9zaCkiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDowMTgwMTE3NDA3MjA2ODExODA4M0ZFMkJBM0M1RUU2NSIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDowNjgwMTE3NDA3MjA2ODExODA4M0U3NkRBMDNEMDVDMSIvPiA8ZGM6dGl0bGU+IDxyZGY6QWx0PiA8cmRmOmxpIHhtbDpsYW5nPSJ4LWRlZmF1bHQiPmdseXBoaWNvbnM8L3JkZjpsaT4gPC9yZGY6QWx0PiA8L2RjOnRpdGxlPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PlXYqDAAAAEjSURBVHja7FXREYIwDKUuYEdgBEZwBEboCI7gCIzACIzACIzACO0E2HqphhDaIPbP3r1Tm+S9a/Js1bIslWQppaz/uMJP5+u0qO6AwCrR1ylJ3aUqvcIJIvxqwxYFxLJ7ALPiJALDDwQmVsAvvVNwVCCgjrx4Bi36HlyiIhLtxTkOhW7ckLHAEK0Z3EMdFF0FsLhmw7XTnhb2Gw+baEVAs2MQ/Z5BmDwKWDJ4kyA3JNfSGOeeHhdB/MGQd0xej+JD/BOz7ZEUMzmbNtEWzFwhIpgAOpEz4zbR9nQZAZ0ih5wOn7TiHHEG4DzMmbSgERCaDEcyOAoExjMCq3uFIa9z9ZL34P5l7HNbZGATJ8hdI69bcCn5oBV/Mv8CIgFXkN89BRgAy9xaTz00S4MAAAAASUVORK5CYII=" />
+								Save Configuration
+							</button>
+						</div>
+
+						<div class="btn_border col-xs-12 col-sm-6 col-md-3 col-lg-3">
+							<button id="getdefs" class="btn btn-lg btn-primary">
+								<img class="icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAAZCAYAAADE6YVjAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA+5pVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyIgeG1wTU06T3JpZ2luYWxEb2N1bWVudElEPSJ1dWlkOjY1RTYzOTA2ODZDRjExREJBNkUyRDg4N0NFQUNCNDA3IiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjRBRTJCQzE1MDZDQzExRTI5OUZEQTZGODg4RDc1ODdCIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjRBRTJCQzE0MDZDQzExRTI5OUZEQTZGODg4RDc1ODdCIiB4bXA6Q3JlYXRvclRvb2w9IkFkb2JlIFBob3Rvc2hvcCBDUzYgKE1hY2ludG9zaCkiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDowMTgwMTE3NDA3MjA2ODExODA4M0ZFMkJBM0M1RUU2NSIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDowNjgwMTE3NDA3MjA2ODExODA4M0U3NkRBMDNEMDVDMSIvPiA8ZGM6dGl0bGU+IDxyZGY6QWx0PiA8cmRmOmxpIHhtbDpsYW5nPSJ4LWRlZmF1bHQiPmdseXBoaWNvbnM8L3JkZjpsaT4gPC9yZGY6QWx0PiA8L2RjOnRpdGxlPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/Pv82KJ8AAAFhSURBVHjavJWBlYMgDIa1E7BB2aBucI7gCDcCIziCI3QERmAER6AbcBPkwr3fexGR2h4e7/2t5mE+SCBpiKh5Jh4jy7FI2OLPzDLPvr80O6Nt2451x6tmfWSm3Vge80dWn3VWWDlBA6tb3pOdeDwrVoBts7M9yCwgDjYTgWJOXHWP508RPlWE8JgwUeM/HIk5IG4BYGdmA8HKSKwogvSRg5EAlYhEn0K8gIR3APDj4CMemu4XguSSkHkHICKiNzkBleSJqSEAx1yopgrOOxG2IM88yWTV1IVvqW5OHrmyEqpDeDs+samzdvIlbMNZEPcfECtsVz4MpiqlUFa6g3fCJleANhU8qaT0KggXL+xAplyptxmQ+cNufhbZYtLSchUOwS2J6gOObGIfoGsmEw/2rbPtF/ekFOejmortV+TIv+DUoUWvQlWEJDC7k9wZbaJPWviqXaxyUmvEoivL1bcAAwA9bUObR3jgfgAAAABJRU5ErkJggg==" />
+								Load Default Values
+							</button>
+						</div>
+						
+					</div>
 				</div>
 			</div>
-		
-		</div>	
-	
+
+
+		</div>
+
+
 	
 		<script src="interface.js"></script>
 	</body>

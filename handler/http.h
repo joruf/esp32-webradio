@@ -513,6 +513,7 @@ void handlehttp()
     String jsonResponse = "{";
     jsonResponse += "\"station\":\"" + icyname + "\",";
     jsonResponse += "\"title\":\"" + icystreamtitle + "\",";
+    jsonResponse += "\"firmware\":\"" + String(FIRMWARE) + "\",";
     jsonResponse += "\"time\":\"" + String(time_str) + "\",";
     jsonResponse += "\"date\":\"" + String(date_str) + "\"";
     jsonResponse += "}";
@@ -572,5 +573,5 @@ String httpheader ( String contentstype )
          String ( "\n"
                   "Server: " NAME "\n"
                   "Cache-Control: " "max-age=3600\n"
-                  "Last-Modified: " VERSION "\n\n" ) ;
+                  "Last-Modified: " FIRMWARE "\n\n" ) ;
 }

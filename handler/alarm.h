@@ -1,5 +1,29 @@
+int32_t sleeptimer_ms = -1; // -1 bedeutet Timer ist aus
 
 
+void handleSleepTimer() {
+  static uint32_t last_millis = 0;
+  
+  if (sleeptimer_ms > 0) {
+    uint32_t current_millis = millis();
+    uint32_t diff = current_millis - last_millis;
+    last_millis = current_millis;
+
+    sleeptimer_ms -= diff;
+
+    if (sleeptimer_ms <= 0) {
+      sleeptimer_ms = -1; // Timer zurücksetzen
+      if (datamode != STOPPED) {
+        dbgprint("Sleep Timer abgelaufen. Stoppe Radio.");
+        stopStream(); // Funktion aus volume.h
+        showTextOnTFT(1, "Sleep Timer"); // Info auf Display
+        showTextOnTFT(3, "Radio aus");
+      }
+    }
+  } else {
+    last_millis = millis(); // Timer steht, Zeitbasis aktuell halten
+  }
+}
 
 
 

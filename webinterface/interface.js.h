@@ -425,6 +425,9 @@ const char interface_js[] PROGMEM = R"=====(
 							if(document.getElementById("statlabel")) document.getElementById("statlabel").innerHTML = data.station;
 							if(document.getElementById("songlabel")) document.getElementById("songlabel").innerHTML = data.title;
 							
+							// Firmware Version
+							if(document.getElementById("firmware")) document.getElementById("firmware").innerHTML = data.firmware;
+			
 							// Uhrzeit und Datum
 							if(document.getElementById("timelabel")) document.getElementById("timelabel").innerHTML = data.time;
 							if(document.getElementById("datelabel")) document.getElementById("datelabel").innerHTML = data.date;
@@ -444,6 +447,38 @@ const char interface_js[] PROGMEM = R"=====(
 	// Intervall festlegen: Alle 5000 Millisekunden (5 Sekunden) erneut abfragen
 	setInterval(loadJSONData, 5000);
 
+
+
+	/** Send sleep-timer to the ESP32 API using jQuery */
+	function sendSleepTimer() {
+			var $sel = $("#sleeptime"); // Wir speichern das jQuery-Objekt
+			var val = $sel.val();
+			
+			if (val == "0") return; // Wenn "Aus" gewählt wurde, nichts tun oder nur senden
+
+			console.log("Sende Sleep-Timer: " + val + " Min.");
+
+			// Senden per jQuery GET
+			$.get("/?sleeptime=" + val, function(data) {
+					console.log("Sleep-Timer erfolgreich übertragen");
+					
+					// JETZT: Die Selectbox wieder auf den ersten Eintrag (Index 0) setzen
+					// Das passiert im "Success"-Callback, also wenn der ESP geantwortet hat
+					$sel.prop('selectedIndex', 0);
+			});
+
+			// Feedback im Log-Feld (bleibt stehen, auch wenn Selectbox zurückspringt)
+			if ($("#command_log").length) {
+					$("#command_log").val("Sleep-Timer auf " + val + " Min. gesetzt.");
+			}
+	}
+
+	/** jQuery Event-Handler */
+	$(document).ready(function() {
+			$(document).on("change", "#sleeptime", function() {
+					sendSleepTimer();
+			});
+	});
 
 
 )=====";

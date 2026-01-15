@@ -107,7 +107,7 @@ const char index_html[] PROGMEM = R"=====(
 					Metadata
 					<small>
 						<span id="datelabel">DD.MM.YYYY</span> | <span id="timelabel">00:00</span>
-						</small>
+					</small>
 				</div>
 				<div class="panel-body">
 					<span id="statlabel" style="color: red;">Lade Sender...</span> |
@@ -165,6 +165,7 @@ const char index_html[] PROGMEM = R"=====(
 				</div>
 			</div>
 				
+			<small>Firmware: <span id="firmware">...</span></small>
 		</div>
 	
 	

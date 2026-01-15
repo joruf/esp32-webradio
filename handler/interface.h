@@ -268,6 +268,17 @@ const char* analyzeCmd (const char* par, const char* val )
   else if (argument.indexOf ("ir_") >= 0 )         // Ir setting?
   { // Do not handle here
   }
+  else if (argument.indexOf ("sleeptime") >= 0 )    // NEU: Sleep Timer Anfrage?
+  {
+    int mins = value.toInt();
+    if (mins > 0) {
+      sleeptimer_ms = (int32_t)mins * 60 * 1000;    // Minuten in Millisekunden umrechnen
+      dbgprint("Sleep Timer gesetzt auf %d Min", mins);
+    } else {
+      sleeptimer_ms = -1;                           // Deaktivieren
+      dbgprint("Sleep Timer aus");
+    }
+  }
   else if (argument.indexOf ("preset_") >= 0 )     // Enumerated preset?
   { // Do not handle here
   }
