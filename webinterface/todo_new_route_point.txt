@@ -1,0 +1,3 @@
+1. name the file with ending .h
+2. include the file into the *.ino-file at line 420 #include "webinterface/NAME.ENDING.h"
+3. create new "else if" entry in the file handler_interface line 50

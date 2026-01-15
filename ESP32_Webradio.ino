@@ -1,0 +1,1014 @@
+//filename: ESP32_Webradio.ino
+// Board > esp32 > ESP32 Dev Module
+// Sollte der Upload abbrechen mit "Fehlgeschlagenes Hochladen: Hochladefehler: exit status 2", den USB-Stecker ausstecken, auf Hochladen klicken etwas warten bis "Kompiliere Scatch" bei 3/4 steht und dann USB wieder einstecken während des ende der Kompilierungsphase
+// BOARD-VERWALTUNG: esp32 (Espressif Systems) v2.0.17, Version 3.x ist nicht lauffaehig, da sich funktionsnamen geaendert haben
+
+// Upload Sketch: Port 7 on Samsung I right bottom. Use AVRISP mkII, Click Sketch Hochladen,
+
+// ESP32 Infos at: http://esp32-server.de/
+
+// ESP32dev Signal  Wired to LCD        Wired to VS1053      SDCARD   Wired to the rest
+// -------- ------  --------------      -------------------  ------   ---------------
+// GPIO32           -                   pin 1 XDCS            -       -
+// GPIO5            -                   pin 2 XCS             -       -
+// GPIO4            -                   pin 4 DREQ            -       -
+// GPIO2            pin 3 D/C or A0     -                     -       -
+// GPIO22           -                   -                     CS      -
+// GPIO16   RXD2    -                   -                     -       TX of NEXTION (if in use)
+// GPIO17   TXD2    -                   -                     -       RX of NEXTION (if in use)
+// GPIO18   SCK     pin 5 CLK or SCL    pin 5 SCK             CLK     -
+// GPIO19   MISO    -                   pin 7 MISO            MISO    -
+// GPIO23   MOSI    pin 4 DIN or SDA    pin 6 MOSI            MOSI    -
+// GPIO15           pin 2 CS            -                     -       -
+// GPI03    RXD0    -                   -                     -       Reserved serial input
+// GPIO1    TXD0    -                   -                     -       Reserved serial output
+// GPIO33   Backl.  -                   LED+                  -       -
+// GPIO34   -       -                   -                     -       Optional pull-up resistor
+// GPIO35   -       -                   -                     -       Infrared receiver VS1838B
+// GPIO25   -       -                   -                     -       Rotary encoder CLK
+// GPIO26   -       -                   -                     -       Rotary encoder DT
+// GPIO27   -       -                   -                     -       Rotary encoder SW
+// -------  ------  ---------------     -------------------  ------   ----------------
+// GND      -       pin 8 GND           pin 8 GND                     Power supply GND
+// VCC 5 V  -       pin 7 BL            -                             Power supply
+// VCC 5 V  -       pin 6 VCC           pin 9 5V                      Power supply
+// EN       -       pin 1 RST           pin 3 XRST                    -
+
+
+
+// Define the version number, also used for webserver as Last-Modified header and to
+// check version for update.  The format must be exactly as specified by the HTTP standard!
+#define VERSION     "v2.3 2026-01-15"
+/*
+Version Changes:
+2.0   2025-03-06  Reload time changes on problems with the data connection
+2.1   2025-03-27  Responsive Design meta tag added to adapt the content on differenz screen sizes
+2.2   2025-05-07  Bugfix HTTP server for root directory "/". HTML tags and stylesheets adapted for menu
+2.3   2026-01-15  Song title API for webinterface implemented. Now we can see icystreamtitle and icyname
+*/
+
+// ESP32-Radio can be updated (OTA) to the latest version from a remote server.
+// The download uses the following server and files:
+#define UPDATEHOST  "www.loresoft.de"                         // Host for software updates
+#define BINFILE     "/downloads/Esp32_radio.ino.esp32.bin"// Binary file name for update software
+#define TFTFILE     "/Arduino/ESP32-Radio.tft"            // Binary file name for update NEXTION image
+
+
+// Define (just one) type of display.  See documentation.
+#define BLUETFT                        // Works also for RED TFT 128x160
+//#define OLED                         // 64x128 I2C OLED
+//#define DUMMYTFT                     // Dummy display
+//#define LCD1602I2C                   // LCD 1602 display with I2C backpack
+//#define ILI9341                      // ILI9341 240*320
+//#define NEXTION                      // Nextion display. Uses UART 2 (pin 16 and 17)
+
+
+#include "nvs.h"
+#include <PubSubClient.h>
+#include <WiFiMulti.h> // Datei > Einstellungen > Zusätzliche Boardverwalter-URLs > https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json > Board-Verwaltung > install: esp32 (Espressif Systems)
+//#include <WiFiClientSecure.h>
+#include <ESPmDNS.h>
+#include <time.h>
+#include <stdio.h>
+#include <string.h>
+#include <FS.h>
+#include <SD.h>
+#include <SPI.h>
+#include <ArduinoOTA.h>
+#include <freertos/queue.h>
+#include <freertos/task.h>
+#include <esp_task_wdt.h>
+#include <esp_partition.h>
+#include <driver/adc.h>
+#include <Update.h>
+#include <base64.h>
+
+#define QSIZ 400                  // Number of entries in the queue
+#define DEBUG_BUFFER_SIZE 150     // Debug buffer size
+#define NVSBUFSIZE 150
+
+// Access point name if connection to WiFi network fails.  Also the hostname for WiFi and OTA.
+// Note that the password of an AP must be at least as long as 8 characters.
+// Also used for other naming.
+#define NAME "ESP32Radio"
+
+#define MAXPRESETS 200            // Max number of presets in preferences
+#define MAXMQTTCONNECTS 5         // Maximum number of MQTT reconnects before give-up
+#define NVSBUFSIZE 150            // Adjust size of buffer to the longest expected string for nvsGetValue
+#define TIMEPOS -52               // Position (column) of time in topline relative to end
+#define SDSPEED 1000000           // SPI speed for SD card
+#define METASIZ 1024              // Size of metaline buffer
+#define MAXKEYS 200               // Max. number of NVS keys in table
+#define BACKLIGHT_TIME 600        // Time-out [sec] for blanking TFT display (BL pin)
+
+// Subscription topics for MQTT.  The topic will be pefixed by "PREFIX/", where PREFIX is replaced
+// by the the mqttprefix in the preferences.  The next definition will yield the topic
+// "ESP32Radio/command" if mqttprefix is "ESP32Radio".
+#define MQTT_SUBTOPIC     "command"   // Command to receive from MQTT
+#define otaclient mp3client           // OTA uses mp3client for connection to host
+
+//10sec adaption
+#define WIFI_RECONNECT_INTERVAL 10000  // 10 Sekunden in Millisekunden
+static uint32_t lastReconnectAttempt = 0;
+
+//**************************************************************************************************
+// Forward declaration and prototypes of various functions.                                        *
+//**************************************************************************************************
+void        showTimeOnTFT(const char* str, uint16_t color = 0xFFFF);
+void        showStreamDataOnTFT(const char* ml, bool full = false);
+void        handleNextDataByteFromServer(uint8_t b);
+void        handleWebpage(const String& pagename);
+void        handleCmd()  ;
+char*       dbgprint( const char* format, ...);
+const char* analyzeCmd(const char* str);
+const char* analyzeCmd(const char* par, const char* val);
+void        chomp(String &str);
+String      httpheader(String contentstype);
+bool        nvsKeyExists(const char* key);
+void        mp3loop();
+void        tftlog(const char *str);
+void        playStreamFromQueue(void * parameter);       // Task to play the stream
+void        spftask(void * parameter);        // Task for special functions
+void        getCurrentTime();
+void        reservepin(int8_t rpinnr);
+
+bool isSoundPlaying();
+void stopStream ();
+bool playStream (int16_t _preset);	// true=sending play info succeeded; false= unable to send playing info
+void playSound(bool _enable);
+void stop_mp3client();
+void IRAM_ATTR enableBacklight(bool enable);
+void handleDisplayData();
+String nvsGetHostFromPref(int16_t preset);
+String nvsGetHostFromPref();
+void showTextOnTFT(uint16_t inx, const char *str);
+void showTextOnTFT(uint16_t inx, String& str);
+
+
+enum alarmStatus {ALRM_NONE, ALRM_START, ALRM_STOP}; // NONE=Nothing; START=last change was a start; STOP=last change was a stop
+alarmStatus radioAlarmStatusChanged = ALRM_NONE; // Indicates if the status was changed right now, to update the display one minute later
+
+const char* msgPlayerStopped	= "Player stopped!\nclick\nto select new station"; // 26 char per line
+const char* msgTurnToSelectStation	= "Turn to select station\nPress to confirm";
+const char* msgRadioAlarmOn		= "Radio Alarm\nhas turned the music ON";
+const char* msgRadioAlarmOff	= "Radio Alarm\nhas turned the music OFF";
+
+//**************************************************************************************************
+// Several structs.                                                                                *
+//**************************************************************************************************
+struct scrseg_struct                                  // For screen segments
+{
+  bool     update_req ;                               // Request update of screen
+  uint16_t color ;                                    // Textcolor
+  uint16_t y ;                                        // Begin of segment row
+  uint16_t height ;                                   // Height of segment
+  String   str ;                                      // String to be displayed
+} ;
+
+enum qdata_type { QDATA, QSTARTSONG, QSTOPSONG } ;    // datatyp in qdata_struct
+struct qdata_struct
+{
+  int datatyp ;                                       // Identifier
+  __attribute__((aligned(4))) uint8_t buf[32] ;       // Buffer for chunk
+} ;
+
+struct ini_struct
+{
+  String         mqttbroker ;                         // The name of the MQTT broker server
+  String         mqttprefix ;                         // Prefix to use for topics
+  uint16_t       mqttport ;                           // Port, default 1883
+  String         mqttuser ;                           // User for MQTT authentication
+  String         mqttpasswd ;                         // Password for MQTT authentication
+  uint8_t        reqvol ;                             // Requested volume
+  uint8_t        rtone[4] ;                           // Requested bass/treble settings
+  int16_t        newpreset ;                          // Requested preset
+  String         clk_server ;                         // Server to be used for time of day clock
+  int8_t         clk_offset ;                         // Offset in hours with respect to UTC
+  int8_t         clk_dst ;                            // Number of hours shift during DST
+  int8_t         ir_pin ;                             // GPIO connected to output of IR decoder
+  int8_t         enc_clk_pin ;                        // GPIO connected to CLK of rotary encoder
+  int8_t         enc_dt_pin ;                         // GPIO connected to DT of rotary encoder
+  int8_t         enc_sw_pin ;                         // GPIO connected to SW of rotary encoder
+  int8_t         tft_cs_pin ;                         // GPIO connected to CS of TFT screen
+  int8_t         tft_dc_pin ;                         // GPIO connected to D/C or A0 of TFT screen
+  int8_t         tft_scl_pin ;                        // GPIO connected to SCL of i2c TFT screen
+  int8_t         tft_sda_pin ;                        // GPIO connected to SDA of I2C TFT screen
+  int8_t         tft_bl_pin ;                         // GPIO to activate BL of display
+  int8_t         tft_blx_pin ;                        // GPIO to activate BL of display (inversed logic)
+  int8_t         sd_cs_pin ;                          // GPIO connected to CS of SD card
+  int8_t         vs_cs_pin ;                          // GPIO connected to CS of VS1053
+  int8_t         vs_dcs_pin ;                         // GPIO connected to DCS of VS1053
+  int8_t         vs_dreq_pin ;                        // GPIO connected to DREQ of VS1053
+  int8_t         vs_shutdown_pin ;                    // GPIO to shut down the amplifier
+  int8_t         vs_shutdownx_pin ;                   // GPIO to shut down the amplifier (inversed logic)
+  int8_t         spi_sck_pin ;                        // GPIO connected to SPI SCK pin
+  int8_t         spi_miso_pin ;                       // GPIO connected to SPI MISO pin
+  int8_t         spi_mosi_pin ;                       // GPIO connected to SPI MOSI pin
+  uint16_t       bat0 ;                               // ADC value for 0 percent battery charge
+  uint16_t       bat100 ;                             // ADC value for 100 percent battery charge
+  String         alrm_start;                          //
+  String         alrm_stop;                           //
+} ;
+
+
+struct WifiInfo_t                                     // For list with WiFi info
+{
+  uint8_t inx ;                                       // Index as in "wifi_00"
+  char * ssid ;                                       // SSID for an entry
+  char * passphrase ;                                 // Passphrase for an entry
+} ;
+
+struct nvs_entry
+{
+  uint8_t  Ns ;                                       // Namespace ID
+  uint8_t  Type ;                                     // Type of value
+  uint8_t  Span ;                                     // Number of entries used for this item
+  uint8_t  Rvs ;                                      // Reserved, should be 0xFF
+  uint32_t CRC ;                                      // CRC
+  char     Key[16] ;                                  // Key in Ascii
+  uint64_t Data ;                                     // Data in entry
+} ;
+
+struct nvs_page                                       // For nvs entries
+{ // 1 page is 4096 bytes
+  uint32_t  State ;
+  uint32_t  Seqnr ;
+  uint32_t  Unused[5] ;
+  uint32_t  CRC ;
+  uint8_t   Bitmap[32] ;
+  nvs_entry Entry[126] ;
+} ;
+
+struct keyname_t                                      // For keys in NVS
+{
+  char      Key[16] ;                                 // Max length is 15 plus delimeter
+} ;
+
+
+//**************************************************************************************************
+// Global data section.                                                                            *
+//**************************************************************************************************
+// There is a block ini-data that contains some configuration.  Configuration data is              *
+// saved in the preferences by the webinterface.  On restart the new data will                     *
+// de read from these preferences.                                                                 *
+// Items in ini_block can be changed by commands from webserver/MQTT/Serial.                       *
+//**************************************************************************************************
+enum display_t { T_UNDEFINED, T_BLUETFT, T_OLED,         // Various types of display
+                 T_DUMMYTFT, T_LCD1602I2C, T_ILI9341,
+                 T_NEXTION } ;
+
+enum datamode_t { INIT = 1, HEADER = 2, DATA = 4,        // State for datastream
+                  METADATA = 8, PLAYLISTINIT = 16,
+                  PLAYLISTHEADER = 32, PLAYLISTDATA = 64,
+                  STOPREQD = 128, STOPPED = 256
+                } ;
+
+// Global variables
+int               DEBUG = 1 ;                            // Debug on/off
+int               numSsid ;                              // Number of available WiFi networks
+WiFiMulti         wifiMulti ;                            // Possible WiFi networks
+ini_struct        ini_block ;                            // Holds configurable data
+WiFiServer        cmdserver(80);                     // Instance of embedded webserver, port 80
+WiFiClient        mp3client ;                            // An instance of the mp3 client, also used for OTA
+WiFiClient        cmdclient ;                            // An instance of the client for commands
+WiFiClient        wmqttclient ;                          // An instance for mqtt
+PubSubClient      mqttclient(wmqttclient);           // Client for MQTT subscriber
+HardwareSerial*   nxtserial = NULL ;                     // Serial port for NEXTION (if defined)
+TaskHandle_t      maintask ;                             // Taskhandle for main task
+TaskHandle_t      xplayStreamFromQueue ;                            // Task handle for playStreamFromQueue
+TaskHandle_t      xspftask ;                             // Task handle for special functions
+SemaphoreHandle_t SPIsem = NULL ;                        // For exclusive SPI usage
+hw_timer_t*       timer = NULL ;                         // For timer
+char              timetxt[9] ;                           // Converted timeinfo
+char              cmd[130] ;                             // Command from MQTT or Serial
+uint8_t           tmpbuff[6000] ;                        // Input buffer for mp3 or data stream
+QueueHandle_t     dataqueue ;                            // Queue for mp3 datastream
+QueueHandle_t     spfqueue ;                             // Queue for special functions
+qdata_struct      outchunk ;                             // Data to queue
+qdata_struct      inchunk ;                              // Data from queue
+uint8_t*          outqp = outchunk.buf ;                 // Pointer to buffer in outchunk
+uint32_t          totalcount = 0 ;                       // Counter mp3 data
+datamode_t        datamode ;                             // State of datastream
+int               metacount ;                            // Number of bytes in metadata
+int               datacount ;                            // Counter databytes before metadata
+char              metalinebf[METASIZ + 1] ;              // Buffer for metaline/ID3 tags
+int16_t           metalinebfx ;                          // Index for metalinebf
+
+String            icystreamtitle ;                       // Streamtitle from metadata --> Song title
+String            icyname ;                              // Icecast station name --> SWR3,...
+
+String            ipaddress ;                            // Own IP-address
+int               bitrate ;                              // Bitrate in kb/sec
+int               mbitrate ;                             // Measured bitrate
+int               metaint = 0 ;                          // Number of databytes between metadata
+int16_t           currentpreset = -1 ;                   // Preset station playing
+String            host ;                                 // The URL to connect to or file to play
+String            playlist ;                             // The URL of the specified playlist
+bool              hostreq = false ;                      // Request for new host
+bool              reqtone = false ;                      // New tone setting requested
+bool              muteflag = false ;                     // Mute output
+bool              resetreq = false ;                     // Request to reset the ESP32
+bool              updatereq = false ;                    // Request to update software from remote host
+bool              NetworkFound = false ;                 // True if WiFi network connected
+bool              mqtt_on = false ;                      // MQTT in use
+String            networks ;                             // Found networks in the surrounding
+uint16_t          mqttcount = 0 ;                        // Counter MAXMQTTCONNECTS
+int8_t            playingstat = 0 ;                      // 1 if radio is playing (for MQTT)
+int16_t           playlist_num = 0 ;                     // Nonzero for selection from playlist
+File              mp3file ;                              // File containing mp3 on SD card
+uint32_t          mp3filelength ;                        // File length
+bool              localfile = false ;                    // Play from local mp3-file or not
+bool              chunked = false ;                      // Station provides chunked transfer
+int               chunkcount = 0 ;                       // Counter for chunked transfer
+String            http_getcmd ;                          // Contents of last GET command
+String            http_rqfile ;                          // Requested file
+bool              http_response_flag = false ;           // Response required
+uint16_t          ir_value = 0 ;                         // IR code
+uint32_t          ir_0 = 550 ;                           // Average duration of an IR short pulse
+uint32_t          ir_1 = 1650 ;                          // Average duration of an IR long pulse
+struct tm         timeinfo ;                             // Will be filled by NTP server
+bool              time_req = false ;                     // Set time requested
+bool              SD_okay = false ;                      // True if SD card in place and readable
+String            SD_nodelist ;                          // Nodes of mp3-files on SD
+int               SD_nodecount = 0 ;                     // Number of nodes in SD_nodelist
+String            SD_currentnode = "" ;                  // Node ID of song playing ("0" if random)
+uint16_t          adcval ;                               // ADC value (battery voltage)
+uint32_t          clength ;                              // Content length found in http header
+uint32_t          max_mp3loop_time = 0 ;                 // To check max handling time in mp3loop (msec)
+int16_t           scanios ;                              // TEST*TEST*TEST
+int16_t           scaniocount ;                          // TEST*TEST*TEST
+uint16_t          bltimer = 0 ;                          // Backlight time-out counter
+display_t         displaytype = T_UNDEFINED ;            // Display type
+std::vector<WifiInfo_t> wifilist ;                       // List with wifi_xx info
+// nvs stuff
+nvs_page                nvsbuf ;                         // Space for 1 page of NVS info
+const esp_partition_t*  nvs ;                            // Pointer to partition struct
+esp_err_t               nvserr ;                         // Error code from nvs functions
+uint32_t                nvshandle = 0 ;                  // Handle for nvs access
+uint8_t                 namespace_ID ;                   // Namespace ID found
+char                    nvskeys[MAXKEYS][16] ;           // Space for NVS keys
+std::vector<keyname_t> keynames ;                        // Keynames in NVS
+// Rotary encoder stuff
+#define sv DRAM_ATTR static volatile
+sv uint16_t       clickcount = 0 ;                       // Incremented per encoder click
+sv int16_t        rotationcount = 0 ;                    // Current position of rotary switch
+sv uint16_t       enc_inactivity = 0 ;                   // Time inactive
+sv bool           singleclick = false ;                  // True if single click detected
+sv bool           doubleclick = false ;                  // True if double click detected
+sv bool           tripleclick = false ;                  // True if triple click detected
+sv bool           longclick = false ;                    // True if longclick detected
+enum enc_menu_t { VOLUME, PRESET, TRACK } ;              // State for rotary encoder menu
+enc_menu_t        enc_menu_mode = VOLUME ;               // Default is VOLUME mode
+
+//
+struct progpin_struct                                    // For programmable input pins
+{
+  int8_t         gpio ;                                  // Pin number
+  bool           reserved ;                              // Reserved for connected devices
+  bool           avail ;                                 // Pin is available for a command
+  String         command ;                               // Command to execute when activated
+  // Example: "uppreset=1"
+  bool           cur ;                                   // Current state, true = HIGH, false = LOW
+} ;
+
+progpin_struct   progpin[] =                             // Input pins and programmed function
+{
+  {  0, false, false,  "", false },
+  //{  1, true,  false,  "", false },                    // Reserved for TX Serial output
+  {  2, false, false,  "", false },
+  //{  3, true,  false,  "", false },                    // Reserved for RX Serial input
+  {  4, false, false,  "", false },
+  {  5, false, false,  "", false },
+  //{  6, true,  false,  "", false },                    // Reserved for FLASH SCK
+  //{  7, true,  false,  "", false },                    // Reserved for FLASH D0
+  //{  8, true,  false,  "", false },                    // Reserved for FLASH D1
+  //{  9, true,  false,  "", false },                    // Reserved for FLASH D2
+  //{ 10, true,  false,  "", false },                    // Reserved for FLASH D3
+  //{ 11, true,  false,  "", false },                    // Reserved for FLASH CMD
+  { 12, false, false,  "", false },
+  { 13, false, false,  "", false },
+  { 14, false, false,  "", false },
+  { 15, false, false,  "", false },
+  { 16, false, false,  "", false },                      // May be UART 2 RX for Nextion
+  { 17, false, false,  "", false },                      // May be UART 2 TX for Nextion
+  { 18, false, false,  "", false },                      // Default for SPI CLK
+  { 19, false, false,  "", false },                      // Default for SPI MISO
+  //{ 20, true,  false,  "", false },                    // Not exposed on DEV board
+  { 21, false, false,  "", false },                      // Also Wire SDA
+  { 22, false, false,  "", false },                      // Also Wire SCL
+  { 23, false, false,  "", false },                      // Default for SPI MOSI
+  //{ 24, true,  false,  "", false },                    // Not exposed on DEV board
+  { 25, false, false,  "", false },
+  { 26, false, false,  "", false },
+  { 27, false, false,  "", false },
+  //{ 28, true,  false,  "", false },                    // Not exposed on DEV board
+  //{ 29, true,  false,  "", false },                    // Not exposed on DEV board
+  //{ 30, true,  false,  "", false },                    // Not exposed on DEV board
+  //{ 31, true,  false,  "", false },                    // Not exposed on DEV board
+  { 32, false, false,  "", false },
+  { 33, false, false,  "", false },
+  { 34, false, false,  "", false },                      // Note, no internal pull-up
+  { 35, false, false,  "", false },                      // Note, no internal pull-up
+  //{ 36, true,  false,  "", false },                    // Reserved for ADC battery level
+  { 39, false,  false,  "", false },                     // Note, no internal pull-up
+  { -1, false, false,  "", false }                       // End of list
+} ;
+
+struct touchpin_struct                                   // For programmable input pins
+{
+  int8_t         gpio ;                                  // Pin number GPIO
+  bool           reserved ;                              // Reserved for connected devices
+  bool           avail ;                                 // Pin is available for a command
+  String         command ;                               // Command to execute when activated
+  // Example: "uppreset=1"
+  bool           cur ;                                   // Current state, true = HIGH, false = LOW
+  int16_t        count ;                                 // Counter number of times low level
+} ;
+touchpin_struct   touchpin[] =                           // Touch pins and programmed function
+{
+  {   4, false, false, "", false, 0 },                   // TOUCH0
+  {   0, true,  false, "", false, 0 },                   // TOUCH1, reserved for BOOT button
+  {   2, false, false, "", false, 0 },                   // TOUCH2
+  {  15, false, false, "", false, 0 },                   // TOUCH3
+  {  13, false, false, "", false, 0 },                   // TOUCH4
+  {  12, false, false, "", false, 0 },                   // TOUCH5
+  {  14, false, false, "", false, 0 },                   // TOUCH6
+  {  27, false, false, "", false, 0 },                   // TOUCH7
+  {  33, false, false, "", false, 0 },                   // TOUCH8
+  {  32, false, false, "", false, 0 },                   // TOUCH9
+  {  -1, false, false, "", false, 0 }                    // End of list
+  // End of table
+} ;
+
+
+
+
+
+//**************************************************************************************************
+// End of global data section.                                                                     *
+//**************************************************************************************************
+
+
+
+
+
+//**************************************************************************************************
+//                                     M Q T T P U B _ C L A S S                                   *
+//**************************************************************************************************
+// ID's for the items to publish to MQTT.  Is index in amqttpub[]
+enum { MQTT_IP,     MQTT_ICYNAME, MQTT_STREAMTITLE, MQTT_NOWPLAYING,
+       MQTT_PRESET, MQTT_VOLUME, MQTT_PLAYING, MQTT_PLAYLISTPOS
+     } ;
+enum { MQSTRING, MQINT8, MQINT16 } ;                     // Type of variable to publish
+
+class mqttpubc                                           // For MQTT publishing
+{
+    struct mqttpub_struct
+    {
+      const char*    topic ;                             // Topic as partial string (without prefix)
+      uint8_t        type ;                              // Type of payload
+      void*          payload ;                           // Payload for this topic
+      bool           topictrigger ;                      // Set to true to trigger MQTT publish
+    } ;
+    // Publication topics for MQTT.  The topic will be pefixed by "PREFIX/", where PREFIX is replaced
+    // by the the mqttprefix in the preferences.
+  protected:
+    mqttpub_struct amqttpub[9] =                   // Definitions of various MQTT topic to publish
+    { // Index is equal to enum above
+      { "ip",              MQSTRING, &ipaddress,        false }, // Definition for MQTT_IP
+      { "icy/name",        MQSTRING, &icyname,          false }, // Definition for MQTT_ICYNAME
+      { "icy/streamtitle", MQSTRING, &icystreamtitle,   false }, // Definition for MQTT_STREAMTITLE
+      { "nowplaying",      MQSTRING, &ipaddress,        false }, // Definition for MQTT_NOWPLAYING
+      { "preset" ,         MQINT8,   &currentpreset,    false }, // Definition for MQTT_PRESET
+      { "volume" ,         MQINT8,   &ini_block.reqvol, false }, // Definition for MQTT_VOLUME
+      { "playing",         MQINT8,   &playingstat,      false }, // Definition for MQTT_PLAYING
+      { "playlist/pos",    MQINT16,  &playlist_num,     false }, // Definition for MQTT_PLAYLISTPOS
+      { NULL,              0,        NULL,              false }  // End of definitions
+    } ;
+  public:
+    void          trigger(uint8_t item);                      // Trigger publishig for one item
+    void          publishtopic();                                // Publish triggerer items
+} ;
+
+
+//**************************************************************************************************
+// MQTTPUB  class implementation.                                                                  *
+//**************************************************************************************************
+
+//**************************************************************************************************
+//                                            T R I G G E R                                        *
+//**************************************************************************************************
+// Set request for an item to publish to MQTT.                                                     *
+//**************************************************************************************************
+void mqttpubc::trigger(uint8_t item)                   // Trigger publishig for one item
+{
+  amqttpub[item].topictrigger = true ;                     // Request re-publish for an item
+}
+
+//**************************************************************************************************
+//                                     P U B L I S H T O P I C                                     *
+//**************************************************************************************************
+// Publish a topic to MQTT broker.                                                                 *
+//**************************************************************************************************
+void mqttpubc::publishtopic()
+{
+  int         i = 0 ;                                         // Loop control
+  char        topic[80] ;                                     // Topic to send
+  const char* payload ;                                       // Points to payload
+  char        intvar[10] ;                                    // Space for integer parameter
+  while(amqttpub[i].topic )
+  {
+    if(amqttpub[i].topictrigger)                          // Topic ready to send?
+    {
+      amqttpub[i].topictrigger = false ;                      // Success or not: clear trigger
+      sprintf(topic, "%s/%s", ini_block.mqttprefix.c_str(),
+                amqttpub[i].topic);                         // Add prefix to topic
+      switch(amqttpub[i].type)                            // Select conversion method
+      {
+        case MQSTRING :
+          payload = ((String*)amqttpub[i].payload)->c_str();
+          //payload = pstr->c_str();                           // Get pointer to payload
+          break ;
+        case MQINT8 :
+          sprintf(intvar, "%d",
+                    *(int8_t*)amqttpub[i].payload);         // Convert to array of char
+          payload = intvar ;                                  // Point to this array
+          break ;
+        case MQINT16 :
+          sprintf(intvar, "%d",
+                    *(int16_t*)amqttpub[i].payload);        // Convert to array of char
+          payload = intvar ;                                  // Point to this array
+          break ;
+        default :
+          continue ;                                          // Unknown data type
+      }
+      dbgprint("Publish to topic %s : %s",                  // Show for debug
+                 topic, payload);
+      if(!mqttclient.publish(topic, payload))           // Publish!
+      {
+        dbgprint("MQTT publish failed!");                 // Failed
+      }
+      return ;                                                // Do the rest later
+    }
+    i++ ;                                                     // Next entry
+  }
+}
+
+mqttpubc         mqttpub ;                                    // Instance for mqttpubc
+
+
+
+
+//**************************************************************************************************
+//     Webinterface.                                                                               *
+//**************************************************************************************************
+#include "webinterface/index.html.h"
+#include "webinterface/mp3play.html.h"
+#include "webinterface/sound.html.h"
+#include "webinterface/config.html.h"
+#include "webinterface/firmware.html.h"
+#include "webinterface/about.html.h"
+#include "webinterface/index.css.h"
+#include "webinterface/interface.js.h"
+/*#include "webinterface/favicon.ico.h"*/
+#include "defaultprefs.h"
+
+
+
+
+
+//**************************************************************************************************
+//     VS1053 stuff.                                                                               *
+//**************************************************************************************************
+#include "handler/vs1053.h"
+VS1053* vs1053player ;
+
+#include "handler/nvs.h"
+#include "handler/string.h"
+#include "handler/isr.h"
+
+
+
+
+
+//**************************************************************************************************
+// Display Handling.                                                                               *
+//**************************************************************************************************
+// Include software for the right display
+#ifdef BLUETFT
+  #include "display/BlueTFT.h"                                     // For ILI9163C or ST7735S 128x160 display
+#endif
+#ifdef ILI9341
+  #include "display/ILI9341.h"                                     // For ILI9341 320x240 display
+#endif
+#ifdef OLED
+  #include "display/SSD1306.h"                                     // For OLED I2C SD1306 64x128 display
+#endif
+#ifdef LCD1602I2C
+  #include "display/LCD1602.h"                                     // For LCD 1602 display (I2C)
+#endif
+#ifdef DUMMYTFT
+  #include "display/DummyTFT.h"                                    // For Dummy display
+#endif
+#ifdef NEXTION
+  #include "display/NEXTION.h"                                     // For NEXTION display
+#endif
+
+
+
+
+
+//**************************************************************************************************
+//                                      Handler Includes                                           *
+//**************************************************************************************************
+#include "handler/spi.h"
+#include "handler/helper.h"
+#include "handler/sd.h"
+#include "handler/upgrade.h"
+#include "handler/mqtt.h"
+#include "handler/alarm.h"
+#include "handler/loop.h"
+#include "handler/ir.h"
+#include "handler/setup.h"
+#include "handler/xml.h"
+#include "handler/time.h"
+#include "handler/http.h"
+#include "handler/volume.h"
+#include "handler/rotary_encoder.h"
+#include "handler/interface.h"
+#include "handler/display.h"
+#include "handler/stream.h"
+#include "handler/mp3.h"
+
+
+
+
+
+
+
+
+//**************************************************************************************************
+//                                           S E T U P                                             *
+//**************************************************************************************************
+// Setup for the program.                                                                          *
+//**************************************************************************************************
+/**
+* Default Prefs for the rotary encoder
+*/
+void saveDefaultPrefs ()
+{
+  //nvsAddValue("", "");
+
+  // Rotary Encoder
+  nvsAddValue("pin_enc_clk", String(25));
+  nvsAddValue("pin_enc_dt", String(26));
+  nvsAddValue("pin_enc_sw", String(27));
+
+  // TFT Display
+  //nvsAddValue("pin_tft_cs", String(15));
+  //nvsAddValue("pin_tft_dc", String(2));
+
+  // VS1053 MP3 Encoder
+  nvsAddValue("pin_vs_cs", String(5));
+  nvsAddValue("pin_vs_dcs", String(32));
+  nvsAddValue("pin_vs_dreq", String(4));
+
+  // Time Server
+  nvsAddValue("clk_dst", String(1));
+  nvsAddValue("clk_offset", String(1));
+  nvsAddValue("clk_server", "pool.ntp.org");
+
+  // MQTT
+  nvsAddValue("mqttbroker", "none");
+  nvsAddValue("mqttport", String(1883));
+  nvsAddValue("mqttuser", "none");
+  nvsAddValue("mqttpasswd", "none");
+  nvsAddValue("mqqprefix", "none");
+
+  // Default Radio Stations
+  nvsAddValue("preset_00", "charthits-high.rautemusik.fm                                      # 0 Rautemusik");
+  nvsAddValue("preset_01", "swr-swr3-live.cast.addradio.de/swr/swr3/live/mp3/128/stream.mp3   # 1 - SWR3");
+  nvsAddValue("preset_02", "dg-swr-https-fra-dtag-cdn.sslcast.addradio.de/swr/swr/raka04/mp3/128/stream.mp3   # 2 - SWR3 Party");
+  nvsAddValue("preset_03", "stream.antenne1.de/a1stg/livestream2.mp3                          # 3 - Antenne 1");
+  nvsAddValue("preset_04", "topradio-de-hz-fal-stream03-cluster01.radiohost.de/kissfm_128     # 4 - Kiss FM");
+  nvsAddValue("preset_05", "streamhq.top100station.com/top100station-high.mp3                 # 5 - TOP 100 Station");
+
+  // Wifi
+  nvsAddValue("wifi_00", "LS-GUEST/9832-7461-2058-3497-6125");
+}
+
+
+void setup()
+{
+  int                       i ;                          // Loop control
+  int                       pinnr ;                      // Input pinnumber
+  const char*               p ;
+  byte                      mac[6] ;                     // WiFi mac address
+  char                      tmpstr[20] ;                 // For version and Mac address
+  const char*               partname = "nvs" ;           // Partition with NVS info
+  esp_partition_iterator_t  pi ;                         // Iterator for find
+  const char*               dtyp = "Display type is %s" ;
+  const char*               wvn = "Include file %s_html has the wrong version number! "
+                                  "Replace header file." ;
+
+  Serial.begin(115200);                              // For debug
+  Serial.println();
+
+
+  //saveDefaultPrefs(); // Uncommend on access problems to renew the prefs
+
+  #if defined(BLUETFT)                               // Report display option
+    dbgprint(dtyp, "BLUETFT");
+  #endif
+  #if defined(ILI9341)                               // Report display option
+    dbgprint(dtyp, "ILI9341");
+  #endif
+  #if defined(OLED )
+    dbgprint(dtyp, "OLED");
+  #endif
+  #if defined(DUMMYTFT )
+    dbgprint(dtyp, "DUMMYTFT");
+  #endif
+  #if defined(LCD1602I2C )
+    dbgprint(dtyp, "LCD1602");
+  #endif
+  #if defined(NEXTION)
+    dbgprint(dtyp, "NEXTION");
+  #endif
+
+  maintask = xTaskGetCurrentTaskHandle();               // My taskhandle
+  SPIsem = xSemaphoreCreateMutex(); ;                    // Semaphore for SPI bus
+  pi = esp_partition_find(ESP_PARTITION_TYPE_DATA,     // Get partition iterator for
+                            ESP_PARTITION_SUBTYPE_ANY,   // the NVS partition
+                            partname);
+  if(pi )
+  {
+    nvs = esp_partition_get(pi);                     // Get partition struct
+    esp_partition_iterator_release(pi);              // Release the iterator
+    dbgprint("Partition %s found, %d bytes",
+               partname,
+               nvs->size);
+  }
+  else
+  {
+    dbgprint("Partition %s not found!", partname);   // Very unlikely...
+    while(true);                                     // Impossible to continue
+  }
+  namespace_ID = FindNamespaceId(NAME);                     // Find ID of our namespace in NVS
+  fillkeylist();                                        // Fill keynames with all keys
+  memset(&ini_block, 0, sizeof(ini_block));          // Init ini_block
+  ini_block.mqttport = 1883 ;                            // Default port for MQTT
+  ini_block.mqttprefix = "" ;                            // No prefix for MQTT topics seen yet
+  ini_block.clk_server = "pool.ntp.org" ;                // Default server for NTP
+  ini_block.clk_offset = 1 ;                             // Default Amsterdam time zone
+  ini_block.clk_dst = 1 ;                                // DST is +1 hour
+  ini_block.bat0 = 0 ;                                   // Battery ADC levels not yet defined
+  ini_block.bat100 = 0 ;
+  ini_block.alrm_start = "";
+  ini_block.alrm_stop = "";
+
+  readIOprefs();                                        // Read pins used for SPI, TFT, VS1053, IR,
+  // Rotary encoder
+  for(i = 0 ; (pinnr = progpin[i].gpio) >= 0 ; i++)  // Check programmable input pins
+  {
+    pinMode(pinnr, INPUT_PULLUP);                    // Input for control button
+    delay(10);
+    // Check if pull-up active
+    if(( progpin[i].cur = digitalRead(pinnr)) == HIGH ) {
+      p = "HIGH" ;
+    } else {
+      p = "LOW, probably no PULL-UP" ;                   // No Pull-up
+    }
+    dbgprint("GPIO%d is %s", pinnr, p);
+  }
+
+  readprogbuttons();                                    // Program the free input pins
+
+  SPI.begin(ini_block.spi_sck_pin, ini_block.spi_miso_pin, ini_block.spi_mosi_pin); // Init VSPI bus with default or modified pins
+  vs1053player = new VS1053(ini_block.vs_cs_pin, ini_block.vs_dcs_pin, ini_block.vs_dreq_pin, ini_block.vs_shutdown_pin, ini_block.vs_shutdownx_pin); // Make instance of player
+  if(ini_block.ir_pin >= 0) {
+    dbgprint("Enable pin %d for IR", ini_block.ir_pin);
+    pinMode(ini_block.ir_pin, INPUT);                  // Pin for IR receiver VS1838B
+    attachInterrupt(ini_block.ir_pin, isr_IR, CHANGE); // Interrupts will be handle by isr_IR
+  }
+
+  if(( ini_block.tft_cs_pin >= 0 ) || (ini_block.tft_scl_pin >= 0)) { // Display configured?
+    dbgprint("Start display");
+    if(dsp_begin()) {                                 // Init display
+      dsp_setRotation();                              // Use landscape format
+      dsp_erase();                                    // Clear screen
+      dsp_setTextSize(1);                             // Small character font
+      dsp_setTextColor(WHITE);                        // Info in white
+      dsp_setCursor(0, 0);                            // Top of screen
+
+      dsp_println("Loresoft, www.loresoft.de");
+
+      p = dbgprint("Version %s", VERSION);
+      dsp_println(p);
+
+      // Print some memory and sketch info
+      p = dbgprint("%d CPU, %d MHz", xPortGetCoreID(), ESP.getCpuFreqMHz()); // Normally about 170 kB
+      dsp_println(p);
+
+      p = dbgprint("Free memory %d KByte", (ESP.getFreeHeap()/1000)); // Normally about 170 kB
+      dsp_println(p);
+
+      dsp_println("");
+      dsp_println("Booting Device...");
+
+      dsp_update();                                     // Show on physical screen
+    }
+  }
+  if(ini_block.tft_bl_pin >= 0)                      // Backlight for TFT control?
+  {
+    pinMode(ini_block.tft_bl_pin, OUTPUT);           // enable output
+  }
+  if(ini_block.tft_blx_pin >= 0)                     // Backlight for TFT (inversed logic) control?
+  {
+    pinMode(ini_block.tft_blx_pin, OUTPUT);          // enable output
+  }
+  enableBacklight(true);                                       // Enable backlight (if configured)
+  if(ini_block.sd_cs_pin >= 0)                       // SD configured?
+  {
+    mountSDCard();
+  }
+  mk_lsan();                                            // Make a list of acceptable networks
+                                                         // in preferences.
+  WiFi.mode(WIFI_STA);                               // This ESP is a station
+  WiFi.persistent(false);                            // Do not save SSID and password
+  WiFi.disconnect();                                    // After restart router could still
+  delay(100);                                        // keep old connection
+  listNetworks();                                       // Find WiFi networks
+  readprefs(false);                                  // Read preferences
+  tcpip_adapter_set_hostname(TCPIP_ADAPTER_IF_STA,
+                               NAME);
+  vs1053player->begin();                                // Initialize VS1053 player
+  delay(10);
+  p = dbgprint("Connect to WiFi");                   // Show progress
+  tftlog(p);                                         // On TFT too
+  NetworkFound = connectwifi();                         // Connect to WiFi network
+  dbgprint("Start server for commands");
+  cmdserver.begin();                                    // Start http server
+  if(NetworkFound)                                   // OTA and MQTT only if Wifi network found
+  {
+    dbgprint("Network found. Starting mqtt and OTA");
+    mqtt_on =(ini_block.mqttbroker.length() > 0)&&   // Use MQTT if broker specified
+             (ini_block.mqttbroker != "none");
+    ArduinoOTA.setHostname(NAME);                    // Set the hostname
+    ArduinoOTA.onStart(otastart);
+    ArduinoOTA.begin();                                 // Allow update over the air
+    if(mqtt_on)                                      // Broker specified?
+    {
+      if(( ini_block.mqttprefix.length() == 0)||     // No prefix?
+          (ini_block.mqttprefix == "none"))
+      {
+        WiFi.macAddress(mac);                        // Get mac-adress
+        sprintf(tmpstr, "P%02X%02X%02X%02X",           // Generate string from last part
+                  mac[3], mac[2],
+                  mac[1], mac[0]);
+        ini_block.mqttprefix = String(tmpstr);       // Save for further use
+      }
+      dbgprint("MQTT uses prefix %s", ini_block.mqttprefix.c_str());
+      dbgprint("Init MQTT");
+      mqttclient.setServer(ini_block.mqttbroker.c_str(), // Specify the broker
+                           ini_block.mqttport);        // And the port
+      mqttclient.setCallback(onMqttMessage);         // Set callback on receive
+    }
+
+    if(MDNS.begin(NAME)) { // Start MDNS transponder
+      dbgprint("MDNS responder started");
+    } else {
+      dbgprint("Error setting up MDNS responder!");
+    }
+  }
+  else {
+    currentpreset = ini_block.newpreset;                // No network: newpreset is -1, so means do not start radio
+  }
+
+  timer = timerBegin(0, 80, true);                   // User 1st timer with prescaler 80
+  timerAttachInterrupt(timer, &timer100, true);      // Call timer100() on timer alarm
+  timerAlarmWrite(timer, 100000, true);              // Alarm every 100 msec
+  timerAlarmEnable(timer);                           // Enable the timer
+  delay(1000);                                       // Show IP for a while
+  configTime(ini_block.clk_offset * 3600, ini_block.clk_dst * 3600, ini_block.clk_server.c_str());  // GMT offset, daylight offset in seconds
+  timeinfo.tm_year = 0 ;                                 // Set TOD to illegal
+
+
+  // Init settings for rotary switch (if existing).
+  if(( ini_block.enc_clk_pin + ini_block.enc_dt_pin + ini_block.enc_sw_pin) <= 2 ) { // If rotary encoder prefs are missed, probably there are no prefs saved. Write the prefs new
+    saveDefaultPrefs();
+    dbgprint("All default prefs added, please restart the machine!");
+  }
+  if(( ini_block.enc_clk_pin + ini_block.enc_dt_pin + ini_block.enc_sw_pin)> 2 )
+  {
+    attachInterrupt(ini_block.enc_clk_pin, isr_enc_turn,   CHANGE);
+    attachInterrupt(ini_block.enc_dt_pin,  isr_enc_turn,   CHANGE);
+    attachInterrupt(ini_block.enc_sw_pin,  isr_enc_switch, CHANGE);
+    dbgprint("Rotary encoder is enabled");
+  } else {
+    dbgprint("Rotary encoder is disabled (%d/%d/%d)", ini_block.enc_clk_pin, ini_block.enc_dt_pin, ini_block.enc_sw_pin);
+  }
+
+  if(NetworkFound) {
+    getCurrentTime();                                           // Sync time (write it in the register timetxt)
+  }
+
+  if(tft) {
+    dsp_fillRect(0, 8, dsp_getwidth(), dsp_getheight() - 8, BLACK); // Clear most of the screen
+  }
+
+  outchunk.datatyp = QDATA ;                              // This chunk dedicated to QDATA
+  adc1_config_width(ADC_WIDTH_12Bit);
+  adc1_config_channel_atten(ADC1_CHANNEL_0, ADC_ATTEN_0db);
+  dataqueue = xQueueCreate(QSIZ, sizeof(qdata_struct)); // Create queue for communication
+  xTaskCreatePinnedToCore (
+    playStreamFromQueue,                                             // Task to play data in dataqueue.
+    "playStreamFromQueue",                                           // name of task.
+    1600,                                                 // Stack size of task
+    NULL,                                                 // parameter of the task
+    2,                                                    // priority of the task
+    &xplayStreamFromQueue,                                           // Task handle to keep track of created task
+    0);                                                 // Run on CPU 0
+  xTaskCreate (
+    spftask,                                              // Task to handle special functions.
+    "Spftask",                                            // name of task.
+    2048,                                                 // Stack size of task
+    NULL,                                                 // parameter of the task
+    1,                                                    // priority of the task
+    &xspftask);                                         // Task handle to keep track of created task
+}
+
+
+
+
+
+//**************************************************************************************************
+//                                           L O O P                                               *
+//**************************************************************************************************
+// Main loop of the program.                                                                       *
+//**************************************************************************************************
+void loop()
+{
+  static bool wasConnected = NetworkFound;  // Initialzustand merken, 10sec adaption
+
+  mp3loop();                                       // Do mp3 related actions
+  if(updatereq)                                 // Software update requested?
+  {
+    if(displaytype == T_NEXTION)                // NEXTION in use?
+    {
+      update_software("lstmodn",                  // update NEXTION image from remote image
+                        UPDATEHOST, TFTFILE);
+    }
+    update_software("lstmods",                    // Update sketch from remote file
+                      UPDATEHOST, BINFILE);
+    resetreq = true ;                               // And reset
+  }
+
+  // WiFi-Reconnect-Logik, 10sec adaption
+  if(WiFi.status() != WL_CONNECTED) {
+    if(millis() - lastReconnectAttempt >= WIFI_RECONNECT_INTERVAL) {
+      lastReconnectAttempt = millis();
+      dbgprint("Attempting WiFi reconnection...");
+      NetworkFound = connectwifi();
+      if(NetworkFound) {
+        // Bei erfolgreicher Verbindung notwendige Services neu starten
+        ArduinoOTA.begin();
+        MDNS.begin(NAME);
+      }
+    }
+    wasConnected = false;
+  } else if(!wasConnected) {
+    // Bei wiederhergestellter Verbindung
+    wasConnected = true;
+    ipaddress = WiFi.localIP().toString();
+    dbgprint("Reconnected to WiFi. IP: %s", ipaddress.c_str());
+  }
+
+  if(resetreq)                                  // Reset requested?
+  {
+    delay(1000);                                // wait some time
+    ESP.restart();                                 // Reboot
+  }
+  scanserial();                                    // Handle serial input
+  scanserial2();                                   // Handle serial input from NEXTION (if active)
+  scandigital();                                   // Scan digital inputs
+  scanIR();                                        // See if IR input
+  ArduinoOTA.handle();                             // Check for OTA
+  mp3loop();                                       // Do more mp3 related actions
+  handlehttpreply();
+  cmdclient = cmdserver.available();               // Check Input from client?
+  if(cmdclient)                                 // Client connected?
+  {
+    dbgprint("Command client available");
+    handlehttp();
+  }
+  // Handle MQTT.
+  if(mqtt_on )
+  {
+    mqttclient.loop();                             // Handling of MQTT connection
+  }
+  nvsAutoSave();                                 // See if time to save settings
+  handleIpPub();                                   // See if time to publish IP
+  handleVolume();                                  // See if time to publish volume
+  checkRotaryEncoder();                                       // Check rotary encoder functions
+}
