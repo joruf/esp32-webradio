@@ -29,8 +29,10 @@ void checkRotaryEncoder()
   }
 
   // Backlight aktivieren bei Aktivität
+  // Backlight aktivieren und Timer zurücksetzen bei Aktivität
   if ( singleclick || doubleclick || tripleclick || longclick || rotationcount != 0 ) {
     enableBacklight ( true ) ;
+    bltimer = 0 ;  // <--- Das hier sorgt dafür, dass die 5 Minuten von vorn beginnen!
   } else {
     return ;
   }

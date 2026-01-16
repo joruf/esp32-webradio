@@ -110,12 +110,16 @@ void IRAM_ATTR timer100()
       }
     }
     time_req = true ;                             // show current time request
-    if(++bltimer == BACKLIGHT_TIME)                  // Time to blank the TFT screen?
-    {
-      bltimer = 0 ;                               // reset counter
-      enableBacklight(false);                           // Disable TFT (backlight)
+
+    // In loop.h innerhalb von timer100 -> if(( count10sec % 10)== 0)
+    if (bltimer < BACKLIGHT_TIME) {           // Nur hochzählen, wenn Limit noch nicht erreicht
+        if (++bltimer == BACKLIGHT_TIME) {    // Wenn Limit genau jetzt erreicht wurde
+            enableBacklight(false);           // Display aus
+            dbgprint("TFT blanking activated");
+        }
     }
   }
+
   // Handle rotary encoder. Inactivity counter will be reset by encoder interrupt
   if(++enc_inactivity == 36000)               // Count inactivity time
   {
