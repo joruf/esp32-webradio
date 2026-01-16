@@ -1,7 +1,8 @@
 //filename: ESP32_Webradio.ino
 // Board > esp32 > ESP32 Dev Module
 // Sollte der Upload abbrechen mit "Fehlgeschlagenes Hochladen: Hochladefehler: exit status 2", den USB-Stecker ausstecken, auf Hochladen klicken etwas warten bis "Kompiliere Scatch" bei 3/4 steht und dann USB wieder einstecken während des ende der Kompilierungsphase
-// BOARD-VERWALTUNG: esp32 (Espressif Systems) v2.0.17, Version 3.x ist nicht lauffaehig, da sich funktionsnamen geaendert haben
+// BOARD-VERWALTUNG: esp32 (Espressif Systems) v3.3.0
+// Space overlaod>100% --> Tools > Partition Scheme > Huge App (3MB no OTA)
 
 // Upload Sketch: Port 7 on Samsung I right bottom. Use AVRISP mkII, Click Sketch Hochladen,
 
@@ -38,7 +39,7 @@
 
 // Define the version number, also used for webserver as Last-Modified header and to
 // check version for update.  The format must be exactly as specified by the HTTP standard!
-#define FIRMWARE     "v2.3 2026-01-15"
+#define FIRMWARE     "v2.4 2026-01-16"
 /*
 Firmware Changes:
 2.0   2025-03-06  Reload time changes on problems with the data connection.
@@ -47,6 +48,7 @@ Firmware Changes:
 2.3   2026-01-15  Song title API for webinterface implemented. Now we can see icystreamtitle and icyname.
                   Sleep-Time implemented to stop mp3 stream after a defined time.
                   Const VERSION renamed to FIRMWARE
+2.4   2026-01-16  Update ESP32 Espressif-Systems v2.0.17 to 3.3.0
 */
 
 // ESP32-Radio can be updated (OTA) to the latest version from a remote server.
@@ -842,8 +844,8 @@ void setup()
   delay(100);                                        // keep old connection
   listNetworks();                                       // Find WiFi networks
   readprefs(false);                                  // Read preferences
-  tcpip_adapter_set_hostname(TCPIP_ADAPTER_IF_STA,
-                               NAME);
+  //tcpip_adapter_set_hostname(TCPIP_ADAPTER_IF_STA, NAME);
+  WiFi.setHostname(NAME);
   vs1053player->begin();                                // Initialize VS1053 player
   delay(10);
   p = dbgprint("Connect to WiFi");                   // Show progress
@@ -887,10 +889,17 @@ void setup()
     currentpreset = ini_block.newpreset;                // No network: newpreset is -1, so means do not start radio
   }
 
+  /*
   timer = timerBegin(0, 80, true);                   // User 1st timer with prescaler 80
   timerAttachInterrupt(timer, &timer100, true);      // Call timer100() on timer alarm
   timerAlarmWrite(timer, 100000, true);              // Alarm every 100 msec
   timerAlarmEnable(timer);                           // Enable the timer
+  */
+  timer = timerBegin(1000000);                       // Timer frequency 1 MHz (Core 3.x)
+  timerAttachInterrupt(timer, &timer100);            // Attach callback (3.x: no edge parameter)
+  timerAlarm(timer, 100000, true, 0);                // 100.000 ticks (100ms), autoreload, reload count 0
+  timerStart(timer);                                 // Starten des Timers (Jetzt geht es los!)
+
   delay(1000);                                       // Show IP for a while
   configTime(ini_block.clk_offset * 3600, ini_block.clk_dst * 3600, ini_block.clk_server.c_str());  // GMT offset, daylight offset in seconds
   timeinfo.tm_year = 0 ;                                 // Set TOD to illegal
@@ -920,8 +929,14 @@ void setup()
   }
 
   outchunk.datatyp = QDATA ;                              // This chunk dedicated to QDATA
+  
+  /*
   adc1_config_width(ADC_WIDTH_12Bit);
   adc1_config_channel_atten(ADC1_CHANNEL_0, ADC_ATTEN_0db);
+  */
+  adc1_config_width(ADC_WIDTH_BIT_12);               // Correct Enum for deprecated function
+  adc1_config_channel_atten(ADC1_CHANNEL_0, ADC_ATTEN_DB_0); // New Enum Name
+
   dataqueue = xQueueCreate(QSIZ, sizeof(qdata_struct)); // Create queue for communication
   xTaskCreatePinnedToCore (
     playStreamFromQueue,                                             // Task to play data in dataqueue.

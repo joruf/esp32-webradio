@@ -184,7 +184,11 @@ void writeprefs()
   String     key, contents ;                                  // Pair for Preferences entry
   String     dstr ;                                           // Contents for debug
 
+  /*
   timerAlarmDisable ( timer ) ;                               // Disable the timer
+  */
+  timerStop ( timer ) ;                                       // Disable the timer
+
   nvsClear() ;                                                // Remove all preferences
   while ( true )
   {
@@ -258,7 +262,12 @@ void writeprefs()
       }
     }
   }
+
+  /*
   timerAlarmEnable ( timer ) ;                                // Enable the timer
+  */
+  timerStart ( timer ) ;                                // Enable the timer
+  
   fillkeylist() ;                                             // Update list with keys
 }
 
