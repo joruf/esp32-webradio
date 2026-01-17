@@ -78,7 +78,7 @@ const char config_html[] PROGMEM = R"=====(
 					<div class="row">
 						<div class="form-group col-xs-12 col-sm-6 col-md-3 col-lg-3">
 							<label>Start (hour)</label>
-							<select class="form-control" id="from_hour">
+							<select class="form-control alarm-field" id="from_hour">
 								<option name="0">0</option>
 								<option name="1">1</option>
 								<option name="2">2</option>
@@ -107,7 +107,7 @@ const char config_html[] PROGMEM = R"=====(
 						</div>
 						<div class="form-group col-xs-12 col-sm-6 col-md-3 col-lg-3">
 							<label>Start (minute)</label>
-							<select class="form-control" id="from_minute">
+							<select class="form-control alarm-field" id="from_minute">
 								<option name="00">00</option>
 								<option name="01">01</option>
 								<option name="02">02</option>
@@ -173,7 +173,7 @@ const char config_html[] PROGMEM = R"=====(
 						
 						<div class="form-group col-xs-12 col-sm-6 col-md-3 col-lg-3">
 							<label>Shut-off (hour)</label>
-							<select class="form-control" id="to_hour">
+							<select class="form-control alarm-field" id="to_hour">
 								<option name="0">0</option>
 								<option name="1">1</option>
 								<option name="2">2</option>
@@ -202,7 +202,7 @@ const char config_html[] PROGMEM = R"=====(
 						</div>
 						<div class="form-group col-xs-12 col-sm-6 col-md-3 col-lg-3">
 							<label>Shut-off (minute)</label>
-							<select class="form-control" id="to_minute">
+							<select class="form-control alarm-field" id="to_minute">
 								<option name="00">00</option>
 								<option name="01">01</option>
 								<option name="02">02</option>

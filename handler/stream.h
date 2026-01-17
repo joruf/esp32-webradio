@@ -211,8 +211,9 @@ void handleDisplayData()
   // We need tp update the time
   if(time_req && NetworkFound) {
     getCurrentTime();
+    handleRadioAlarm(); // Hier aufrufen, wenn die Zeit gerade frisch vom NTP/System kommt!
   }
-
+  
   claimSPI("hspec"); // Claim SPI bus
   if(isSoundPlaying() == false) {
     vs1053player->setVolume(0);                           // Mute

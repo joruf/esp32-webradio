@@ -39,7 +39,7 @@
 
 // Define the version number, also used for webserver as Last-Modified header and to
 // check version for update.  The format must be exactly as specified by the HTTP standard!
-#define FIRMWARE     "v2.5 2026-01-16"
+#define FIRMWARE     "v2.6 2026-01-17"
 /*
 Firmware Changes:
 2.0   2025-03-06  Reload time changes on problems with the data connection.
@@ -50,6 +50,7 @@ Firmware Changes:
                   Const VERSION renamed to FIRMWARE
 2.4   2026-01-16  Update ESP32 Espressif-Systems v2.0.17 to 3.3.0
 2.5   2026-01-16  Rotary encoder click and doubleclick logic implemented click=radio on/off, doubleclick=select radio station
+2.6   2026-01-17  Bugfix alarm start/stop not working after ESP32 Espressif-Systems update to 3.3.0
 */
 
 // ESP32-Radio can be updated (OTA) to the latest version from a remote server.

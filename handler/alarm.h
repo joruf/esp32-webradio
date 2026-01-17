@@ -41,29 +41,44 @@ void handleRadioAlarm () {
 	  }
   }
 
-  if (ini_block.alrm_start.c_str() != "none") {
+  // --- RADIO ALARM START ---
+  if (ini_block.alrm_start != "none" && ini_block.alrm_start.length() >= 4) {
     int8_t alrm_tm_start_hour = getValue(ini_block.alrm_start.c_str(), ':', 0).toInt();
     int8_t alrm_tm_start_min = getValue(ini_block.alrm_start.c_str(), ':', 1).toInt();
-    if (/*radioAlarmOn == false &&*/ timeinfo.tm_hour == alrm_tm_start_hour && timeinfo.tm_min == alrm_tm_start_min) {   // Start radio alarm
-      playSound(true);
-      playStream(currentpreset);
+
+    if (timeinfo.tm_hour == alrm_tm_start_hour && timeinfo.tm_min == alrm_tm_start_min && timeinfo.tm_sec == 0) {
+      // 1. Wir nehmen den eingestellten Alarm-Sender (ini_block.newpreset)
+      playStream(ini_block.newpreset); 
+
+      // 2. Das Signal geben, dass der MP3-Loop sofort loslegen soll
+      // (Das passiert im Hintergrund auch beim Web-Klick)
+      hostreq = true; 
+
+      // 3. Ton einschalten
+      muteflag = false; 
+
+      // 4. Optik
       enableBacklight(true);
-      showTextOnTFT(1, msgRadioAlarmOn);                    // Set screen segment bottom part
+      showTextOnTFT(1, msgRadioAlarmOn);
       radioAlarmStatusChanged = ALRM_START;
     }
   }
 
-  if (ini_block.alrm_stop.c_str() != "none") {
-    //showTextOnTFT(3, ini_block.alrm_stop.c_str());
+  // --- RADIO ALARM STOP ---
+  if (ini_block.alrm_stop.c_str() != "none" && ini_block.alrm_stop.length() >= 4) {
     int8_t alrm_tm_stop_hour = getValue(ini_block.alrm_stop.c_str(), ':', 0).toInt();
     int8_t alrm_tm_stop_min = getValue(ini_block.alrm_stop.c_str(), ':', 1).toInt();
-    if (/*radioAlarmOn == true &&*/ timeinfo.tm_hour == alrm_tm_stop_hour && timeinfo.tm_min == alrm_tm_stop_min) {   // Stop radio alarm
+    
+    // NEU: Zusätzliche Prüfung auf Sekunden (0 bis 2)
+    if (timeinfo.tm_hour == alrm_tm_stop_hour && 
+        timeinfo.tm_min == alrm_tm_stop_min && 
+        timeinfo.tm_sec <= 2) {   // Nur in den ersten 2 Sekunden der Minute ausführen
+        
       stopStream();
-      //playSound(false);
       enableBacklight(true);
-      showTextOnTFT(1, msgRadioAlarmOff);                   // Set screen segment bottom part
+      showTextOnTFT(1, msgRadioAlarmOff);
       radioAlarmStatusChanged = ALRM_STOP;
-	  showTextOnTFT(3, msgPlayerStopped);
+      showTextOnTFT(3, msgPlayerStopped);
     }
   }
 

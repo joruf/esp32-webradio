@@ -34,7 +34,24 @@ const char interface_js[] PROGMEM = R"=====(
 		
 		console.log("to_hour to_minute clicked "+$(this).val());
 	});
-	
+
+
+	// Automatisch speichern, wenn eine Alarm-Selectbox geändert wird
+	$(document).on("change", ".alarm-field", function() {
+			console.log("Alarm-Einstellung geändert: " + $(this).attr("id"));
+			
+			// Simuliert den Klick auf den "Save Configuration" Button
+			// Dies führt die bestehende Speicher-Logik deines Interfaces aus
+			$("#savePref").click(); // Senden der Pref abschicken
+			
+			// Optional: Ein kurzer visueller Hinweis am geänderten Feld
+			var $this = $(this);
+			$this.css("border-color", "#28a745");
+			setTimeout(function() {
+					$this.css("border-color", "");
+			}, 1000);
+	});
+
 
 	/**
 	 * Insert the saved webradio time from the textarea to the select boxes
