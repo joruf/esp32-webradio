@@ -53,6 +53,7 @@ Firmware Changes:
 2.06   2026-01-17  Bugfix alarm start/stop not working after ESP32 Espressif-Systems update to 3.3.0.
 2.07   2026-01-21  MQTT removed, mute button removed from index.html, html button size changed.
                   Hardcoded GPIO pins for the rotary encoder, IR receiver, SD card, TFT, and VS1053 fixed within the code.
+                  Webinterface layout adapted.
 */
 
 // ESP32-Radio can be updated (OTA) to the latest version from a remote server.
