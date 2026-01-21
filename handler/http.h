@@ -228,14 +228,7 @@ void writeprefs()
                      String ( "/*******" ) ;                  // Hide in debug line
             }
           }
-          if ( ( key.indexOf ( "mqttpasswd" ) == 0 ) )        // Sensitive info?
-          {
-            if ( contents.indexOf ( "****" ) == 0 )           // Hidden password?
-            {
-              contents = ini_block.mqttpasswd ;               // Retrieve mqtt password
-            }
-            dstr = String ( "*******" ) ;                     // Hide in debug line
-          }
+
           dbgprint ( "writeprefs setstr %s = %s",
                      key.c_str(), dstr.c_str() ) ;
           nvsAddValue ( key.c_str(), contents ) ;               // Save new pair (needs a restart to use it in the program)
@@ -548,24 +541,6 @@ void handlehttp()
 
 
   //cmdclient.stop() ;
-}
-
-
-//**************************************************************************************************
-//                                      H A N D L E I P P U B                                      *
-//**************************************************************************************************
-// Handle publish op IP to MQTT.  This will happen every 10 minutes.                               *
-//**************************************************************************************************
-void handleIpPub()
-{
-  static uint32_t pubtime = 300000 ;                       // Limit save to once per 10 minutes
-
-  if ( ( millis() - pubtime ) < 600000 )                   // 600 sec is 10 minutes
-  {
-    return ;
-  }
-  pubtime = millis() ;                                     // Set time of last publish
-  mqttpub.trigger ( MQTT_IP ) ;                            // Request re-publish IP
 }
 
 

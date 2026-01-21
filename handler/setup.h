@@ -348,10 +348,7 @@ String readprefs ( bool output )
       cmd = String ( "" ) ;                                 // Do not analyze this
       
     }
-    else if ( strstr ( key, "mqttpasswd"  ) )               // Is it a MQTT password?
-    {
-      val = String ( "*******" ) ;                          // hide it
-    }
+
     if ( output )
     {
       if ( ( i > 0 ) &&

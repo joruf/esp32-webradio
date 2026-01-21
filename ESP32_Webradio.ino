@@ -39,7 +39,7 @@
 
 // Define the version number, also used for webserver as Last-Modified header and to
 // check version for update.  The format must be exactly as specified by the HTTP standard!
-#define FIRMWARE     "v2.6 2026-01-17"
+#define FIRMWARE     "v2.7 2026-01-21"
 /*
 Firmware Changes:
 2.0   2025-03-06  Reload time changes on problems with the data connection.
@@ -47,10 +47,11 @@ Firmware Changes:
 2.2   2025-05-07  Bugfix HTTP server for root directory "/". HTML tags and stylesheets adapted for menu.
 2.3   2026-01-15  Song title API for webinterface implemented. Now we can see icystreamtitle and icyname.
                   Sleep-Time implemented to stop mp3 stream after a defined time.
-                  Const VERSION renamed to FIRMWARE
-2.4   2026-01-16  Update ESP32 Espressif-Systems v2.0.17 to 3.3.0
-2.5   2026-01-16  Rotary encoder click and doubleclick logic implemented click=radio on/off, doubleclick=select radio station
-2.6   2026-01-17  Bugfix alarm start/stop not working after ESP32 Espressif-Systems update to 3.3.0
+                  Const VERSION renamed to FIRMWARE.
+2.4   2026-01-16  Update ESP32 Espressif-Systems v2.0.17 to 3.3.0.
+2.5   2026-01-16  Rotary encoder click and doubleclick logic implemented click=radio on/off, doubleclick=select radio station.
+2.6   2026-01-17  Bugfix alarm start/stop not working after ESP32 Espressif-Systems update to 3.3.0.
+2.7   2026-01-21  MQTT removed, mute button removed from index.html, html button size changed.
 */
 
 // ESP32-Radio can be updated (OTA) to the latest version from a remote server.
@@ -99,7 +100,6 @@ Firmware Changes:
 #define NAME "ESP32Radio"
 
 #define MAXPRESETS 200            // Max number of presets in preferences
-#define MAXMQTTCONNECTS 5         // Maximum number of MQTT reconnects before give-up
 #define NVSBUFSIZE 150            // Adjust size of buffer to the longest expected string for nvsGetValue
 #define TIMEPOS -52               // Position (column) of time in topline relative to end
 #define SDSPEED 1000000           // SPI speed for SD card
@@ -107,10 +107,6 @@ Firmware Changes:
 #define MAXKEYS 200               // Max. number of NVS keys in table
 #define BACKLIGHT_TIME 600        // Time-out [sec] for blanking TFT display (BL pin)
 
-// Subscription topics for MQTT.  The topic will be pefixed by "PREFIX/", where PREFIX is replaced
-// by the the mqttprefix in the preferences.  The next definition will yield the topic
-// "ESP32Radio/command" if mqttprefix is "ESP32Radio".
-#define MQTT_SUBTOPIC     "command"   // Command to receive from MQTT
 #define otaclient mp3client           // OTA uses mp3client for connection to host
 
 //10sec adaption
@@ -180,11 +176,6 @@ struct qdata_struct
 
 struct ini_struct
 {
-  String         mqttbroker ;                         // The name of the MQTT broker server
-  String         mqttprefix ;                         // Prefix to use for topics
-  uint16_t       mqttport ;                           // Port, default 1883
-  String         mqttuser ;                           // User for MQTT authentication
-  String         mqttpasswd ;                         // Password for MQTT authentication
   uint8_t        reqvol ;                             // Requested volume
   uint8_t        rtone[4] ;                           // Requested bass/treble settings
   int16_t        newpreset ;                          // Requested preset
@@ -257,7 +248,7 @@ struct keyname_t                                      // For keys in NVS
 // There is a block ini-data that contains some configuration.  Configuration data is              *
 // saved in the preferences by the webinterface.  On restart the new data will                     *
 // de read from these preferences.                                                                 *
-// Items in ini_block can be changed by commands from webserver/MQTT/Serial.                       *
+// Items in ini_block can be changed by commands from webserver/Serial.                            *
 //**************************************************************************************************
 enum display_t { T_UNDEFINED, T_BLUETFT, T_OLED,         // Various types of display
                  T_DUMMYTFT, T_LCD1602I2C, T_ILI9341,
@@ -277,8 +268,6 @@ ini_struct        ini_block ;                            // Holds configurable d
 WiFiServer        cmdserver(80);                     // Instance of embedded webserver, port 80
 WiFiClient        mp3client ;                            // An instance of the mp3 client, also used for OTA
 WiFiClient        cmdclient ;                            // An instance of the client for commands
-WiFiClient        wmqttclient ;                          // An instance for mqtt
-PubSubClient      mqttclient(wmqttclient);           // Client for MQTT subscriber
 HardwareSerial*   nxtserial = NULL ;                     // Serial port for NEXTION (if defined)
 TaskHandle_t      maintask ;                             // Taskhandle for main task
 TaskHandle_t      xplayStreamFromQueue ;                            // Task handle for playStreamFromQueue
@@ -286,7 +275,7 @@ TaskHandle_t      xspftask ;                             // Task handle for spec
 SemaphoreHandle_t SPIsem = NULL ;                        // For exclusive SPI usage
 hw_timer_t*       timer = NULL ;                         // For timer
 char              timetxt[9] ;                           // Converted timeinfo
-char              cmd[130] ;                             // Command from MQTT or Serial
+char              cmd[130] ;                             // Command from Serial
 uint8_t           tmpbuff[6000] ;                        // Input buffer for mp3 or data stream
 QueueHandle_t     dataqueue ;                            // Queue for mp3 datastream
 QueueHandle_t     spfqueue ;                             // Queue for special functions
@@ -316,10 +305,7 @@ bool              muteflag = false ;                     // Mute output
 bool              resetreq = false ;                     // Request to reset the ESP32
 bool              updatereq = false ;                    // Request to update software from remote host
 bool              NetworkFound = false ;                 // True if WiFi network connected
-bool              mqtt_on = false ;                      // MQTT in use
 String            networks ;                             // Found networks in the surrounding
-uint16_t          mqttcount = 0 ;                        // Counter MAXMQTTCONNECTS
-int8_t            playingstat = 0 ;                      // 1 if radio is playing (for MQTT)
 int16_t           playlist_num = 0 ;                     // Nonzero for selection from playlist
 File              mp3file ;                              // File containing mp3 on SD card
 uint32_t          mp3filelength ;                        // File length
@@ -450,120 +436,6 @@ touchpin_struct   touchpin[] =                           // Touch pins and progr
 
 
 
-//**************************************************************************************************
-// End of global data section.                                                                     *
-//**************************************************************************************************
-
-
-
-
-
-//**************************************************************************************************
-//                                     M Q T T P U B _ C L A S S                                   *
-//**************************************************************************************************
-// ID's for the items to publish to MQTT.  Is index in amqttpub[]
-enum { MQTT_IP,     MQTT_ICYNAME, MQTT_STREAMTITLE, MQTT_NOWPLAYING,
-       MQTT_PRESET, MQTT_VOLUME, MQTT_PLAYING, MQTT_PLAYLISTPOS
-     } ;
-enum { MQSTRING, MQINT8, MQINT16 } ;                     // Type of variable to publish
-
-class mqttpubc                                           // For MQTT publishing
-{
-    struct mqttpub_struct
-    {
-      const char*    topic ;                             // Topic as partial string (without prefix)
-      uint8_t        type ;                              // Type of payload
-      void*          payload ;                           // Payload for this topic
-      bool           topictrigger ;                      // Set to true to trigger MQTT publish
-    } ;
-    // Publication topics for MQTT.  The topic will be pefixed by "PREFIX/", where PREFIX is replaced
-    // by the the mqttprefix in the preferences.
-  protected:
-    mqttpub_struct amqttpub[9] =                   // Definitions of various MQTT topic to publish
-    { // Index is equal to enum above
-      { "ip",              MQSTRING, &ipaddress,        false }, // Definition for MQTT_IP
-      { "icy/name",        MQSTRING, &icyname,          false }, // Definition for MQTT_ICYNAME
-      { "icy/streamtitle", MQSTRING, &icystreamtitle,   false }, // Definition for MQTT_STREAMTITLE
-      { "nowplaying",      MQSTRING, &ipaddress,        false }, // Definition for MQTT_NOWPLAYING
-      { "preset" ,         MQINT8,   &currentpreset,    false }, // Definition for MQTT_PRESET
-      { "volume" ,         MQINT8,   &ini_block.reqvol, false }, // Definition for MQTT_VOLUME
-      { "playing",         MQINT8,   &playingstat,      false }, // Definition for MQTT_PLAYING
-      { "playlist/pos",    MQINT16,  &playlist_num,     false }, // Definition for MQTT_PLAYLISTPOS
-      { NULL,              0,        NULL,              false }  // End of definitions
-    } ;
-  public:
-    void          trigger(uint8_t item);                      // Trigger publishig for one item
-    void          publishtopic();                                // Publish triggerer items
-} ;
-
-
-//**************************************************************************************************
-// MQTTPUB  class implementation.                                                                  *
-//**************************************************************************************************
-
-//**************************************************************************************************
-//                                            T R I G G E R                                        *
-//**************************************************************************************************
-// Set request for an item to publish to MQTT.                                                     *
-//**************************************************************************************************
-void mqttpubc::trigger(uint8_t item)                   // Trigger publishig for one item
-{
-  amqttpub[item].topictrigger = true ;                     // Request re-publish for an item
-}
-
-//**************************************************************************************************
-//                                     P U B L I S H T O P I C                                     *
-//**************************************************************************************************
-// Publish a topic to MQTT broker.                                                                 *
-//**************************************************************************************************
-void mqttpubc::publishtopic()
-{
-  int         i = 0 ;                                         // Loop control
-  char        topic[80] ;                                     // Topic to send
-  const char* payload ;                                       // Points to payload
-  char        intvar[10] ;                                    // Space for integer parameter
-  while(amqttpub[i].topic )
-  {
-    if(amqttpub[i].topictrigger)                          // Topic ready to send?
-    {
-      amqttpub[i].topictrigger = false ;                      // Success or not: clear trigger
-      sprintf(topic, "%s/%s", ini_block.mqttprefix.c_str(),
-                amqttpub[i].topic);                         // Add prefix to topic
-      switch(amqttpub[i].type)                            // Select conversion method
-      {
-        case MQSTRING :
-          payload = ((String*)amqttpub[i].payload)->c_str();
-          //payload = pstr->c_str();                           // Get pointer to payload
-          break ;
-        case MQINT8 :
-          sprintf(intvar, "%d",
-                    *(int8_t*)amqttpub[i].payload);         // Convert to array of char
-          payload = intvar ;                                  // Point to this array
-          break ;
-        case MQINT16 :
-          sprintf(intvar, "%d",
-                    *(int16_t*)amqttpub[i].payload);        // Convert to array of char
-          payload = intvar ;                                  // Point to this array
-          break ;
-        default :
-          continue ;                                          // Unknown data type
-      }
-      dbgprint("Publish to topic %s : %s",                  // Show for debug
-                 topic, payload);
-      if(!mqttclient.publish(topic, payload))           // Publish!
-      {
-        dbgprint("MQTT publish failed!");                 // Failed
-      }
-      return ;                                                // Do the rest later
-    }
-    i++ ;                                                     // Next entry
-  }
-}
-
-mqttpubc         mqttpub ;                                    // Instance for mqttpubc
-
-
-
 
 //**************************************************************************************************
 //     Webinterface.                                                                               *
@@ -631,7 +503,6 @@ VS1053* vs1053player ;
 #include "handler/helper.h"
 #include "handler/sd.h"
 #include "handler/upgrade.h"
-#include "handler/mqtt.h"
 #include "handler/alarm.h"
 #include "handler/loop.h"
 #include "handler/ir.h"
@@ -683,13 +554,6 @@ void saveDefaultPrefs ()
   nvsAddValue("clk_dst", String(1));
   nvsAddValue("clk_offset", String(1));
   nvsAddValue("clk_server", "pool.ntp.org");
-
-  // MQTT
-  nvsAddValue("mqttbroker", "none");
-  nvsAddValue("mqttport", String(1883));
-  nvsAddValue("mqttuser", "none");
-  nvsAddValue("mqttpasswd", "none");
-  nvsAddValue("mqqprefix", "none");
 
   // Default Radio Stations
   nvsAddValue("preset_00", "charthits-high.rautemusik.fm                                      # 0 Rautemusik");
@@ -760,11 +624,9 @@ void setup()
     dbgprint("Partition %s not found!", partname);   // Very unlikely...
     while(true);                                     // Impossible to continue
   }
-  namespace_ID = FindNamespaceId(NAME);                     // Find ID of our namespace in NVS
-  fillkeylist();                                        // Fill keynames with all keys
-  memset(&ini_block, 0, sizeof(ini_block));          // Init ini_block
-  ini_block.mqttport = 1883 ;                            // Default port for MQTT
-  ini_block.mqttprefix = "" ;                            // No prefix for MQTT topics seen yet
+  namespace_ID = FindNamespaceId(NAME);                  // Find ID of our namespace in NVS
+  fillkeylist();                                         // Fill keynames with all keys
+  memset(&ini_block, 0, sizeof(ini_block));              // Init ini_block
   ini_block.clk_server = "pool.ntp.org" ;                // Default server for NTP
   ini_block.clk_offset = 1 ;                             // Default Amsterdam time zone
   ini_block.clk_dst = 1 ;                                // DST is +1 hour
@@ -855,31 +717,12 @@ void setup()
   NetworkFound = connectwifi();                         // Connect to WiFi network
   dbgprint("Start server for commands");
   cmdserver.begin();                                    // Start http server
-  if(NetworkFound)                                   // OTA and MQTT only if Wifi network found
+  if(NetworkFound)                                   // OTA only if Wifi network found
   {
-    dbgprint("Network found. Starting mqtt and OTA");
-    mqtt_on =(ini_block.mqttbroker.length() > 0)&&   // Use MQTT if broker specified
-             (ini_block.mqttbroker != "none");
+    dbgprint("Network found. Starting OTA");
     ArduinoOTA.setHostname(NAME);                    // Set the hostname
     ArduinoOTA.onStart(otastart);
     ArduinoOTA.begin();                                 // Allow update over the air
-    if(mqtt_on)                                      // Broker specified?
-    {
-      if(( ini_block.mqttprefix.length() == 0)||     // No prefix?
-          (ini_block.mqttprefix == "none"))
-      {
-        WiFi.macAddress(mac);                        // Get mac-adress
-        sprintf(tmpstr, "P%02X%02X%02X%02X",           // Generate string from last part
-                  mac[3], mac[2],
-                  mac[1], mac[0]);
-        ini_block.mqttprefix = String(tmpstr);       // Save for further use
-      }
-      dbgprint("MQTT uses prefix %s", ini_block.mqttprefix.c_str());
-      dbgprint("Init MQTT");
-      mqttclient.setServer(ini_block.mqttbroker.c_str(), // Specify the broker
-                           ini_block.mqttport);        // And the port
-      mqttclient.setCallback(onMqttMessage);         // Set callback on receive
-    }
 
     if(MDNS.begin(NAME)) { // Start MDNS transponder
       dbgprint("MDNS responder started");
@@ -1022,13 +865,7 @@ void loop()
     dbgprint("Command client available");
     handlehttp();
   }
-  // Handle MQTT.
-  if(mqtt_on )
-  {
-    mqttclient.loop();                             // Handling of MQTT connection
-  }
+
   nvsAutoSave();                                 // See if time to save settings
-  handleIpPub();                                   // See if time to publish IP
-  handleVolume();                                  // See if time to publish volume
   checkRotaryEncoder();                                       // Check rotary encoder functions
 }

@@ -34,7 +34,7 @@ void showStreamDataOnTFT(const char *ml, bool full) {
     return ;                                    // Do not show
   }
 
-  // Save for status request from browser and for MQTT
+  // Save for status request from browser
   icystreamtitle = streamtitle ;
 
   // look for artist/title separator
@@ -159,15 +159,11 @@ void playStreamFromQueue(void * parameter) {
           totalcount += sizeof(inchunk.buf);                       // Count the bytes
           break ;
         case QSTARTSONG:
-          playingstat = 1 ;                                         // Status for MQTT
-          mqttpub.trigger(MQTT_PLAYING);                        // Request publishing to MQTT
           claimSPI("startsong");                                // Claim SPI bus
           vs1053player->startSong();                               // START, start player
           releaseSPI();                                            // Release SPI bus
           break ;
         case QSTOPSONG:
-          playingstat = 0 ;                                         // Status for MQTT
-          mqttpub.trigger(MQTT_PLAYING);                        // Request publishing to MQTT
           claimSPI("stopsong");                                 // Claim SPI bus
           vs1053player->setVolume(0);                           // Mute
           vs1053player->stopSong();                                // STOP, stop player
@@ -238,11 +234,4 @@ void handleDisplayData()
   }
 
   releaseSPI(); // Release SPI bus
-  if(mqtt_on) {
-    if(!mqttclient.connected()) { // If not connected, make a reconnect
-      mqttreconnect();
-    } else {
-      mqttpub.publishtopic();                                // Check if any publishing to do
-    }
-  }
 }

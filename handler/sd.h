@@ -408,7 +408,6 @@ bool connecttofile()
     dbgprint ( "Error opening file %s", path.c_str() ) ;  // No luck
     return false ;
   }
-  mqttpub.trigger ( MQTT_STREAMTITLE ) ;                  // Request publishing to MQTT
   icyname = "" ;                                          // No icy name yet
   chunked = false ;                                       // File not chunked
   metaint = 0 ;                                           // No metadata

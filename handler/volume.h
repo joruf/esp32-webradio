@@ -1,23 +1,3 @@
-//**************************************************************************************************
-//                                      H A N D L E V O L P U B                                    *
-//**************************************************************************************************
-// Handle publish of Volume to MQTT.  This will happen max every 10 seconds.                       *
-//**************************************************************************************************
-void handleVolume() {
-  static uint32_t pubtime = 10000 ;                        // Limit save to once per 10 seconds
-  static uint8_t  oldvol = -1 ;                            // For comparison
-
-  if ( ( millis() - pubtime ) < 10000 ) { // 10 seconds
-    return ;
-  }
-  pubtime = millis() ;                                     // Set time of last publish
-  if ( ini_block.reqvol != oldvol ) { // Volume change?
-    mqttpub.trigger ( MQTT_VOLUME ) ;                      // Request publish VOLUME
-    oldvol = ini_block.reqvol ;                            // Remember publishe volume
-  }
-}
-
-
 
 /**
  * @desc	Check if sound is playing

@@ -121,7 +121,7 @@ void handleWebpage (const String& pagename )
 //**************************************************************************************************
 //                                     A N A L Y Z E C M D                                         *
 //**************************************************************************************************
-// Handling of the various commands from remote webclient, Serial or MQTT.                         *
+// Handling of the various commands from remote webclient, Serial        .                         *
 // Version for handling string with: <parameter>=<value>                                           *
 //**************************************************************************************************
 const char* analyzeCmd (const char* str )
@@ -147,7 +147,7 @@ const char* analyzeCmd (const char* str )
 //**************************************************************************************************
 //                                     A N A L Y Z E C M D                                         *
 //**************************************************************************************************
-// Handling of the various commands from remote webclient, serial or MQTT.                         *
+// Handling of the various commands from remote webclient, serial        .                         *
 // par holds the parametername and val holds the value.                                            *
 // "wifi_00" and "preset_00" may appear more than once, like wifi_01, wifi_02, etc.                *
 // Examples with available parameters:                                                             *
@@ -167,11 +167,6 @@ const char* analyzeCmd (const char* str )
 //   resume                                 // Resume playing                                      *
 //   mute                                   // Mute/unmute the music (toggle)                      *
 //   wifi_00    = mySSID/mypassword         // Set WiFi SSID and password *)                       *
-//   mqttbroker = mybroker.com              // Set MQTT broker to use *)                           *
-//   mqttprefix = XP93g                     // Set MQTT broker to use                              *
-//   mqttport   = 1883                      // Set MQTT port to use, default 1883 *)               *
-//   mqttuser   = myuser                    // Set MQTT user for authentication *)                 *
-//   mqttpasswd = mypassword                // Set MQTT password for authentication *)             *
 //   clk_server = pool.ntp.org              // Time server to be used *)                           *
 //   clk_offset = <-11..+14>                // Offset with respect to UTC in hours *)              *
 //   clk_dst    = <1..2>                    // Offset during daylight saving time in hours *)      *
@@ -439,30 +434,7 @@ const char* analyzeCmd (const char* par, const char* val )
   {
     vs1053player->AdjustRate (ivalue);             // adjust
   }
-  else if (argument.startsWith ("mqtt") )          // Parameter fo MQTT?
-  {
-    strcpy (reply, "MQTT broker parameter changed. Save and restart to have effect");
-    if (argument.indexOf ("broker") > 0 )          // Broker specified?
-    {
-      ini_block.mqttbroker = value ;                  // set broker accordingly
-    }
-    else if (argument.indexOf ("prefix") > 0 )     // Port specified?
-    {
-      ini_block.mqttprefix = value ;                  // set port user accordingly
-    }
-    else if (argument.indexOf ("port") > 0 )       // Port specified?
-    {
-      ini_block.mqttport = ivalue ;                   // set port user accordingly
-    }
-    else if (argument.indexOf ("user") > 0 )       // User specified?
-    {
-      ini_block.mqttuser = value ;                    // set user accordingly
-    }
-    else if (argument.indexOf ("passwd") > 0 )     // Password specified?
-    {
-      ini_block.mqttpasswd = value.c_str() ;          // set broker password accordingly
-    }
-  }
+
   else if (argument == "debug")                     // debug on/off request?
   {
     DEBUG = ivalue ;                                  // set flag accordingly

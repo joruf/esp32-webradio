@@ -140,7 +140,6 @@ void handleNextDataByteFromServer (uint8_t b) {
           icyname = metaline.substring(9);            // Get station name
           icyname.trim();                             // Remove leading and trailing spaces
           showTextOnTFT (2, icyname);                      // Set screen segment bottom part
-          mqttpub.trigger (MQTT_ICYNAME);           // Request publishing to MQTT
         } else if (lcml.startsWith ("transfer-encoding:")) {
           // Station provides chunked transfer
           if (lcml.endsWith ("chunked")) {
@@ -191,7 +190,6 @@ void handleNextDataByteFromServer (uint8_t b) {
         // "StreamTitle='60s 03 05 Magic60s';StreamUrl='';"
         // Isolate the StreamTitle, remove leading and trailing quotes if present.
         showStreamDataOnTFT (metalinebf);               // Show artist and title if present in metadata
-        mqttpub.trigger (MQTT_STREAMTITLE);         // Request publishing to MQTT
       }
 
       if (metalinebfx  > (METASIZ - 10)) { // If Unlikely metaline length
@@ -232,7 +230,6 @@ void handleNextDataByteFromServer (uint8_t b) {
       if (LFcount == 2) {
         dbgprint ("Switch to PLAYLISTDATA, search for entry %d", playlist_num);
         datamode = PLAYLISTDATA;                      // Expecting data now
-        mqttpub.trigger (MQTT_PLAYLISTPOS);         // Playlistposition to MQTT
         return;
       }
     } else {
@@ -281,7 +278,6 @@ void handleNextDataByteFromServer (uint8_t b) {
           if (inx > 0) {
             // Show artist and title if present in metadata
             showStreamDataOnTFT (metaline.substring (inx + 1).c_str(), true);
-            mqttpub.trigger (MQTT_STREAMTITLE);     // Request publishing to MQTT
           }
         }
       }
@@ -450,7 +446,6 @@ void mp3loop() {
   if (hostreq) { // New preset or station
     hostreq = false;
     currentpreset = ini_block.newpreset;                 // Remember current preset
-    mqttpub.trigger (MQTT_PRESET);                     // Request publishing to MQTT
     // Find out if this URL is on localhost (SD).
     localfile = (host.indexOf ("localhost/") >= 0);
     if (localfile) { // If playing file from localhost

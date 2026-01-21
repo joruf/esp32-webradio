@@ -1,7 +1,7 @@
 //**************************************************************************************************
 //                                     A N A L Y Z E C M D                                         *
 //**************************************************************************************************
-// Handling of the various commands from remote webclient, serial or MQTT.                         *
+// Handling of the various commands from remote webclient or serial.                               *
 // par holds the parametername and val holds the value.                                            *
 // "wifi_00" and "preset_00" may appear more than once, like wifi_01, wifi_02, etc.                *
 // Examples with available parameters:                                                             *
@@ -21,11 +21,6 @@
 //   resume                                 // Resume playing                                      *
 //   mute                                   // Mute/unmute the music (toggle)                      *
 //   wifi_00    = mySSID/mypassword         // Set WiFi SSID and password *)                       *
-//   mqttbroker = mybroker.com              // Set MQTT broker to use *)                           *
-//   mqttprefix = XP93g                     // Set MQTT broker to use                              *
-//   mqttport   = 1883                      // Set MQTT port to use, default 1883 *)               *
-//   mqttuser   = myuser                    // Set MQTT user for authentication *)                 *
-//   mqttpasswd = mypassword                // Set MQTT password for authentication *)             *
 //   clk_server = pool.ntp.org              // Time server to be used *)                           *
 //   clk_offset = <-11..+14>                // Offset with respect to UTC in hours *)              *
 //   clk_dst    = <1..2>                    // Offset during daylight saving time in hours *)      *

@@ -15,12 +15,6 @@ gpio_14 = stop
 gpio_17 = resume
 gpio_34 = station = icecast.omroep.nl:80/radio1-bb-mp3
 #
-# MQTT settings
-mqttbroker = none
-mqttport = 1883
-mqttuser = none
-mqttpasswd = none
-mqqprefix = none
 # Enter your WiFi network specs here: {NetworkName}/{Password}
 # 00=Prio1, 01=Prio2 (optional)
 wifi_00 = SSID1/PASSWD1
