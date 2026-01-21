@@ -263,20 +263,21 @@ void readIOprefs()
     int8_t      pdefault ;                                // Default pin
   };
   struct iosetting klist[] = {                            // List of I/O related keys
-    { "pin_ir",        &ini_block.ir_pin,           -1 },
-    { "pin_enc_clk",   &ini_block.enc_clk_pin,      -1 },
-    { "pin_enc_dt",    &ini_block.enc_dt_pin,       -1 },
-    { "pin_enc_sw",    &ini_block.enc_sw_pin,       -1 },
-    { "pin_tft_cs",    &ini_block.tft_cs_pin,       -1 }, // Display SPI version
-    { "pin_tft_dc",    &ini_block.tft_dc_pin,       -1 }, // Display SPI version
+    { "pin_enc_clk",  &ini_block.enc_clk_pin,  25 }, // Default Pinout
+    { "pin_enc_dt",   &ini_block.enc_dt_pin,   26 }, // Default Pinout
+    { "pin_enc_sw",   &ini_block.enc_sw_pin,   27 }, // Default Pinout
+    { "pin_ir",       &ini_block.ir_pin,       35 }, // Default Pinout
+    { "pin_sd_cs",    &ini_block.sd_cs_pin,    21 }, // Default Pinout
+    { "pin_tft_cs",   &ini_block.tft_cs_pin,   15 }, // Default Pinout
+    { "pin_tft_dc",   &ini_block.tft_dc_pin,    2 }, // Default Pinout
+    { "pin_vs_cs",    &ini_block.vs_cs_pin,     5 }, // Default Pinout
+    { "pin_vs_dcs",   &ini_block.vs_dcs_pin,   32 }, // Default Pinout
+    { "pin_vs_dreq",  &ini_block.vs_dreq_pin,    4 }, // Default Pinout
+
     { "pin_tft_scl",   &ini_block.tft_scl_pin,      -1 }, // Display I2C version
     { "pin_tft_sda",   &ini_block.tft_sda_pin,      -1 }, // Display I2C version
     { "pin_tft_bl",    &ini_block.tft_bl_pin,       33 }, // Display backlight
     { "pin_tft_blx",   &ini_block.tft_blx_pin,      -1 }, // Display backlight (inversed logic)
-    { "pin_sd_cs",     &ini_block.sd_cs_pin,        -1 },
-    { "pin_vs_cs",     &ini_block.vs_cs_pin,        -1 },
-    { "pin_vs_dcs",    &ini_block.vs_dcs_pin,       -1 },
-    { "pin_vs_dreq",   &ini_block.vs_dreq_pin,      -1 },
     { "pin_shutdown",  &ini_block.vs_shutdown_pin,  -1 }, // Amplifier shut-down pin
     { "pin_shutdownx", &ini_block.vs_shutdownx_pin, -1 }, // Amplifier shut-down pin (inversed logic)
     { "pin_spi_sck",   &ini_block.spi_sck_pin,      18 },

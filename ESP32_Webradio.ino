@@ -39,19 +39,20 @@
 
 // Define the version number, also used for webserver as Last-Modified header and to
 // check version for update.  The format must be exactly as specified by the HTTP standard!
-#define FIRMWARE     "v2.7 2026-01-21"
+#define FIRMWARE     "v2.07 2026-01-21"
 /*
 Firmware Changes:
-2.0   2025-03-06  Reload time changes on problems with the data connection.
-2.1   2025-03-27  Responsive Design meta tag added to adapt the content on differenz screen sizes.
-2.2   2025-05-07  Bugfix HTTP server for root directory "/". HTML tags and stylesheets adapted for menu.
-2.3   2026-01-15  Song title API for webinterface implemented. Now we can see icystreamtitle and icyname.
+2.00   2025-03-06  Reload time changes on problems with the data connection.
+2.01   2025-03-27  Responsive Design meta tag added to adapt the content on differenz screen sizes.
+2.02   2025-05-07  Bugfix HTTP server for root directory "/". HTML tags and stylesheets adapted for menu.
+2.03   2026-01-15  Song title API for webinterface implemented. Now we can see icystreamtitle and icyname.
                   Sleep-Time implemented to stop mp3 stream after a defined time.
                   Const VERSION renamed to FIRMWARE.
-2.4   2026-01-16  Update ESP32 Espressif-Systems v2.0.17 to 3.3.0.
-2.5   2026-01-16  Rotary encoder click and doubleclick logic implemented click=radio on/off, doubleclick=select radio station.
-2.6   2026-01-17  Bugfix alarm start/stop not working after ESP32 Espressif-Systems update to 3.3.0.
-2.7   2026-01-21  MQTT removed, mute button removed from index.html, html button size changed.
+2.04   2026-01-16  Update ESP32 Espressif-Systems v2.0.17 to 3.3.0.
+2.05   2026-01-16  Rotary encoder click and doubleclick logic implemented click=radio on/off, doubleclick=select radio station.
+2.06   2026-01-17  Bugfix alarm start/stop not working after ESP32 Espressif-Systems update to 3.3.0.
+2.07   2026-01-21  MQTT removed, mute button removed from index.html, html button size changed.
+                  Hardcoded GPIO pins for the rotary encoder, IR receiver, SD card, TFT, and VS1053 fixed within the code.
 */
 
 // ESP32-Radio can be updated (OTA) to the latest version from a remote server.
@@ -534,22 +535,6 @@ VS1053* vs1053player ;
 */
 void saveDefaultPrefs ()
 {
-  //nvsAddValue("", "");
-
-  // Rotary Encoder
-  nvsAddValue("pin_enc_clk", String(25));
-  nvsAddValue("pin_enc_dt", String(26));
-  nvsAddValue("pin_enc_sw", String(27));
-
-  // TFT Display
-  //nvsAddValue("pin_tft_cs", String(15));
-  //nvsAddValue("pin_tft_dc", String(2));
-
-  // VS1053 MP3 Encoder
-  nvsAddValue("pin_vs_cs", String(5));
-  nvsAddValue("pin_vs_dcs", String(32));
-  nvsAddValue("pin_vs_dreq", String(4));
-
   // Time Server
   nvsAddValue("clk_dst", String(1));
   nvsAddValue("clk_offset", String(1));
@@ -565,6 +550,24 @@ void saveDefaultPrefs ()
 
   // Wifi
   nvsAddValue("wifi_00", "LS-GUEST/9832-7461-2058-3497-6125");
+
+  //nvsAddValue("KEY", "VALUE");
+
+  // Rotary Encoder
+  //nvsAddValue("pin_enc_clk", String(25));
+  //nvsAddValue("pin_enc_dt", String(26));
+  //nvsAddValue("pin_enc_sw", String(27));
+
+  // TFT Display
+  //nvsAddValue("pin_tft_cs", String(15));
+  //nvsAddValue("pin_tft_dc", String(2));
+
+  // VS1053 MP3 Encoder
+  //nvsAddValue("pin_vs_cs", String(5));
+  //nvsAddValue("pin_vs_dcs", String(32));
+  //nvsAddValue("pin_vs_dreq", String(4));
+
+
 }
 
 
