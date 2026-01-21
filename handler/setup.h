@@ -175,12 +175,12 @@ bool connectwifi()
   else
   {
     ipaddress = WiFi.localIP().toString() ;             // Form IP address
-    pfs2 = dbgprint ( "Connected to %s", WiFi.SSID().c_str() ) ;
-    tftlog ( pfs2 ) ;
+
+    tftlog((String("WiFi Name: ") + WiFi.SSID()).c_str()); // WiFi Name. E.g. LS-Gast
+    
     pfs = dbgprint ( "IP = %s", ipaddress.c_str() ) ;   // String to dispay on TFT
   }
   tftlog ( pfs ) ;                                      // Show IP
-  delay ( 3000 ) ;                                      // Allow user to read this
   tftlog ( "\f" ) ;                                     // Select new page if NEXTION 
   return ( localAP == false ) ;                         // Return result of connection
 }
