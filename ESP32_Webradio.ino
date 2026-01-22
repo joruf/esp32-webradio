@@ -39,21 +39,23 @@
 
 // Define the version number, also used for webserver as Last-Modified header and to
 // check version for update.  The format must be exactly as specified by the HTTP standard!
-#define FIRMWARE     "v2.07 2026-01-21"
+#define FIRMWARE     "v2.08 2026-01-22"
 /*
 Firmware Changes:
-2.00   2025-03-06  Reload time changes on problems with the data connection.
-2.01   2025-03-27  Responsive Design meta tag added to adapt the content on differenz screen sizes.
-2.02   2025-05-07  Bugfix HTTP server for root directory "/". HTML tags and stylesheets adapted for menu.
-2.03   2026-01-15  Song title API for webinterface implemented. Now we can see icystreamtitle and icyname.
+2.00  2025-03-06  Reload time changes on problems with the data connection.
+2.01  2025-03-27  Responsive Design meta tag added to adapt the content on differenz screen sizes.
+2.02  2025-05-07  Bugfix HTTP server for root directory "/". HTML tags and stylesheets adapted for menu.
+2.03  2026-01-15  Song title API for webinterface implemented. Now we can see icystreamtitle and icyname.
                   Sleep-Time implemented to stop mp3 stream after a defined time.
                   Const VERSION renamed to FIRMWARE.
-2.04   2026-01-16  Update ESP32 Espressif-Systems v2.0.17 to 3.3.0.
-2.05   2026-01-16  Rotary encoder click and doubleclick logic implemented click=radio on/off, doubleclick=select radio station.
-2.06   2026-01-17  Bugfix alarm start/stop not working after ESP32 Espressif-Systems update to 3.3.0.
-2.07   2026-01-21  MQTT removed, mute button removed from index.html, html button size changed.
+2.04  2026-01-16  Update ESP32 Espressif-Systems v2.0.17 to 3.3.0.
+2.05  2026-01-16  Rotary encoder click and doubleclick logic implemented click=radio on/off, doubleclick=select radio station.
+2.06  2026-01-17  Bugfix alarm start/stop not working after ESP32 Espressif-Systems update to 3.3.0.
+2.07  2026-01-21  MQTT removed, mute button removed from index.html, html button size changed.
                   Hardcoded GPIO pins for the rotary encoder, IR receiver, SD card, TFT, and VS1053 fixed within the code.
                   Webinterface layout adapted.
+2.08  2026-01-22  writeDefaultConfig.h implemented to write the default props into the NVS on problems
+                  SD-Card disabled. Display NetworkList listNetworks() into the display
 */
 
 // ESP32-Radio can be updated (OTA) to the latest version from a remote server.
@@ -92,6 +94,7 @@ Firmware Changes:
 #include <Update.h>
 #include <base64.h>
 
+
 #define QSIZ 400                  // Number of entries in the queue
 #define DEBUG_BUFFER_SIZE 150     // Debug buffer size
 #define NVSBUFSIZE 150
@@ -99,7 +102,7 @@ Firmware Changes:
 // Access point name if connection to WiFi network fails.  Also the hostname for WiFi and OTA.
 // Note that the password of an AP must be at least as long as 8 characters.
 // Also used for other naming.
-#define NAME "ESP32Radio"
+#define NAME "ESP32Webradio"
 
 #define MAXPRESETS 200            // Max number of presets in preferences
 #define NVSBUFSIZE 150            // Adjust size of buffer to the longest expected string for nvsGetValue
@@ -108,8 +111,8 @@ Firmware Changes:
 #define METASIZ 1024              // Size of metaline buffer
 #define MAXKEYS 200               // Max. number of NVS keys in table
 #define BACKLIGHT_TIME 600        // Time-out [sec] for blanking TFT display (BL pin)
-
-#define otaclient mp3client           // OTA uses mp3client for connection to host
+#define MAX_DISPLAY_NETWORKS 3    // Max number of displayed networks on the display
+#define otaclient mp3client       // OTA uses mp3client for connection to host
 
 //10sec adaption
 #define WIFI_RECONNECT_INTERVAL 10000  // 10 Sekunden in Millisekunden
@@ -518,7 +521,7 @@ VS1053* vs1053player ;
 #include "handler/display.h"
 #include "handler/stream.h"
 #include "handler/mp3.h"
-
+#include "writeDefaultConfig.h"
 
 
 
@@ -531,47 +534,6 @@ VS1053* vs1053player ;
 //**************************************************************************************************
 // Setup for the program.                                                                          *
 //**************************************************************************************************
-/**
-* Default Prefs for the rotary encoder
-*/
-void saveDefaultPrefs ()
-{
-  // Time Server
-  nvsAddValue("clk_dst", String(1));
-  nvsAddValue("clk_offset", String(1));
-  nvsAddValue("clk_server", "pool.ntp.org");
-
-  // Default Radio Stations
-  nvsAddValue("preset_00", "charthits-high.rautemusik.fm                                      # 0 Rautemusik");
-  nvsAddValue("preset_01", "swr-swr3-live.cast.addradio.de/swr/swr3/live/mp3/128/stream.mp3   # 1 - SWR3");
-  nvsAddValue("preset_02", "dg-swr-https-fra-dtag-cdn.sslcast.addradio.de/swr/swr/raka04/mp3/128/stream.mp3   # 2 - SWR3 Party");
-  nvsAddValue("preset_03", "stream.antenne1.de/a1stg/livestream2.mp3                          # 3 - Antenne 1");
-  nvsAddValue("preset_04", "topradio-de-hz-fal-stream03-cluster01.radiohost.de/kissfm_128     # 4 - Kiss FM");
-  nvsAddValue("preset_05", "streamhq.top100station.com/top100station-high.mp3                 # 5 - TOP 100 Station");
-
-  // Wifi
-  nvsAddValue("wifi_00", "LS-GUEST/9832-7461-2058-3497-6125");
-
-  //nvsAddValue("KEY", "VALUE");
-
-  // Rotary Encoder
-  //nvsAddValue("pin_enc_clk", String(25));
-  //nvsAddValue("pin_enc_dt", String(26));
-  //nvsAddValue("pin_enc_sw", String(27));
-
-  // TFT Display
-  //nvsAddValue("pin_tft_cs", String(15));
-  //nvsAddValue("pin_tft_dc", String(2));
-
-  // VS1053 MP3 Encoder
-  //nvsAddValue("pin_vs_cs", String(5));
-  //nvsAddValue("pin_vs_dcs", String(32));
-  //nvsAddValue("pin_vs_dreq", String(4));
-
-
-}
-
-
 void setup()
 {
   int                       i ;                          // Loop control
@@ -589,7 +551,10 @@ void setup()
   Serial.println();
 
 
-  //saveDefaultPrefs(); // Uncommend on access problems to renew the prefs
+  // ATTENTION NVS config problems (joruf)
+  // Uncomment saveDefaultConfig() on access problems to re-write configuration props to NVS
+  //saveDefaultConfig();
+
 
   #if defined(BLUETFT)                               // Report display option
     dbgprint(dtyp, "BLUETFT");
@@ -700,10 +665,15 @@ void setup()
     pinMode(ini_block.tft_blx_pin, OUTPUT);          // enable output
   }
   enableBacklight(true);                                       // Enable backlight (if configured)
+
+  // SD Card mount disabled. We dont have one
+  /*
   if(ini_block.sd_cs_pin >= 0)                       // SD configured?
   {
     mountSDCard();
   }
+  */
+
   mk_lsan();                                            // Make a list of acceptable networks
                                                          // in preferences.
   WiFi.mode(WIFI_STA);                               // This ESP is a station
@@ -720,6 +690,7 @@ void setup()
   tftlog(p);                                         // On TFT too
   NetworkFound = connectwifi();                         // Connect to WiFi network
   dbgprint("Start server for commands");
+  delay(500);
   cmdserver.begin();                                    // Start http server
   if(NetworkFound)                                   // OTA only if Wifi network found
   {
@@ -756,7 +727,7 @@ void setup()
 
   // Init settings for rotary switch (if existing).
   if(( ini_block.enc_clk_pin + ini_block.enc_dt_pin + ini_block.enc_sw_pin) <= 2 ) { // If rotary encoder prefs are missed, probably there are no prefs saved. Write the prefs new
-    saveDefaultPrefs();
+    saveDefaultConfig();
     dbgprint("All default prefs added, please restart the machine!");
   }
   if(( ini_block.enc_clk_pin + ini_block.enc_dt_pin + ini_block.enc_sw_pin)> 2 )

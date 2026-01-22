@@ -76,6 +76,7 @@ const char* getEncryptionType ( wifi_auth_mode_t thisType )
 // List the available networks.                                                                    *
 // Acceptable networks are those who have an entry in the preferences.                             *
 // SSIDs of available networks will be saved for use in webinterface.                              *
+// OPTIMIERT: Zeigt nur die 4 stärksten Netzwerke auf dem Display!                                 *
 //**************************************************************************************************
 void listNetworks()
 {
@@ -83,6 +84,8 @@ void listNetworks()
   wifi_auth_mode_t encryption ;       // TKIP(WPA), WEP, etc.
   const char*      acceptable ;       // Netwerk is acceptable for connection
   int              i, j ;             // Loop control
+  char             displayLine[40];   // Buffer für Display-Zeilen
+  int              displayCount = 0;  // Zähler für angezeigte Netzwerke
 
   dbgprint ( "Scan Networks" ) ;                         // Scan for nearby networks
   tftlog ( "Scan Networks" ) ;
@@ -97,10 +100,21 @@ void listNetworks()
     tftlog ( "Missing wifi connection" ) ;
     return ;
   }
-  // print the list of networks seen:
+  
+  // Anzahl der gefundenen Netzwerke anzeigen
   dbgprint ( "Number of available networks: %d", numSsid ) ;
   
-  // Print the network number and name for each network found and
+  // Zeige auf Display nur die Info dass wir filtern
+  if (numSsid > MAX_DISPLAY_NETWORKS) {
+    sprintf(displayLine, "Found %d (show top %d)", numSsid, MAX_DISPLAY_NETWORKS);
+  } else {
+    sprintf(displayLine, "Found %d networks", numSsid);
+  }
+  tftlog(displayLine);
+  delay(800);
+  
+  // ALLE Netzwerke im Serial Monitor ausgeben (wie bisher)
+  // Aber nur die MAX_DISPLAY_NETWORKS stärksten auf dem Display
   for ( i = 0 ; i < numSsid ; i++ )
   {
     acceptable = "" ;                                    // Assume not acceptable
@@ -114,15 +128,42 @@ void listNetworks()
       }
     }
     encryption = WiFi.encryptionType ( i ) ;
+    
+    // IMMER im Serial Monitor ausgeben (alle Netzwerke)
     dbgprint ( "%2d - %-25s Signal: %3d dBm, Encryption %4s, %s",
                i + 1, WiFi.SSID(i).c_str(), WiFi.RSSI(i),
                getEncryptionType ( encryption ),
                acceptable ) ;
+    
+    // Nur die ersten MAX_DISPLAY_NETWORKS Netzwerke auf dem Display anzeigen
+    // (WiFi.scanNetworks() sortiert bereits nach Signalstärke - stärkste zuerst!)
+    if (displayCount < MAX_DISPLAY_NETWORKS) {
+      String ssidShort = WiFi.SSID(i);
+      if (ssidShort.length() > 16) {
+        ssidShort = ssidShort.substring(0, 16);  // SSID auf 16 Zeichen kürzen
+      }
+      
+      // Display SSID and SSID strength
+      sprintf(displayLine, "%d-%s %ddBm",
+              i + 1, 
+              ssidShort.c_str(), 
+              WiFi.RSSI(i));
+      
+      tftlog(displayLine);
+      delay(400);  // Pause zwischen den Netzwerken
+      displayCount++;
+    }
+    
     // Remember this network for later use
     networks += WiFi.SSID(i) + String ( "|" ) ;
   }
+  
   dbgprint ( "End of list" ) ;
+  
+  delay(1000);  // Letzte Zeile 1 Sekunde anzeigen
 }
+
+
 
 
 
@@ -136,53 +177,68 @@ void listNetworks()
 //**************************************************************************************************
 bool connectwifi()
 {
-  char*      pfs ;                                      // Pointer to formatted string
-  char*      pfs2 ;                                     // Pointer to formatted string
-  char*      pfs3 ;                                     // Pointer to formatted string
-  bool       localAP = false ;                          // True if only local AP is left
+  char* pfs ;                                      
+  bool       localAP = false ;                          
+  WifiInfo_t winfo ;                                    
 
-  WifiInfo_t winfo ;                                    // Entry from wifilist
+  WiFi.disconnect() ;                                   
+  WiFi.softAPdisconnect(true) ;                         
 
-  WiFi.disconnect() ;                                   // After restart the router could
-  WiFi.softAPdisconnect(true) ;                         // still keep the old connection
-  if ( wifilist.size()  )                               // Any AP defined?
+  if ( wifilist.size() )                                
   {
-    if ( wifilist.size() == 1 )                         // Just one AP defined in preferences?
+    if ( wifilist.size() == 1 )                         
     {
-      winfo = wifilist[0] ;                             // Get this entry
-      WiFi.begin ( winfo.ssid, winfo.passphrase ) ;     // Connect to single SSID found in wifi_xx
-      dbgprint ( "Try WiFi %s", winfo.ssid ) ;          // Message to show during WiFi connect
+      winfo = wifilist[0] ;                             
+      WiFi.begin ( winfo.ssid, winfo.passphrase ) ;     
+      dbgprint ( "Try WiFi %s", winfo.ssid ) ;          
     }
-    else                                                // More AP to try
+    else                                                
     {
-      wifiMulti.run() ;                                 // Connect to best network
+      wifiMulti.run() ;                                 
     }
-    if (  WiFi.waitForConnectResult() != WL_CONNECTED ) // Try to connect
+
+    // Warte max 15 Sek auf Verbindung
+    if ( WiFi.waitForConnectResult() != WL_CONNECTED ) 
     {
-      localAP = true ;                                  // Error, setup own AP
+      localAP = true ;                                  
     }
   }
   else
   {
-    localAP = true ;                                    // Not even a single AP defined
+    localAP = true ;                                    
   }
-  if ( localAP )                                        // Must setup local AP?
-  {
-    dbgprint ( "WiFi Failed!  Trying to setup AP with name %s and password %s.", NAME, NAME ) ;
-    WiFi.softAP ( NAME, NAME ) ;                        // This ESP will be an AP
-    pfs = dbgprint ( "IP = 192.168.4.1" ) ;             // Address for AP
-  }
-  else
-  {
-    ipaddress = WiFi.localIP().toString() ;             // Form IP address
 
-    tftlog((String("WiFi Name: ") + WiFi.SSID()).c_str()); // WiFi Name. E.g. LS-Gast
+  if ( localAP )                                        
+  {
+    dbgprint ( "WiFi Failed! Setup AP: %s", NAME ) ;
     
-    pfs = dbgprint ( "IP = %s", ipaddress.c_str() ) ;   // String to dispay on TFT
+    WiFi.mode(WIFI_AP); // WICHTIG: Modus hart auf Access Point stellen
+    
+    // IP-Konfiguration erzwingen
+    IPAddress local_IP(192, 168, 4, 1);
+    IPAddress gateway(192, 168, 4, 1);
+    IPAddress subnet(255, 255, 255, 0);
+    WiFi.softAPConfig(local_IP, gateway, subnet);
+    
+    // Hotspot starten
+    WiFi.softAP ( NAME, NAME ) ;                        
+    delay(1000);
+    ipaddress = WiFi.softAPIP().toString();
+    pfs = dbgprint ( "IP = %s", ipaddress.c_str() ) ;             
+    NetworkFound = true; // Damit der Webserver im Loop startet
   }
-  tftlog ( pfs ) ;                                      // Show IP
-  tftlog ( "\f" ) ;                                     // Select new page if NEXTION 
-  return ( localAP == false ) ;                         // Return result of connection
+  else
+  {
+    ipaddress = WiFi.localIP().toString() ;             
+    tftlog((String("WiFi Name: ") + WiFi.SSID()).c_str()); 
+    pfs = dbgprint ( "IP = %s", ipaddress.c_str() ) ;   
+    NetworkFound = true;
+  }
+
+  tftlog ( pfs ) ;
+  delay(500);
+  tftlog ( "\f" ) ;
+  return ( localAP == false ) ;                         
 }
 
 

@@ -264,6 +264,8 @@ void VS1053::begin() {
     //SPI Clock to 4 MHz. Now you can set high speed SPI clock.
     VS1053_SPI = SPISettings(5000000, MSBFIRST, SPI_MODE0);
     write_register(SCI_MODE, _BV(SM_SDINEW) | _BV(SM_LINE1));
+    //write_register(SCI_BASS, 0x0000); // Setzt Bass/Treble auf neutral (0)
+
     testComm("Fast SPI, Testing VS1053 read/write registers again...");
     delay(10);
     await_data_request() ;

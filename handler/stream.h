@@ -211,6 +211,8 @@ void handleDisplayData()
   }
   
   claimSPI("hspec"); // Claim SPI bus
+  //uint8_t testTone[4] = {0, 0, 0, 0}; 
+  //vs1053player->setTone(testTone); // Setzt Bass/Treble sicher auf neutral
   if(isSoundPlaying() == false) {
     vs1053player->setVolume(0);                           // Mute
   } else {

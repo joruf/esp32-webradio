@@ -1,0 +1,5 @@
+Arduino IDE schließen wegen Serial Monitor
+
+esptool.py --chip esp32 --port /dev/ttyUSB0 --baud 460000 write_flash -z 0x10000 Esp32_Webradio_v2.0_2025.ino.bin
+
+

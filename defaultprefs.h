@@ -27,19 +27,19 @@ tonela = 0
 tonelf = 0
 #
 preset = 6
-# Some preset examples
-preset_00 = charthits-high.rautemusik.fm                                                    #  0 - Rautemusik
-preset_01 = liveradio.swr.de/sw282p3/swr3/play.mp3                                          #  1 - SWR3
-preset_02 = dg-swr-https-fra-dtag-cdn.sslcast.addradio.de/swr/swr/raka04/mp3/128/stream.mp3 #  2 - SWR3 Party
-preset_03 = stream.antenne1.de/a1stg/livestream2.mp3                                        #  3 - Antenne 1
-preset_04 = topradio-de-hz-fal-stream03-cluster01.radiohost.de/kissfm_128                   #  4 - Kiss FM
-preset_05 = streamhq.top100station.com/top100station-high.mp3                               #  5 - Top 100 Station
-preset_06 = blackblack.stream.laut.fm/blackblack                                            #  6 - Black
-preset_07 = de-hz-fal-stream06.rautemusik.fm/blackbeats                                     #  7 - Black Stream
-preset_08 = stream.antenne1.de/80er/livestream2.mp3                                         #  8 - Antenne 1 80ger
-preset_09 = dg-wdr-https-dus-dtag-cdn.sslcast.addradio.de/wdr/1live/live/mp3/128/stream.mp3 #  9 - 1.Live
-preset_10 = http://185.52.127.159/de/33001/mp3_128.mp3                                      # 10 - Energy Berlin
-preset_11 = http://185.52.127.170/de/33005/mp3_128.mp3                                      # 11 - Energy Stuttgart
+preset_00 = charthits-high.rautemusik.fm                    # 0 - Rautemusik
+preset_01 = stream.sunshine-live.de/live/mp3-192            # 1 - Sunshine Live
+preset_02 = listen.technobase.fm/tunein-mp3                 # 2 - Technobase.FM (HandsUp & Dance)
+preset_03 = stream.slam.nl/slam_mp3                         # 3 - SLAM Live
+preset_04 = ic.radiomonster.fm/dance.ultra                  # 4 - RadioMonster Dance
+preset_05 = ice1.somafm.com/groovesalad-128-mp3             # 5 - SomaFM
+preset_06 = dancefm.net/listen.m3u                          # 6 - Dance FM (Global/US-Style)
+preset_07 = stream.antenne1.de/a1stg/livestream2.mp3        # 7 - Antenne 1
+preset_08 = topradio-de-hz-fal-stream03-cluster01.radiohost.de/kissfm_128     # 8 - Kiss FM
+preset_09 = streamhq.top100station.com/top100station-high.mp3                 # 9 - TOP 100 Station
+preset_10 = stream.antenne1.de/80er/livestream2.mp3                           # 10 - Antenne 1 80ger
+preset_11 = play.antenne.de/dance-xxl.m3u                                     # 11 - Antenne 1 Dance
+preset_12 = liveradio.swr.de/sw331ch/swr3/play.aac                            # 12 - SWR3#
 #
 # Clock offset and daylight saving time
 clk_server = pool.ntp.org                            # Time server to be used
