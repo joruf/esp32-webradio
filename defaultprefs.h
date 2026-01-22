@@ -1,31 +1,16 @@
 //filename: defaultprefs.h
 
 // Default preferences in raw data format for PROGMEM
-//
+// Required when pressing the "Load default Values" button on webpage/config.html
 const char defprefs_txt[] PROGMEM = R"=====(
-alrm_start = none     # Format: hh:min 12:30
-alrm_stop = none      # Format: hh:min 13:00
+alrm_start = "6:30"           # Format: hh:min 12:30
+alrm_stop = "7:30"            # Format: hh:min 13:00
 
-# Example configuration
-# Programmable input pins:
-gpio_00 = uppreset = 1
-gpio_12 = upvolume = 2
-gpio_13 = downvolume = 2
-gpio_14 = stop
-gpio_17 = resume
-gpio_34 = station = icecast.omroep.nl:80/radio1-bb-mp3
-#
-# Enter your WiFi network specs here: {NetworkName}/{Password}
-# 00=Prio1, 01=Prio2 (optional)
-wifi_00 = SSID1/PASSWD1
-wifi_01 = SSID2/PASSWD2
-#
-volume = 72
-toneha = 0
-tonehf = 0
-tonela = 0
-tonelf = 0
-#
+# Clock offset and daylight saving time
+clk_server = pool.ntp.org     # Time server to be used
+clk_offset = 1                # Offset with respect to UTC in hours
+clk_dst = 1                   # Offset during daylight saving time (hours)
+
 preset = 6
 preset_00 = charthits-high.rautemusik.fm                    # 0 - Rautemusik
 preset_01 = stream.sunshine-live.de/live/mp3-192            # 1 - Sunshine Live
@@ -40,12 +25,24 @@ preset_09 = streamhq.top100station.com/top100station-high.mp3                 # 
 preset_10 = stream.antenne1.de/80er/livestream2.mp3                           # 10 - Antenne 1 80ger
 preset_11 = play.antenne.de/dance-xxl.m3u                                     # 11 - Antenne 1 Dance
 preset_12 = liveradio.swr.de/sw331ch/swr3/play.aac                            # 12 - SWR3
-#
-# Clock offset and daylight saving time
-clk_server = pool.ntp.org                            # Time server to be used
-clk_offset = 1                                       # Offset with respect to UTC in hours
-clk_dst = 1                                          # Offset during daylight saving time (hours)
-# Some IR codes
-ir_40BF = upvolume = 2
-ir_C03F = downvolume = 2
+
+# Example configuration
+# Programmable input pins:
+gpio_00 = uppreset = 1
+gpio_12 = upvolume = 2
+gpio_13 = downvolume = 2
+gpio_14 = stop
+gpio_17 = resume
+gpio_34 = station = icecast.omroep.nl:80/radio1-bb-mp3
+
+# Enter your WiFi network specs here: {NetworkName}/{Password}
+# 00=Prio1, 01=Prio2 (optional)
+wifi_00 = SSID1/PASSWD1
+wifi_01 = SSID2/PASSWD2
+
+volume = 72
+toneha = 0
+tonehf = 0
+tonela = 0
+tonelf = 0
 )=====" ;

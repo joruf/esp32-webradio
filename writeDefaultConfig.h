@@ -1,15 +1,14 @@
 /*
  * ESP32 Webradio - Config Reset Function
- * 
- * Diese Funktion schreibt alle Default-Einstellungen ins NVS
- * Einfach vor mk_lsan() aufrufen um die Config zu erneuern
+ * This function writes all default settings to the NVS.
+ * Simply call it before mk_lsan() to refresh/reset the configuration.
  */
 
 //**************************************************************************************************
 //                              S A V E D E F A U L T C O N F I G                                  *
 //**************************************************************************************************
-// Speichert die komplette Default-Konfiguration ins NVS                                           *
-// Überschreibt alle vorhandenen Einstellungen!                                                    *
+// Saves the complete default configuration to the NVS                                             *
+// Overwrites all existing settings!                                                               *
 //**************************************************************************************************
 void saveDefaultConfig()
 {
@@ -91,13 +90,6 @@ void saveDefaultConfig()
   nvsAddValue("clk_offset", "1");      // UTC+1 (Deutschland Winter)
   nvsAddValue("clk_dst", "1");         // +1 Stunde Sommerzeit
   dbgprint("  ✅ Zeitserver konfiguriert");
-  
-  // ═══════════════════════════════════════════════════════════════
-  // IR FERNBEDIENUNG (Optional)
-  // ═══════════════════════════════════════════════════════════════
-  // Optional: IR-Codes nur wenn IR-Fernbedienung vorhanden
-  // nvsAddValue("ir_40BF", "upvolume = 2");
-  // nvsAddValue("ir_C03F", "downvolume = 2");
   
   dbgprint("\n╔═════════════════════════════════════════╗");
   dbgprint("║  ✅ Default-Konfiguration gespeichert!  ║");

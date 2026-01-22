@@ -54,9 +54,10 @@ Firmware Changes:
 2.07  2026-01-21  MQTT removed, mute button removed from index.html, html button size changed.
                   Hardcoded GPIO pins for the rotary encoder, IR receiver, SD card, TFT, and VS1053 fixed within the code.
                   Webinterface layout adapted.
-2.08  2026-01-22  writeDefaultConfig.h implemented to write the default props into the NVS on problems
-                  SD-Card disabled. Display NetworkList listNetworks() into the display
-2.09  2026-01-22  IR input recognition removed
+2.08  2026-01-22  writeDefaultConfig.h implemented to write the default props into the NVS on problems.
+                  SD-Card disabled. Display NetworkList listNetworks() into the display.
+2.09  2026-01-22  IR remote control recognition removed.
+                  defaultprefs.h structured
 */
 
 // ESP32-Radio can be updated (OTA) to the latest version from a remote server.
