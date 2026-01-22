@@ -39,7 +39,7 @@ preset_08 = topradio-de-hz-fal-stream03-cluster01.radiohost.de/kissfm_128     # 
 preset_09 = streamhq.top100station.com/top100station-high.mp3                 # 9 - TOP 100 Station
 preset_10 = stream.antenne1.de/80er/livestream2.mp3                           # 10 - Antenne 1 80ger
 preset_11 = play.antenne.de/dance-xxl.m3u                                     # 11 - Antenne 1 Dance
-preset_12 = liveradio.swr.de/sw331ch/swr3/play.aac                            # 12 - SWR3#
+preset_12 = liveradio.swr.de/sw331ch/swr3/play.aac                            # 12 - SWR3
 #
 # Clock offset and daylight saving time
 clk_server = pool.ntp.org                            # Time server to be used

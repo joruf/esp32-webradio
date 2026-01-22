@@ -30,8 +30,8 @@ void saveDefaultConfig()
   // ALARM KONFIGURATION
   // ═══════════════════════════════════════════════════════════════
   dbgprint("\n[2/7] Alarm-Einstellungen...");
-  nvsAddValue("alrm_start", "none");
-  nvsAddValue("alrm_stop", "none");
+  nvsAddValue("alrm_start", "6:30");
+  nvsAddValue("alrm_stop", "7:30");
   dbgprint("  ✅ Alarm konfiguriert");
   
   // ═══════════════════════════════════════════════════════════════
@@ -68,19 +68,19 @@ void saveDefaultConfig()
   // RADIO STATIONEN (PRESETS)
   // ═══════════════════════════════════════════════════════════════
   dbgprint("\n[6/7] Radio-Stationen...");
-  nvsAddValue("preset_00", "charthits-high.rautemusik.fm");
-  nvsAddValue("preset_01", "stream.sunshine-live.de/live/mp3-192");
-  nvsAddValue("preset_02", "listen.technobase.fm/tunein-mp3");
-  nvsAddValue("preset_03", "stream.slam.nl/slam_mp3");
-  nvsAddValue("preset_04", "ic.radiomonster.fm/dance.ultra");
-  nvsAddValue("preset_05", "ice1.somafm.com/groovesalad-128-mp3");
-  nvsAddValue("preset_06", "dancefm.net/listen.m3u");
-  nvsAddValue("preset_07", "stream.antenne1.de/a1stg/livestream2.mp3");
-  nvsAddValue("preset_08", "topradio-de-hz-fal-stream03-cluster01.radiohost.de/kissfm_128");
-  nvsAddValue("preset_09", "streamhq.top100station.com/top100station-high.mp3");
-  nvsAddValue("preset_10", "stream.antenne1.de/80er/livestream2.mp3");
-  nvsAddValue("preset_11", "play.antenne.de/dance-xxl.m3u");
-  nvsAddValue("preset_12", "liveradio.swr.de/sw331ch/swr3/play.aac");
+  nvsAddValue("preset_00", "charthits-high.rautemusik.fm # 0 - Rautemusik");
+  nvsAddValue("preset_01", "stream.sunshine-live.de/live/mp3-192 # 1 - Sunshine Live");
+  nvsAddValue("preset_02", "listen.technobase.fm/tunein-mp3 # 2 - Technobase.FM (HandsUp & Dance)");
+  nvsAddValue("preset_03", "stream.slam.nl/slam_mp3 # 3 - SLAM Live");
+  nvsAddValue("preset_04", "ic.radiomonster.fm/dance.ultra # 4 - RadioMonster Dance");
+  nvsAddValue("preset_05", "ice1.somafm.com/groovesalad-128-mp3 # 5 - SomaFM");
+  nvsAddValue("preset_06", "dancefm.net/listen.m3u # 6 - Dance FM (Global/US-Style)");
+  nvsAddValue("preset_07", "stream.antenne1.de/a1stg/livestream2.mp3 # 7 - Antenne 1");
+  nvsAddValue("preset_08", "topradio-de-hz-fal-stream03-cluster01.radiohost.de/kissfm_128 # 8 - Kiss FM");
+  nvsAddValue("preset_09", "streamhq.top100station.com/top100station-high.mp3 # 9 - TOP 100 Station");
+  nvsAddValue("preset_10", "stream.antenne1.de/80er/livestream2.mp3 # 10 - Antenne 1 80ger");
+  nvsAddValue("preset_11", "play.antenne.de/dance-xxl.m3u # 11 - Antenne 1 Dance");
+  nvsAddValue("preset_12", "liveradio.swr.de/sw331ch/swr3/play.aac # 12 - SWR3");
   dbgprint("  ✅ 13 Radio-Stationen konfiguriert");
   
   // ═══════════════════════════════════════════════════════════════

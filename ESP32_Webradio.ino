@@ -39,7 +39,7 @@
 
 // Define the version number, also used for webserver as Last-Modified header and to
 // check version for update.  The format must be exactly as specified by the HTTP standard!
-#define FIRMWARE     "v2.08 2026-01-22"
+#define FIRMWARE     "v2.09 2026-01-22"
 /*
 Firmware Changes:
 2.00  2025-03-06  Reload time changes on problems with the data connection.
@@ -56,6 +56,7 @@ Firmware Changes:
                   Webinterface layout adapted.
 2.08  2026-01-22  writeDefaultConfig.h implemented to write the default props into the NVS on problems
                   SD-Card disabled. Display NetworkList listNetworks() into the display
+2.09  2026-01-22  IR input recognition removed
 */
 
 // ESP32-Radio can be updated (OTA) to the latest version from a remote server.
@@ -510,7 +511,6 @@ VS1053* vs1053player ;
 #include "handler/upgrade.h"
 #include "handler/alarm.h"
 #include "handler/loop.h"
-#include "handler/ir.h"
 #include "handler/setup.h"
 #include "handler/xml.h"
 #include "handler/time.h"
@@ -830,7 +830,7 @@ void loop()
   scanserial();                                    // Handle serial input
   scanserial2();                                   // Handle serial input from NEXTION (if active)
   scandigital();                                   // Scan digital inputs
-  scanIR();                                        // See if IR input
+  //scanIR();                                        // See if IR input
   ArduinoOTA.handle();                             // Check for OTA
   mp3loop();                                       // Do more mp3 related actions
   handlehttpreply();
