@@ -1,12 +1,10 @@
-
-
-
-
-//**************************************************************************************************
-//                                      T F T S E T                                                *
-//**************************************************************************************************
-// Request to display a segment on TFT.  Version for char* and String parameter.                   *
-//**************************************************************************************************
+/**
+ * @brief Requests display of a text on the TFT display (char* version).
+ * 
+ * @param inx Index of the TFT segment (must be < TFTSECS)
+ * @param str String to display (as char*)
+ * @note The actual display update happens asynchronously in handle_tft_txt()
+ */
 void showTextOnTFT(uint16_t inx, const char *str )
 {
   if(inx < TFTSECS)                                 // Segment available on display
@@ -19,6 +17,13 @@ void showTextOnTFT(uint16_t inx, const char *str )
   }
 }
 
+/**
+ * @brief Requests display of a text on the TFT display (String reference version).
+ * 
+ * @param inx Index of the TFT segment (must be < TFTSECS)
+ * @param str String to display (as String reference)
+ * @note The actual display update happens asynchronously in handle_tft_txt()
+ */
 void showTextOnTFT(uint16_t inx, String& str )
 {
   if(inx < TFTSECS)                                 // Segment available on display
@@ -29,16 +34,15 @@ void showTextOnTFT(uint16_t inx, String& str )
 }
 
 
-
-
-
-
-//**************************************************************************************************
-//                                           BACKLIGHT  S E T                                      *
-//**************************************************************************************************
-// Enable or disable the TFT backlight if configured.                                              *
-// May be called from interrupt level.                                                             *
-//**************************************************************************************************
+/**
+ * @brief Turns the TFT backlight on or off.
+ * 
+ * Supports both normal (tft_bl_pin) and inverted (tft_blx_pin) logic.
+ * Can be called from interrupt context (IRAM_ATTR).
+ * 
+ * @param enable true = backlight ON, false = OFF
+ * @note When enabling, the bltimer (backlight timeout counter) is reset.
+ */
 void IRAM_ATTR enableBacklight(bool enable)
 {
   if(ini_block.tft_bl_pin >= 0) {                     // Backlight for TFT control?
@@ -55,14 +59,11 @@ void IRAM_ATTR enableBacklight(bool enable)
 }
 
 
-
-
-
-//**************************************************************************************************
-//                                           T F T L O G                                           *
-//**************************************************************************************************
-// Log to TFT if enabled.                                                                          *
-//**************************************************************************************************
+/**
+ * @brief Writes a log message to the TFT display if configured.
+ * 
+ * @param str String to log
+ */
 void tftlog(const char *str)
 {
   if(tft)                                           // TFT configured?
@@ -73,52 +74,89 @@ void tftlog(const char *str)
 }
 
 
-//**************************************************************************************************
-//                                      D I S P L A Y I N F O                                      *
-//**************************************************************************************************
-// Show a string on the LCD at a specified y-position (0..2) in a specified color.                 *
-// The parameter is the index in tftdata[].                                                        *
-//**************************************************************************************************
+/**
+ * @brief Clears the background area for a TFT segment.
+ * 
+ * @param p Pointer to the segment to display
+ * @param width Width of the area to clear
+ */
+static void clearSegmentBackground(scrseg_struct* p, uint16_t width)
+{
+  dsp_fillRect(0, p->y, width, p->height, BLACK);
+}
+
+/**
+ * @brief Draws a divider line above a segment (if space permits and desired).
+ * 
+ * @param p Pointer to the segment to display
+ * @param width Width of the divider line
+ */
+static void drawDividerAboveSegment(scrseg_struct* p, uint16_t width)
+{
+  if((dsp_getheight() > 64) && (p->y > 1))
+  {
+    dsp_fillRect(0, p->y - 4, width, 1, GREEN);      // show divider above text
+  }
+}
+
+/**
+ * @brief Converts and draws the text of a segment on the display.
+ * 
+ * @param p Pointer to the segment to display
+ */
+static void drawSegmentText(scrseg_struct* p)
+{
+  uint16_t len = p->str.length();                       // Required length of buffer
+  if(len++)
+  {
+    char buf[len];                                      // Need some buffer space
+    p->str.toCharArray(buf, len);                       // Make a local copy of the string
+    utf8ascii(buf);                                     // Convert possible UTF8
+    dsp_setTextColor(p->color);                         // Set the requested color
+    dsp_setCursor(0, p->y);                             // Prepare to show the info
+    dsp_println(buf);                                   // Show the string
+  }
+}
+
+/**
+ * @brief Displays a string on the LCD at a specified y-position.
+ * 
+ * The position is determined by the index in tftdata[] (0 = top line,
+ * 1..TFTSECS-1 = bottom lines). The top line is automatically shortened
+ * by TIMEPOS characters to make room for the clock display.
+ * 
+ * @param inx Index in tftdata[] (must be < TFTSECS)
+ * @note Assumes that 'tft' (display handle) is valid.
+ */
 void displayinfo(uint16_t inx)
 {
-  uint16_t       width = dsp_getwidth();                  // Normal number of colums
+  uint16_t       width = dsp_getwidth();                // Normal number of colums
   scrseg_struct* p = &tftdata[inx];
-  uint16_t len;                                           // Length of string, later buffer length
 
   if(inx == 0)                                          // Topline is shorter
   {
-    width += TIMEPOS;                                     // Leave space for time
+    width += TIMEPOS;                                   // Leave space for time
   }
+  
   if(tft)                                               // TFT active?
   {
-    dsp_fillRect(0, p->y, width, p->height, BLACK);    // Clear the space for new info
-    if(( dsp_getheight() > 64) &&(p->y > 1))        // Need and space for divider?
-    {
-      dsp_fillRect(0, p->y - 4, width, 1, GREEN);      // show divider above text
-    }
-    len = p->str.length();                                // Required length of buffer
-    if(len++)                                           // Check string length, set buffer length
-    {
-      char buf [ len ];                                   // Need some buffer space
-      p->str.toCharArray(buf, len);                    // Make a local copy of the string
-      utf8ascii(buf);                                  // Convert possible UTF8
-      dsp_setTextColor(p->color);                      // Set the requested color
-      dsp_setCursor(0, p->y);                          // Prepare to show the info
-      dsp_println(buf);                                // Show the string
-    }
+    clearSegmentBackground(p, width);
+    drawDividerAboveSegment(p, width);
+    drawSegmentText(p);
   }
 }
 
 
-
-
-
-
-//**************************************************************************************************
-//                                H A N D L E _ T F T _ T X T                                      *
-//**************************************************************************************************
-// Check if tft refresh is requested.                                                              *
-//**************************************************************************************************
+/**
+ * @brief Processes pending TFT text update requests.
+ * 
+ * Checks all segments for a set update_req flag. When a request is found,
+ * the corresponding segment is updated. Only one request is processed per call.
+ * 
+ * @return true  if an update was performed
+ * @return false if no pending request was found
+ * @note This function should be called regularly in the main loop.
+ */
 bool handle_tft_txt()
 {
   for(uint16_t i = 0; i < TFTSECS; i++)              // Handle all sections

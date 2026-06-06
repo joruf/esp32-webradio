@@ -1,33 +1,41 @@
-
-
-
-//**************************************************************************************************
-//                                          T I M E R 6 0 S E C                                    *
-//**************************************************************************************************
-// Extra watchdog.  Called every 60 seconds.                                                       *
-// If totalcount has not been changed, there is a problem and playing will stop.                   *
-// Note that calling timely procedures within this routine or in called functions will             *
-// cause a crash!                                                                                  *
-//**************************************************************************************************
+/**
+ * @brief 60-second timer interrupt (extra watchdog).
+ * 
+ * This function is called every 60 seconds. It checks the radio alarm
+ * and enables/disables it when needed.
+ * 
+ * @note Runs in interrupt context (IRAM_ATTR)
+ * @note Calling time-consuming functions may cause crashes!
+ * @see handleRadioAlarm()
+ */
 void IRAM_ATTR timer60sec()
 {
   //dbgprint ("60 seconds over, last minute %d ", timeinfo.tm_min);
   // Enable/Disable radio alarm at specified time
   handleRadioAlarm();
-
 }
 
-
-
-
-//**************************************************************************************************
-//                                          T I M E R 1 0 S E C                                    *
-//**************************************************************************************************
-// Extra watchdog.  Called every 10 seconds.                                                       *
-// If totalcount has not been changed, there is a problem and playing will stop.                   *
-// Note that calling timely procedures within this routine or in called functions will             *
-// cause a crash!                                                                                  *
-//**************************************************************************************************
+/**
+ * @brief 10-second timer interrupt (extra watchdog).
+ * 
+ * This function is called every 10 seconds. It checks whether data is still
+ * being sent to the MP3 decoder. If inactivity persists, playback is either
+ * restarted or the ESP32 is reset.
+ * 
+ * @details
+ * - Counts 6 calls (60 seconds) then calls timer60sec()
+ * - Checks the number of bytes sent in the last 10 seconds
+ * - If 0 bytes and more than 10 consecutive failures → ESP.restart()
+ * - In playlist mode, the playlist is reset
+ * - On repeated failure, the current station is restarted
+ * - On successful data transfer, the bitrate is calculated
+ * 
+ * @note Runs in interrupt context (IRAM_ATTR)
+ * @note Calling time-consuming functions may cause crashes!
+ * @see timer60sec()
+ * @see playStream()
+ * @see totalcount (global) - Counter of sent bytes
+ */
 void IRAM_ATTR timer10sec()
 {
   sv int16_t   count60sec = 0 ;                   // Counter for activatie 60 seconds process
@@ -36,7 +44,6 @@ void IRAM_ATTR timer10sec()
     timer60sec();                                // do 10 second procedure
     count60sec = 0 ;                              // Reset count
   }
-
 
   static uint32_t oldtotalcount = 7321 ;          // Needed for change detection
   static uint8_t  morethanonce = 0 ;              // Counter for succesive fails
@@ -75,13 +82,27 @@ void IRAM_ATTR timer10sec()
   }
 }
 
-
-//**************************************************************************************************
-//                                          T I M E R 1 0 0                                        *
-//**************************************************************************************************
-// Called every 100 msec on interrupt level, so must be in IRAM and no lengthy operations          *
-// allowed.                                                                                        *
-//**************************************************************************************************
+/**
+ * @brief 100-millisecond timer interrupt.
+ * 
+ * This function is called every 100 ms in interrupt context. It manages
+ * time updates, backlight timeout, encoder inactivity, and detection of
+ * single/double/triple clicks of the encoder button.
+ * 
+ * @details
+ * - Counts up to 10 seconds and calls timer10sec()
+ * - Every second: Updates timeinfo (sec, min, hour) and sets time_req
+ * - Backlight: Turns off display after BACKLIGHT_TIME seconds
+ * - Encoder inactivity counter increments (reset by interrupts)
+ * - Click detection: After 4 stable cycles, sets singleclick,
+ *   doubleclick or tripleclick
+ * 
+ * @note Runs in interrupt context (IRAM_ATTR)
+ * @note No long or blocking operations allowed!
+ * @see timer10sec()
+ * @see enableBacklight()
+ * @see singleclick, doubleclick, tripleclick (global)
+ */
 void IRAM_ATTR timer100()
 {
   sv int16_t   count10sec = 0 ;                   // Counter for activatie 10 seconds process
@@ -156,17 +177,23 @@ void IRAM_ATTR timer100()
   }
 }
 
-
-
-
-
-
-
-//**************************************************************************************************
-//                                     S C A N S E R I A L                                         *
-//**************************************************************************************************
-// Listen to commands on the Serial inputline.                                                     *
-//**************************************************************************************************
+/**
+ * @brief Reads and processes commands from the Serial interface.
+ * 
+ * This function is called regularly in the main loop. It reads characters
+ * from the serial input, assembles them into commands (ending with \n or \r),
+ * and passes them to analyzeCmd() for execution.
+ * 
+ * @details
+ * - Command echo is not sent (commented out)
+ * - When NEXTION is active, commands with prefix "N:" are forwarded there
+ * - Commands longer than sizeof(cmd)-2 are discarded
+ * - The result from analyzeCmd() is printed via dbgprint()
+ * 
+ * @note Can be called in main loop context (not in interrupt)
+ * @see analyzeCmd()
+ * @see nxtserial (global) - For NEXTION override
+ */
 void scanserial()
 {
   static String serialcmd ;                      // Command from Serial input
@@ -207,12 +234,24 @@ void scanserial()
   }
 }
 
-
-//**************************************************************************************************
-//                                     S C A N S E R I A L 2                                       *
-//**************************************************************************************************
-// Listen to commands on the 2nd Serial inputline (NEXTION).                                       *
-//**************************************************************************************************
+/**
+ * @brief Reads and processes commands from the second serial interface (NEXTION).
+ * 
+ * This function is called regularly in the main loop. It reads commands
+ * from the NEXTION display (terminated by 0xFF 0xFF 0xFF) and forwards them
+ * to analyzeCmd() for execution.
+ * 
+ * @details
+ * - Commands end with three consecutive 0xFF bytes
+ * - Only commands with prefix 0x70 (button pressed) are processed
+ * - The prefix is removed before passing the command to analyzeCmd()
+ * - Commands that are too long are discarded
+ * 
+ * @note Can be called in main loop context (not in interrupt)
+ * @note Requires active nxtserial object
+ * @see analyzeCmd()
+ * @see nxtserial (global) - NEXTION serial object
+ */
 void scanserial2()
 {
   static String  serialcmd ;                       // Command from Serial input
@@ -259,13 +298,27 @@ void scanserial2()
   }
 }
 
-
-//**************************************************************************************************
-//                                     S C A N D I G I T A L                                       *
-//**************************************************************************************************
-// Scan digital inputs.                                                                            *
-//**************************************************************************************************
-void  scandigital()
+/**
+ * @brief Scans digital inputs (GPIOs and touch pins) for edge detection.
+ * 
+ * This function is called regularly in the main loop (max every 100 ms).
+ * It detects HIGH→LOW changes on configured digital inputs and touch pins,
+ * then executes the associated command.
+ * 
+ * @details
+ * - Debouncing: At least 100 ms between scans
+ * - For digital pins: Only HIGH→LOW transitions trigger commands
+ * - For touch pins: THRESHOLD (30) defines touch detection level
+ * - Touch pins must be LOW for 3 cycles before being considered "touched"
+ * - When detected, analyzeCmd() is called with the associated command
+ * 
+ * @note Can be called in main loop context (not in interrupt)
+ * @note progpin[] and touchpin[] must be initialized
+ * @see analyzeCmd()
+ * @see progpin (global) - Array with digital pin configurations
+ * @see touchpin (global) - Array with touch pin configurations
+ */
+void scandigital()
 {
   static uint32_t oldmillis = 5000 ;                        // To compare with current time
   int             i ;                                       // Loop control

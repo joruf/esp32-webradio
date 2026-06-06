@@ -1,271 +1,325 @@
 // OTA-Update: https://github.com/esp8266/Arduino/issues/4400
 
-
-// If the line contains content-length information: set length (content length counter).
-// @TODO muss noch in eine andere Datei veschoben werden
-void scan_content_length ( const char* metalinebf )
-{
-  if ( strstr ( metalinebf, "Content-Length" ) )        // Line contains content length
-  {
+/**
+ * @brief Scan for content-length information in header line.
+ *        If the line contains content-length information, set the clength counter.
+ * 
+ * @param metalinebf Header line to scan
+ */
+void scan_content_length(const char* metalinebf) {
+  if (strstr(metalinebf, "Content-Length")) {
     char* p;
-    clength = atoi ( metalinebf + 15 ) ;                // Yes, set clength
-    p = dbgprint ( "Content-Length is %d", clength ) ;      // Show for debugging purposes
-    dsp_println(p);                                   // Set screen segment bottom part
+    clength = atoi(metalinebf + 15);
+    p = dbgprint("Content-Length is %d", clength);
+    dsp_println(p);
     delay(2000);
   }
 }
 
-
-//**************************************************************************************************
-//                                           O T A S T A R T                                       *
-//**************************************************************************************************
-// Update via WiFi has been started by Arduino IDE or update request.                              *
-//**************************************************************************************************
-void otastart()
-{
+/**
+ * @brief Update via WiFi has been started by Arduino IDE or update request.
+ */
+void otastart() {
   char* p;
-  p = dbgprint ( "OTA update Started" ) ;
-  dsp_println(p);                                   // Set screen segment bottom part
+  p = dbgprint("OTA update Started");
+  dsp_println(p);
   delay(2000);
 }
 
-
-//**************************************************************************************************
-// Update NEXTION image from OTA stream.                                                           *
-//**************************************************************************************************
-bool do_nextion_update ( uint32_t clength )
-{
-  bool     res = false ;                                       // Update result
-  uint32_t k ;
-  int      c ;                                                 // Reply from NEXTION
-
-  if ( nxtserial )                                             // NEXTION active?
-  {
-    vTaskDelete ( xspftask ) ;                                 // Prevent output to NEXTION
-    delay ( 1000 ) ;
-    nxtserial->printf ( "\xFF\xFF\xFF" ) ;                     // Empty command
-    for ( int i = 0 ; i < 100 ; i++ )                          // Any input seen?
-    {
-      if ( nxtserial->available() )
-      {
-        c =  nxtserial->read() ;                               // Read garbage
-      }
-      delay ( 20 ) ;
+/**
+ * @brief Wait for NEXTION ACK response.
+ * 
+ * @param timeout Maximum time to wait in milliseconds
+ * @return int The received ACK byte, or -1 on timeout
+ */
+static int waitForNextionAck(uint32_t timeout) {
+  uint32_t start = millis();
+  while (!nxtserial->available()) {
+    if (millis() - start > timeout) {
+      return -1;
     }
-    nxtserial->printf ( "whmi-wri %d,9600,0\xFF\xFF\xFF",      // Start upload
-                        clength ) ;
-    while ( !nxtserial->available() )                          // Any input seen?
-    {
-      delay ( 20 ) ;
-    }
-    c =  nxtserial->read() ;                                   // Yes, read the 0x05 ACK
-    while ( clength )                                          // Loop for the transfer
-    {
-      k = clength ;
-      if ( k > 4096 )
-      {
-        k = 4096 ;
-      }
-      k = otaclient.read ( tmpbuff, k ) ;                      // Read a number of bytes from the stream
-      dbgprint ( "TFT file, read %d bytes", k ) ;
-      nxtserial->write ( tmpbuff, k ) ;     
-      while ( !nxtserial->available() )                        // Any input seen?
-      {
-        delay ( 20 ) ;
-      }
-      c =  (char)nxtserial->read() ;                           // Yes, read the 0x05 ACK
-      if ( c != 0x05 )
-      {
-        break ;
-      }
-      clength -= k ;
-    }
-    otaclient.flush() ;
-    if ( clength == 0 )
-    {
-      dbgprint ( "Update successfully completed" ) ;
-      res = true ;
-    }
+    delay(20);
   }
-  return res ;
+  return nxtserial->read();
 }
 
+/**
+ * @brief Update NEXTION image from OTA stream.
+ * 
+ * @param clength Size of the update data
+ * @return true if update was successful, false otherwise
+ */
+bool do_nextion_update(uint32_t clength) {
+  bool res = false;
+  uint32_t k;
+  int c;
 
-//**************************************************************************************************
-// Update software from OTA stream.                                                                *
-//**************************************************************************************************
-bool do_software_update ( uint32_t clength )
-{
-  bool res = false ;                                          // Update result  
-  if ( Update.begin ( clength ) )                             // Update possible?
-  {
-    dbgprint ( "Begin OTA update, length is %d", clength ) ;
-    if ( Update.writeStream ( otaclient ) == clength )        // writeStream is the real download
-    {
-      dbgprint ( "Written %d bytes successfully", clength ) ;
-    }
-    else
-    {
-      dbgprint ( "Write failed!" ) ;
-    }
-    if ( Update.end() )                                       // Check for successful flash
-    {
-      dbgprint( "OTA done" ) ;
-      if ( Update.isFinished() )
-      {
-        dbgprint ( "Update successfully completed" ) ;
-        res = true ;                                          // Positive result
-      }
-      else
-      {
-        dbgprint ( "Update not finished!" ) ;
-      }
-    }
-    else
-    {
-      dbgprint ( "Error Occurred. Error %s", Update.getError() ) ;
-    }
+  if (!nxtserial) {
+    return false;
   }
-  else
-  {
-    // Not enough space to begin OTA
-    dbgprint ( "Not enough space to begin OTA" ) ;
-    otaclient.flush() ;
-  }
-  return res ;
-}
 
-
-//**************************************************************************************************
-// Update software by download from remote host.                                                   *
-//**************************************************************************************************
-void update_software ( const char* lstmodkey, const char* updatehost, const char* binfile )
-{
-  dsp_erase() ;                                      // Clear screen
-  dsp_println("OTA Update");
-  delay(2000);
-
-  uint32_t    timeout = millis() ;                              // To detect time-out
-  String      line ;                                            // Input header line
-  String      lstmod = "" ;                                     // Last modified timestamp in NVS
-  String      newlstmod ;                                       // Last modified from host
-
+  vTaskDelete(xspftask);
+  delay(1000);
   
-  updatereq = false ;                                           // Clear update flag
-  otastart() ;                                                  // Show something on screen
-  stop_mp3client () ;                                           // Stop input stream
-  lstmod = nvsGetValue ( lstmodkey ) ;                            // Get current last modified timestamp
+  nxtserial->printf("\xFF\xFF\xFF");  // Empty command
+  
+  // Read garbage input
+  for (int i = 0; i < 100; i++) {
+    if (nxtserial->available()) {
+      nxtserial->read();
+    }
+    delay(20);
+  }
+  
+  nxtserial->printf("whmi-wri %d,9600,0\xFF\xFF\xFF", clength);
+  
+  c = waitForNextionAck(2000);
+  if (c != 0x05) {
+    return false;
+  }
+  
+  while (clength) {
+    k = (clength > 4096) ? 4096 : clength;
+    k = otaclient.read(tmpbuff, k);
+    dbgprint("TFT file, read %d bytes", k);
+    nxtserial->write(tmpbuff, k);
+    
+    c = waitForNextionAck(2000);
+    if (c != 0x05) {
+      break;
+    }
+    clength -= k;
+  }
+  
+  otaclient.flush();
+  
+  if (clength == 0) {
+    dbgprint("Update successfully completed");
+    res = true;
+  }
+  
+  return res;
+}
 
-  dsp_erase() ; // Clear screen
+/**
+ * @brief Update software from OTA stream.
+ * 
+ * @param clength Size of the update data
+ * @return true if update was successful, false otherwise
+ */
+bool do_software_update(uint32_t clength) {
+  bool res = false;
+  
+  if (!Update.begin(clength)) {
+    dbgprint("Not enough space to begin OTA");
+    otaclient.flush();
+    return false;
+  }
+  
+  dbgprint("Begin OTA update, length is %d", clength);
+  
+  if (Update.writeStream(otaclient) == clength) {
+    dbgprint("Written %d bytes successfully", clength);
+  } else {
+    dbgprint("Write failed!");
+  }
+  
+  if (Update.end()) {
+    dbgprint("OTA done");
+    if (Update.isFinished()) {
+      dbgprint("Update successfully completed");
+      res = true;
+    } else {
+      dbgprint("Update not finished!");
+    }
+  } else {
+    dbgprint("Error Occurred. Error %s", Update.getError());
+  }
+  
+  return res;
+}
+
+/**
+ * @brief Parse HTTP response headers for OTA update.
+ * 
+ * @param line Current header line
+ * @param newlstmod Output buffer for Last-Modified timestamp
+ * @return true if headers are complete (empty line), false otherwise
+ */
+static bool parseOtaHeaders(const String& line, String& newlstmod) {
+  if (line.startsWith("HTTP/1.1")) {
+    if (line.indexOf(" 200 ") < 0) {
+      dsp_erase();
+      dsp_println("Invalid HTTP Status");
+      dsp_println("Exit OTA Update");
+      dbgprint("Got a non 200 status code from server!");
+      delay(2000);
+      return false;
+    }
+  }
+  
+  scan_content_length(line.c_str());
+  
+  if (line.startsWith("Last-Modified: ")) {
+    newlstmod = line.substring(15);
+  }
+  
+  return true;
+}
+
+/**
+ * @brief Connect to update server and request the binary file.
+ * 
+ * @param updatehost Hostname of the update server
+ * @param binfile Path to the binary file
+ * @return true if connection successful, false otherwise
+ */
+static bool connectToUpdateServer(const char* updatehost, const char* binfile) {
+  dsp_erase();
   dsp_println("Connecting to host");
   dsp_println(updatehost);
   delay(2000);
-
-  dbgprint ( "Connecting to %s for %s",
-              updatehost, binfile ) ;
-  if ( !otaclient.connect ( updatehost, 80 ) )                  // Connect to host
-  {
-    dsp_erase() ; // Clear screen
+  
+  dbgprint("Connecting to %s for %s", updatehost, binfile);
+  
+  if (!otaclient.connect(updatehost, 80)) {
+    dsp_erase();
     dsp_println("Connecting failed");
-    dbgprint ( "Connect to updatehost failed!" ) ;
+    dbgprint("Connect to updatehost failed!");
     delay(2000);
-    return ;
+    return false;
   }
   
-  dsp_erase() ; // Clear screen
+  dsp_erase();
   dsp_println("Loading bin file");
   delay(2000);
-  otaclient.printf ( "GET %s HTTP/1.1\r\n"
-                     "Host: %s\r\n"
-                     "Cache-Control: no-cache\r\n"
-                     "Connection: close\r\n\r\n",
-                     binfile,
-                     updatehost ) ;
-  while ( otaclient.available() == 0 )                          // Wait until response appears
-  {
-    if ( millis() - timeout > 20000 ) // 20sec timeout
-    {
-      dsp_erase() ; // Clear screen
+  
+  otaclient.printf("GET %s HTTP/1.1\r\n"
+                   "Host: %s\r\n"
+                   "Cache-Control: no-cache\r\n"
+                   "Connection: close\r\n\r\n",
+                   binfile,
+                   updatehost);
+  
+  return true;
+}
+
+/**
+ * @brief Wait for response from update server.
+ * 
+ * @param timeout_ms Timeout in milliseconds
+ * @return true if data available, false on timeout
+ */
+static bool waitForResponse(uint32_t timeout_ms) {
+  uint32_t timeout = millis();
+  while (otaclient.available() == 0) {
+    if (millis() - timeout > timeout_ms) {
+      dsp_erase();
       dsp_println("Connect Timeout");
-      dbgprint ( "Connect to Update host Timeout!" ) ;
+      dbgprint("Connect to Update host Timeout!");
       delay(2000);
-      otaclient.stop() ;
-      return ;
+      otaclient.stop();
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * @brief Perform the actual update (software or NEXTION image).
+ * 
+ * @param binfile Path to the binary file
+ * @param newlstmod New Last-Modified timestamp
+ * @param lstmodkey NVS key for storing timestamp
+ * @return true if update was successful, false otherwise
+ */
+static bool performUpdate(const char* binfile, const String& newlstmod, const char* lstmodkey) {
+  dsp_erase();
+  dsp_println("Updating sketch");
+  
+  bool success = false;
+  
+  if (strstr(binfile, ".bin")) {
+    success = do_software_update(clength);
+  }
+  
+  if (strstr(binfile, ".tft")) {
+    success = do_nextion_update(clength);
+  }
+  
+  if (success) {
+    nvsAddValue(lstmodkey, newlstmod);
+  }
+  
+  return success;
+}
+
+/**
+ * @brief Update software by download from remote host.
+ * 
+ * @param lstmodkey NVS key for storing Last-Modified timestamp
+ * @param updatehost Hostname of the update server
+ * @param binfile Path to the binary file
+ */
+void update_software(const char* lstmodkey, const char* updatehost, const char* binfile) {
+  String line;
+  String lstmod;
+  String newlstmod;
+  
+  dsp_erase();
+  dsp_println("OTA Update");
+  delay(2000);
+  
+  updatereq = false;
+  otastart();
+  stop_mp3client();
+  lstmod = nvsGetValue(lstmodkey);
+  
+  if (!connectToUpdateServer(updatehost, binfile)) {
+    return;
+  }
+  
+  if (!waitForResponse(20000)) {
+    return;
+  }
+  
+  // Parse HTTP response headers
+  dsp_erase();
+  while (otaclient.available()) {
+    line = otaclient.readStringUntil('\n');
+    line.trim();
+    
+    dsp_println(line.c_str());
+    dbgprint(line.c_str());
+    
+    if (!line.length()) {
+      break;
+    }
+    
+    if (!parseOtaHeaders(line, newlstmod)) {
+      return;
     }
   }
   
-  // Connected, handle response
-  dsp_erase() ; // Clear screen
-  while ( otaclient.available() )
-  {
-    line = otaclient.readStringUntil ( '\n' ) ;                 // Read a line from response    
-    line.trim() ;                                               // Remove garbage
-    
-    dsp_println(line.c_str());
-    dbgprint ( line.c_str() ) ;                                 // Debug info
-    if ( !line.length() )                                       // End of headers?
-    {
-      break ;                                                   // Yes, get the OTA started
-    }
-    
-    
-    // Check if the HTTP Response is 200.  Any other response is an error.
-    if ( line.startsWith ( "HTTP/1.1" ) )                       // 
-    {
-      if ( line.indexOf ( " 200 " ) < 0 )
-      {
-        dsp_erase() ; // Clear screen
-        dsp_println("Invalid HTTP Status");
-        dsp_println("Exit OTA Update");
-        dbgprint ( "Got a non 200 status code from server!" ) ;
-        delay(2000);
-        return ;
-      }
-    }
-    scan_content_length ( line.c_str() ) ;                      // Scan for content_length
-    if ( line.startsWith ( "Last-Modified: " ) )                // Timestamp of binary file
-    {
-      newlstmod = line.substring ( 15 ) ;                       // Isolate timestamp
-    }
-  }
-  // End of headers reached
-  if ( newlstmod == lstmod )                                    // Need for update?
-  {
-    dsp_erase() ; // Clear screen
+  // Check if update is needed
+  if (newlstmod == lstmod) {
+    dsp_erase();
     dsp_println("No update required");
     dsp_println("Exit OTA Update");
-    dbgprint ( "No new version available" ) ;                   // No, show reason
+    dbgprint("No new version available");
     delay(2000);
-    otaclient.flush() ;
-    return ;    
+    otaclient.flush();
+    return;
   }
-  if ( clength > 0 )
-  {
-    dsp_erase() ; // Clear screen
-    dsp_println("Updating sketch");
-
-    if ( strstr ( binfile, ".bin" ) )                           // Update of the sketch?
-    {
-      if ( do_software_update ( clength ) )                     // Flash updated sketch
-      {
-        nvsAddValue ( lstmodkey, newlstmod ) ;                    // Update Last Modified in NVS
-      }
-    }
-    if ( strstr ( binfile, ".tft" ) )                           // Update of the NEXTION image?
-    {
-      if ( do_nextion_update ( clength ) )                      // Flash updated NEXTION
-      {
-        nvsAddValue ( lstmodkey, newlstmod ) ;                    // Update Last Modified in NVS
-      }
-    }
-  }
-  else
-  {
-    dsp_erase() ; // Clear screen
+  
+  // Perform the update
+  if (clength > 0) {
+    performUpdate(binfile, newlstmod, lstmodkey);
+  } else {
+    dsp_erase();
     dsp_println("Missing content in response");
-    dbgprint ( "There was no content in the response" ) ;
+    dbgprint("There was no content in the response");
     delay(2000);
-    otaclient.flush() ;
+    otaclient.flush();
   }
 }
-

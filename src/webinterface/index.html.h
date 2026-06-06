@@ -53,7 +53,7 @@ const char index_html[] PROGMEM = R"=====(
 				<div class="panel-heading">
 					Metadata
 					<small>
-						<span id="datelabel">DD.MM.YYYY</span> | <span id="timelabel">00:00</span>
+						<span id="datelabel">DD.MM.YYYY</span>
 					</small>
 				</div>
 				<div class="panel-body">

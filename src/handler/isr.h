@@ -1,12 +1,21 @@
-
-//**************************************************************************************************
-//                                          I S R _ I R                                            *
-//**************************************************************************************************
-// Interrupts received from VS1838B on every change of the signal.                                 *
-// Intervals are 640 or 1640 microseconds for data.  syncpulses are 3400 micros or longer.         *
-// Input is complete after 65 level changes.                                                       *
-// Only the last 32 level changes are significant and will be handed over to common data.          *
-//**************************************************************************************************
+/**
+ * @brief IRAM interrupt service routine for the IR receiver (VS1838B).
+ * 
+ * This function is called on every edge of the IR signal. It measures the
+ * time intervals between edges and decodes the IR bits from them.
+ * 
+ * @details
+ * - Short pulses (300-800 µs) are decoded as logic "0"
+ * - Long pulses (1400-1900 µs) are decoded as logic "1"
+ * - After 65 level changes (32 bits + sync), the 32-bit signal is converted
+ *   into a 16-bit result and stored in 'ir_value'
+ * - The average pulse duration is calculated using a moving average
+ *   for both short and long pulses (ir_0, ir_1)
+ * 
+ * @note This function runs in interrupt context (IRAM_ATTR)
+ * @note Uses 'sv' (static volatile) for variables that persist across calls
+ * @see ir_value (global) - Contains the decoded IR code
+ */
 void IRAM_ATTR isr_IR()
 {
   sv uint32_t      t0 = 0 ;                          // To get the interval
@@ -51,12 +60,26 @@ void IRAM_ATTR isr_IR()
   }
 }
 
-
-//**************************************************************************************************
-//                                          I S R _ E N C _ S W I T C H                            *
-//**************************************************************************************************
-// Interrupts received from rotary encoder switch.                                                 *
-//**************************************************************************************************
+/**
+ * @brief IRAM interrupt service routine for the rotary encoder switch.
+ * 
+ * This function is called on every edge of the switch signal.
+ * It detects short clicks (button pressed and released) and
+ * long clicks (pressed and held > 1 second).
+ * 
+ * @details
+ * - Debouncing via time comparison (same millisecond is ignored)
+ * - On button release, it distinguishes:
+ *   - Pressed longer than 1 second → 'longclick' is set to true
+ *   - Pressed shorter than 1 second → 'clickcount' is incremented
+ * - 'enc_inactivity' is reset to 0 on every activation
+ * 
+ * @note This function runs in interrupt context (IRAM_ATTR)
+ * @note Uses 'sv' (static volatile) for variables that persist across calls
+ * @see longclick (global) - Flag for long button press
+ * @see clickcount (global) - Counter for short clicks
+ * @see enc_inactivity (global) - Inactivity counter (reset here)
+ */
 void IRAM_ATTR isr_enc_switch()
 {
   sv uint32_t     oldtime = 0 ;                            // Time in millis previous interrupt
@@ -90,20 +113,27 @@ void IRAM_ATTR isr_enc_switch()
   oldtime = newtime ;                                      // For next compare
 }
 
-
-//**************************************************************************************************
-//                                          I S R _ E N C _ T U R N                                *
-//**************************************************************************************************
-// Interrupts received from rotary encoder (clk signal) knob turn.                                 *
-// The encoder is a Manchester coded device, the outcomes (-1,0,1) of all the previous state and   *
-// actual state are stored in the enc_states[].                                                    *
-// Full_status is a 4 bit variable, the upper 2 bits are the previous encoder values, the lower    *
-// ones are the actual ones.                                                                       *
-// 4 bits cover all the possible previous and actual states of the 2 PINs, so this variable is     *
-// the index enc_states[].                                                                         *
-// No debouncing is needed, because only the valid states produce values different from 0.         *
-// Rotation is 4 if position is moved from one fixed position to the next, so it is devided by 4.  *
-//**************************************************************************************************
+/**
+ * @brief IRAM interrupt service routine for rotary encoder rotation.
+ * 
+ * This function is called on every edge of the encoder's CLK signal.
+ * It decodes the Manchester-coded signals from the CLK and DT pins.
+ * 
+ * @details
+ * - The current state of both pins (CLK, DT) is read as a 2-bit value
+ * - An index (0-15) into the 'enc_states[]' table is formed from the
+ *   previous and current states
+ * - The table returns -1, 0, or +1 for each state change
+ * - A full detent step (4 state changes) is detected and 'rotationcount'
+ *   is incremented or decremented
+ * - 'enc_inactivity' is reset to 0 on every movement
+ * 
+ * @note This function runs in interrupt context (IRAM_ATTR)
+ * @note The 'enc_states[]' table must be in DRAM (iram safe) and is declared 'static const'
+ * @note No debouncing is needed because the table only considers valid transitions
+ * @see rotationcount (global) - Counter for encoder rotations (positive = louder, negative = quieter)
+ * @see enc_inactivity (global) - Inactivity counter (reset here)
+ */
 void IRAM_ATTR isr_enc_turn()
 {
   sv uint32_t     old_state = 0x0001 ;                          // Previous state

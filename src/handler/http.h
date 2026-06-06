@@ -1,9 +1,10 @@
-//**************************************************************************************************
-//                                      F I L L K E Y L I S T                                      *
-//**************************************************************************************************
-// Fill the list of all relevant keys in NVS.                                                      *
-// The keys will be sorted.                                                                        *
-//**************************************************************************************************
+
+/**
+ * @brief Fill the list of all relevant keys in NVS.
+ * 
+ * Reads all pages of the NVS partition, extracts active entries with the correct namespace,
+ * stores them in nvskeys array, and sorts the keys.
+ */
 void fillkeylist()
 {
   esp_err_t    result = ESP_OK ;                                // Result of reading partition
@@ -51,18 +52,14 @@ void fillkeylist()
 }
 
 
-
-
-//**************************************************************************************************
-//                                           M K _ L S A N                                         *
-//**************************************************************************************************
-// Make al list of acceptable networks in preferences.                                             *
-// Will be called only once by setup().                                                            *
-// The result will be stored in wifilist.                                                          *
-// Not that the last found SSID and password are kept in common data.  If only one SSID is         *
-// defined, the connect is made without using wifiMulti.  In this case a connection will           *
-// be made even if de SSID is hidden.                                                              *
-//**************************************************************************************************
+/**
+ * @brief Make a list of acceptable networks from preferences.
+ * 
+ * Will be called only once by setup(). The result will be stored in wifilist.
+ * The last found SSID and password are kept in common data. If only one SSID is
+ * defined, the connection is made without using wifiMulti. In this case a connection
+ * will be made even if the SSID is hidden.
+ */
 void  mk_lsan()
 {
   uint8_t     i ;                                        // Loop control
@@ -99,13 +96,13 @@ void  mk_lsan()
 }
 
 
-
-//**************************************************************************************************
-//                                     G E T R A D I O S T A T U S                                 *
-//**************************************************************************************************
-// Return preset-, tone- and volume status.                                                        *
-// Included are the presets, the current station, the volume and the tone settings.                *
-//**************************************************************************************************
+/**
+ * @brief Return preset, tone and volume status as a formatted string.
+ * 
+ * Included are the preset number, the volume and the four tone settings (HA, HF, LA, LF).
+ * 
+ * @return String Formatted status string
+ */
 String getradiostatus()
 {
   char                pnr[3] ;                           // Preset as 2 character, i.e. "03"
@@ -126,12 +123,14 @@ String getradiostatus()
 }
 
 
-
-//**************************************************************************************************
-//                                        R I N B Y T                                              *
-//**************************************************************************************************
-// Read next byte from http inputbuffer.  Buffered for speed reasons.                              *
-//**************************************************************************************************
+/**
+ * @brief Read next byte from HTTP input buffer.
+ * 
+ * Uses a static buffer for speed reasons. The buffer is refilled when empty or when forcestart is true.
+ * 
+ * @param forcestart If true, force a buffer refill regardless of current position
+ * @return uint8_t The next byte read, or '\n' on error
+ */
 uint8_t rinbyt ( bool forcestart )
 {
   static uint8_t  buf[1024] ;                           // Inputbuffer
@@ -169,12 +168,12 @@ uint8_t rinbyt ( bool forcestart )
 }
 
 
-//**************************************************************************************************
-//                                        W R I T E P R E F S                                      *
-//**************************************************************************************************
-// Update the preferences.  Called from the web interface.                                         *
-// Reads the values from the interface															   *
-//**************************************************************************************************
+/**
+ * @brief Update the preferences.
+ * 
+ * Called from the web interface. Reads the values from the HTTP input,
+ * clears all existing preferences, and writes the new values to NVS.
+ */
 void writeprefs()
 {
   int        inx ;                                            // Position in inputstr
@@ -265,12 +264,11 @@ void writeprefs()
 }
 
 
-//**************************************************************************************************
-//                                     G E T S E T T I N G S                                       *
-//**************************************************************************************************
-// Send some settings to the webserver.                                                            *
-// Included are the presets, the current station, the volume and the tone settings.                *
-//**************************************************************************************************
+/**
+ * @brief Send settings to the webserver.
+ * 
+ * Includes all presets, the current station, the volume and the tone settings.
+ */
 void getsettings()
 {
   String              val ;                              // Result to send
@@ -309,11 +307,11 @@ void getsettings()
 }
 
 
-//**************************************************************************************************
-//                                        H A N D L E H T T P R E P L Y                            *
-//**************************************************************************************************
-// Handle the output after an http request.                                                        *
-//**************************************************************************************************
+/**
+ * @brief Handle the output after an HTTP request.
+ * 
+ * Processes the response based on the requested command or file.
+ */
 void handlehttpreply()
 {
   const char*   p ;                                         // Pointer to reply if command
@@ -410,6 +408,13 @@ void handlehttpreply()
 //**************************************************************************************************
 // Handle the input of an http request.                                                            *
 //**************************************************************************************************
+
+/**
+ * @brief Handle the input of an HTTP request.
+ * 
+ * Reads the HTTP request from the client, parses GET/POST commands and parameters,
+ * and extracts the command or filename for further processing.
+ */
 void handlehttp()
 {
   bool        first = true ;                                 // First call to rinbyt()
@@ -497,7 +502,7 @@ void handlehttp()
     }
   }
 
-  // Sends: sender name, song titel, time und date as JSON
+  // Sends: sender name, song title, time and date as JSON
   if (http_getcmd.startsWith("getJSON")) {
     String jsonResponse = "{";
     jsonResponse += "\"station\":\"" + icyname + "\",";
@@ -507,7 +512,7 @@ void handlehttp()
     jsonResponse += "\"date\":\"" + String(timetxt) + "\"";
     jsonResponse += "}";
 
-    // Header für JSON senden
+    // Send JSON header
     cmdclient.print("HTTP/1.1 200 OK\r\n");
     cmdclient.print("Content-Type: application/json; charset=utf-8\r\n");
     cmdclient.print("Content-Length: "); cmdclient.print(jsonResponse.length()); cmdclient.print("\r\n");
@@ -537,6 +542,13 @@ void handlehttp()
 //**************************************************************************************************
 // Set http headers to a string.                                                                   *
 //**************************************************************************************************
+
+/**
+ * @brief Generate HTTP response header string.
+ * 
+ * @param contentstype The Content-Type header value (e.g., "text/html")
+ * @return String Complete HTTP header
+ */
 String httpheader ( String contentstype )
 {
   return String ( "HTTP/1.1 200 OK\nContent-type:" ) +

@@ -1,21 +1,10 @@
-/*
-NVS is the "EEPROM" alternative in the CPU
 
-EEPROM Speicher als solcher existiert in ESP32 nicht, aber dieses Modul hat eine Alternative und entsprechende Bibliothek zum Arbeiten damit.
-Dieser Speicher wird „NVS“ (Non-Volatile Storage) genannt.
-*/
-
-//#include <nvs.h>
-
-
-
-//**************************************************************************************************
-//                                      N V S O P E N                                              *
-//**************************************************************************************************
-// Open Preferences with my-app namespace. Each application module, library, etc.                  *
-// has to use namespace name to prevent key name collisions. We will open storage in               *
-// RW-mode (second parameter has to be false).                                                     *
-//**************************************************************************************************
+/**
+ * @brief Open NVS with my-app namespace.
+ * 
+ * Each application module, library, etc. has to use a namespace name to prevent
+ * key name collisions. Storage is opened in RW mode.
+ */
 void nvsOpen() {
   if(!nvshandle) {
 
@@ -27,22 +16,23 @@ void nvsOpen() {
 }
 
 
-//**************************************************************************************************
-//                                      N V S C L E A R                                            *
-//**************************************************************************************************
-// Clear all preferences.                                                                          *
-//**************************************************************************************************
+/**
+ * @brief Clear all preferences from NVS.
+ * 
+ * @return esp_err_t ESP_OK on success, otherwise error code
+ */
 esp_err_t nvsClear() {
   nvsOpen();                                         // Be sure to open nvs
   return nvs_erase_all(nvshandle);                // Clear all keys
 }
 
 
-//**************************************************************************************************
-//                                      N V S G E T S T R                                          *
-//**************************************************************************************************
-// Read a string from nvs (EEPROM).                                                                         *
-//**************************************************************************************************
+/**
+ * @brief Read a string value from NVS.
+ * 
+ * @param key The key to look up
+ * @return String The value associated with the key, or empty string on error
+ */
 String nvsGetValue(const char* key) {
   static char   nvs_buf[NVSBUFSIZE];       // Buffer for contents
   size_t        len = NVSBUFSIZE;          // Max length of the string, later real length
@@ -58,12 +48,15 @@ String nvsGetValue(const char* key) {
 }
 
 
-//**************************************************************************************************
-//                                      N V S S E T S T R                                          *
-//**************************************************************************************************
-// Put a key/value pair in nvs.  Length is limited to allow easy read-back.                        *
-// No writing if no change.                                                                        *
-//**************************************************************************************************
+/**
+ * @brief Store a key/value pair in NVS.
+ * 
+ * Length is limited to allow easy read-back. No write is performed if the value hasn't changed.
+ * 
+ * @param key The key to store
+ * @param val The value to associate with the key
+ * @return esp_err_t ESP_OK on success, otherwise error code
+ */
 esp_err_t nvsAddValue(const char* key, String val) {
   String curcont ;                                         // Current contents
   bool   wflag = true  ;                                   // Assume update or new key
@@ -90,12 +83,12 @@ esp_err_t nvsAddValue(const char* key, String val) {
 }
 
 
-
-//**************************************************************************************************
-//                                      N V S S E A R C H                                          *
-//**************************************************************************************************
-// Check if key exists in nvs.                                                                     *
-//**************************************************************************************************
+/**
+ * @brief Check if a key exists in NVS.
+ * 
+ * @param key The key to check
+ * @return true if the key exists, false otherwise
+ */
 bool nvsKeyExists(const char* key) {
   size_t        len = NVSBUFSIZE;                      // Length of the string
 
@@ -105,16 +98,12 @@ bool nvsKeyExists(const char* key) {
 }
 
 
-
-
-
-//**************************************************************************************************
-//                                      H A N D L E S A V E R E Q                                  *
-//**************************************************************************************************
-// Handle save volume/preset/tone.  This will save current settings every 10 minutes to            *
-// the preferences.  On the next restart these values will be loaded.                              *
-// Note that saving prefences will only take place if contents has changed.                        *
-//**************************************************************************************************
+/**
+ * @brief Auto-save volume, preset, and tone settings.
+ * 
+ * This saves current settings to NVS every 10 minutes. On the next restart,
+ * these values will be loaded. Saving only occurs if contents have changed.
+ */
 void nvsAutoSave()
 {
   static uint32_t savetime = 0;                          // Limit save to once per 10 minutes
@@ -133,16 +122,14 @@ void nvsAutoSave()
 }
 
 
-
-
-
-//**************************************************************************************************
-//                                  R E A D H O S T F R O M P R E F                                *
-//**************************************************************************************************
-// Read the mp3 host from the preferences specified by the parameter.                              *
-// The host will be returned.                                                                      *
-// We search for "preset_x" or "preset_xx" or "preset_xxx".										   *
-//**************************************************************************************************
+/**
+ * @brief Read the MP3 host from preferences for a specific preset number.
+ * 
+ * Searches for keys in the format "preset_x", "preset_xx", or "preset_xxx".
+ * 
+ * @param preset The preset number to look up
+ * @return String The host URL, or empty string if not found
+ */
 String nvsGetHostFromPref(int16_t preset )
 {
   char           tkey[12] ;                            // Key as an array of char
@@ -165,12 +152,14 @@ String nvsGetHostFromPref(int16_t preset )
 }
 
 
-//**************************************************************************************************
-//                                  R E A D H O S T F R O M P R E F                                *
-//**************************************************************************************************
-// Search for the next mp3 host in preferences specified newpreset.                                *
-// The host will be returned.  newpreset will be updated                                           *
-//**************************************************************************************************
+/**
+ * @brief Search for the next available MP3 host in preferences.
+ * 
+ * Uses ini_block.newpreset as starting point and updates it when a valid host is found.
+ * Wraps around to 0 if MAXPRESETS is reached.
+ * 
+ * @return String The found host URL, or empty string if none found
+ */
 String nvsGetHostFromPref()
 {
   String contents = "" ;                                // Result of search
@@ -190,7 +179,3 @@ String nvsGetHostFromPref()
   // Get the contents
   return contents ;                                     // Return the station
 }
-
-
-
-

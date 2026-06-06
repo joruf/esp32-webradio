@@ -1,13 +1,13 @@
-//**************************************************************************************************
-//                                           C H K _ E N C                                         *
-//**************************************************************************************************
-// See if rotary encoder is activated and perform its functions.                                   *
-//**************************************************************************************************
-
-enum SINGLE_CLICK_STATUS {STOPPED_PLAYING, SELECT_PRESET, PLAYING_PRESET};
-SINGLE_CLICK_STATUS singleClickStatus = PLAYING_PRESET;
-
-
+/**
+ * @brief Rotary encoder handling: volume, preset selection, and track selection.
+ * 
+ * This function is called regularly to process encoder clicks, double-clicks,
+ * rotations, and inactivity timeouts. It controls power toggling, preset
+ * selection, volume adjustment, and (optionally) track selection from SD card.
+ * 
+ * @note The original logic is kept exactly as in the working version to ensure
+ *       continuous volume control after power toggle.
+ */
 void checkRotaryEncoder()
 {
   static int8_t  enc_preset ;
@@ -16,7 +16,7 @@ void checkRotaryEncoder()
   String         tmp ;
   int16_t        inx ;
 
-  // Inaktivitäts-Timer: Zurück zum Volume-Modus nach 4 Sekunden
+  // Inactivity timer: return to VOLUME mode after 4 seconds
   if ( enc_menu_mode != VOLUME )
   {
     if ( enc_inactivity > 40 )
@@ -24,25 +24,24 @@ void checkRotaryEncoder()
       enc_inactivity = 0 ;
       enc_menu_mode = VOLUME ;
       dbgprint ( "Encoder mode back to VOLUME" ) ;
-      showTextOnTFT ( 2, "" ) ; // Anzeige bereinigen
+      showTextOnTFT ( 2, "" ) ; // Clear display line
     }
   }
 
-  // Backlight aktivieren bei Aktivität
-  // Backlight aktivieren und Timer zurücksetzen bei Aktivität
+  // Activate backlight and reset timer on any activity
   if ( singleclick || doubleclick || tripleclick || longclick || rotationcount != 0 ) {
     enableBacklight ( true ) ;
-    bltimer = 0 ;  // <--- Das hier sorgt dafür, dass die 5 Minuten von vorn beginnen!
+    bltimer = 0 ;
   } else {
     return ;
   }
 
-  // --- DER ENTSCHEIDENDE TEIL: SINGLE CLICK LOGIK ---
+  // --- Single click handling (power toggle in VOLUME mode) ---
   if (singleclick) {
-    // Wenn wir im VOLUME Modus sind -> RADIO AN/AUS (Power Toggle)
+    // In VOLUME mode: radio on/off (power toggle)
     if (enc_menu_mode == VOLUME) {
-      singleclick = false; // Klick hier verarbeiten
-      dbgprint("Klick im Volume-Modus - Power Toggle");
+      singleclick = false;
+      dbgprint("Click in volume mode - Power Toggle");
 
       if (datamode != STOPPED) { 
         stopStream();
@@ -59,12 +58,10 @@ void checkRotaryEncoder()
         dbgprint("Starte Preset %d", enc_preset);
       }
     } 
-    // Wenn wir in einem anderen Modus sind (PRESET oder TRACK)
-    // lassen wir singleclick = true stehen, damit es weiter unten 
-    // im originalen Switch-Block verarbeitet wird!
+    // In other modes (PRESET/TRACK), the click is processed later as confirmation
   }
 
-  // Double Click: Senderwahl-Modus aktivieren
+  // Double click: activate preset selection mode
   if ( doubleclick )
   {
     dbgprint ( "Double click") ;
@@ -74,17 +71,17 @@ void checkRotaryEncoder()
     enc_preset = ini_block.newpreset;
   }
 
-  // Single Click Verarbeitung für PRESET / TRACK Bestätigung
+  // Single click confirmation for PRESET / TRACK mode
   if ( singleclick )
   {
-    dbgprint ( "Single click (Modus-Bestätigung)") ;
+    dbgprint ( "Single click (Mode confirmation)") ;
     singleclick = false ;
     switch ( enc_menu_mode )
     {
       case PRESET :
         currentpreset = -1 ;
         ini_block.newpreset = enc_preset ;
-        enc_menu_mode = VOLUME ; // Zurück zum Volume nach Auswahl
+        enc_menu_mode = VOLUME ;
         showTextOnTFT ( 1, "Radio an" ) ;
         showTextOnTFT ( 3, "Sender gewählt" ) ;
         break ;
@@ -95,12 +92,12 @@ void checkRotaryEncoder()
         showTextOnTFT ( 3, "" ) ;
         break ;
       default:
-        // VOLUME Fall wird hier ignoriert, da oben bereits abgehandelt
+        // VOLUME case is already handled above
         break;
     }
   }
 
-  // Long Click: Stopp oder SD-Zufall
+  // Long click: stop or random SD track (currently disabled)
   if ( longclick )
   {
     /*
@@ -118,7 +115,7 @@ void checkRotaryEncoder()
     */
   }
 
-  // Triple Click: SD-Track Modus
+  // Triple click: SD track mode (currently disabled)
   /*
   if ( tripleclick )
   {
@@ -134,8 +131,7 @@ void checkRotaryEncoder()
   }
   */
 
-
-  // Dreh-Logik (unverändert)
+  // Rotation handling (volume, preset, or track selection)
   if ( rotationcount == 0 ) return ;
   
   switch ( enc_menu_mode )
@@ -147,7 +143,7 @@ void checkRotaryEncoder()
       
     case PRESET :
       enc_preset += rotationcount ;
-      if ( enc_preset < 0 ) enc_preset = MAXPRESETS; // Wrap around
+      if ( enc_preset < 0 ) enc_preset = MAXPRESETS;
       tmp = nvsGetHostFromPref ( enc_preset ) ;
       if ( tmp == "" ) {
         enc_preset = 0 ;

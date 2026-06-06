@@ -1,4 +1,9 @@
-// Returns the contenttype of a file to send.
+/**
+ * @brief Returns the content type of a file based on its file extension.
+ * 
+ * @param filename The filename (e.g. "index.html")
+ * @return String Content type (e.g. "text/html") or empty string for disallowed files
+ */
 String getContentType (String filename )
 {
   if      (filename.endsWith (".html") ) return "text/html" ;
@@ -15,14 +20,17 @@ String getContentType (String filename )
 }
 
 
-
-
-
-//**************************************************************************************************
-//                                        H A N D L E F S F                                        *
-//**************************************************************************************************
-// Handling of requesting pages from the PROGMEM. Example: favicon.ico                             *
-//**************************************************************************************************
+/**
+ * @brief Handles a request for a web page from PROGMEM.
+ * 
+ * Sends the requested page (e.g. index.html, config.html, CSS, JS)
+ * to the connected client. For unknown or invalid pages, a 404 error is returned.
+ * 
+ * @param pagename Name of the requested page (e.g. "/", "index.html")
+ * @note The page is read from PROGMEM (flash memory) and sent to the client
+ *       in chunks of up to 1024 bytes.
+ * @see getContentType()
+ */
 void handleWebpage (const String& pagename )
 {
   String                 ct ;                           // Content type
@@ -118,12 +126,16 @@ void handleWebpage (const String& pagename )
 }
 
 
-//**************************************************************************************************
-//                                     A N A L Y Z E C M D                                         *
-//**************************************************************************************************
-// Handling of the various commands from remote webclient, Serial        .                         *
-// Version for handling string with: <parameter>=<value>                                           *
-//**************************************************************************************************
+/**
+ * @brief Parses a command with a possible "=" separator (wrapper function).
+ * 
+ * Searches for an equals sign in the command. If present, the command is split
+ * into parameter and value and passed to the second overload.
+ * 
+ * @param str Command in the format "parameter=value" or just "parameter"
+ * @return const char* Response to the command (e.g. "Command accepted")
+ * @see analyzeCmd(const char* par, const char* val)
+ */
 const char* analyzeCmd (const char* str )
 {
   char*        value ;                           // Points to value after equalsign in command
@@ -144,42 +156,30 @@ const char* analyzeCmd (const char* str )
 }
 
 
-//**************************************************************************************************
-//                                     A N A L Y Z E C M D                                         *
-//**************************************************************************************************
-// Handling of the various commands from remote webclient, serial        .                         *
-// par holds the parametername and val holds the value.                                            *
-// "wifi_00" and "preset_00" may appear more than once, like wifi_01, wifi_02, etc.                *
-// Examples with available parameters:                                                             *
-//   preset     = 12                        // Select start preset to connect to                   *
-//   preset_00  = <mp3 stream>              // Specify station for a preset 00-max *)              *
-//   volume     = 95                        // Percentage between 0 and 100                        *
-//   upvolume   = 2                         // Add percentage to current volume                    *
-//   downvolume = 2                         // Subtract percentage from current volume             *
-//   toneha     = <0..15>                   // Setting treble gain                                 *
-//   tonehf     = <0..15>                   // Setting treble frequency                            *
-//   tonela     = <0..15>                   // Setting bass gain                                   *
-//   tonelf     = <0..15>                   // Setting treble frequency                            *
-//   station    = <mp3 stream>              // Select new station (will not be saved)              *
-//   station    = <URL>.mp3                 // Play standalone .mp3 file (not saved)               *
-//   station    = <URL>.m3u                 // Select playlist (will not be saved)                 *
-//   stop                                   // Stop playing                                        *
-//   resume                                 // Resume playing                                      *
-//   mute                                   // Mute/unmute the music (toggle)                      *
-//   wifi_00    = mySSID/mypassword         // Set WiFi SSID and password *)                       *
-//   clk_server = pool.ntp.org              // Time server to be used *)                           *
-//   clk_offset = <-11..+14>                // Offset with respect to UTC in hours *)              *
-//   clk_dst    = <1..2>                    // Offset during daylight saving time in hours *)      *
-//   mp3track   = <nodeID>                  // Play track from SD card, nodeID 0 = random          *
-//   settings                               // Returns setting like presets and tone               *
-//   status                                 // Show current URL to play                            *
-//   test                                   // For test purposes                                   *
-//   debug      = 0 or 1                    // Switch debugging on or off                          *
-//   reset                                  // Restart the ESP32                                   *
-//   bat0       = 2318                      // ADC value for an empty battery                      *
-//   bat100     = 2916                      // ADC value for a fully charged battery               *
-//  Commands marked with "*)" are sensible during initialization only                              *
-//**************************************************************************************************
+/**
+ * @brief Analyzes and executes a command with a parameter.
+ * 
+ * This function processes all HTTP and serial commands of the system.
+ * Supported commands include:
+ * - Volume control (volume, upvolume, downvolume)
+ * - Station selection (preset, preset_XX, station)
+ * - Tone control (toneha, tonehf, tonela, tonelf)
+ * - Sleep timer (sleeptime)
+ * - Mute (mute)
+ * - Playback control (stop, resume)
+ * - System commands (reset, update, debug, test)
+ * - Time synchronization (clk_server, clk_offset, clk_dst)
+ * - Battery calibration (bat0, bat100)
+ * - WiFi networks (getnetworks)
+ * - Alarm times (alrm_start, alrm_stop)
+ * - Backlight (backlight_on, backlight_off)
+ * 
+ * @param par Parameter name (e.g. "volume", "preset", "station")
+ * @param val Parameter value (e.g. "75", "12", "http://...")
+ * @return const char* Response string for the client
+ * @note For relative commands (up/down), the value is added/subtracted accordingly
+ * @note Commands marked with "*)" in the description are only meaningful during initialization
+ */
 const char* analyzeCmd (const char* par, const char* val )
 {
   String             argument ;                       // Argument as string
@@ -263,15 +263,15 @@ const char* analyzeCmd (const char* par, const char* val )
   else if (argument.indexOf ("ir_") >= 0 )         // Ir setting?
   { // Do not handle here
   }
-  else if (argument.indexOf ("sleeptime") >= 0 )    // NEU: Sleep Timer Anfrage?
+  else if (argument.indexOf ("sleeptime") >= 0 )    // NEW: Sleep timer request?
   {
     int mins = value.toInt();
     if (mins > 0) {
-      sleeptimer_ms = (int32_t)mins * 60 * 1000;    // Minuten in Millisekunden umrechnen
-      dbgprint("Sleep Timer gesetzt auf %d Min", mins);
+      sleeptimer_ms = (int32_t)mins * 60 * 1000;    // Convert minutes to milliseconds
+      dbgprint("Sleep Timer set to %d min", mins);
     } else {
-      sleeptimer_ms = -1;                           // Deaktivieren
-      dbgprint("Sleep Timer aus");
+      sleeptimer_ms = -1;                           // Deactivate
+      dbgprint("Sleep Timer off");
     }
   }
   else if (argument.indexOf ("preset_") >= 0 )     // Enumerated preset?
@@ -410,7 +410,7 @@ const char* analyzeCmd (const char* par, const char* val )
   // Commands for bass/treble control
   else if (argument.startsWith ("tone") )          // Tone command
   {
-    if (argument.indexOf ("ha") > 0 )              // High amplitue? (for treble)
+    if (argument.indexOf ("ha") > 0 )              // High amplitude? (for treble)
     {
       ini_block.rtone[0] = ivalue ;                   // prepare to set ST_AMPLITUDE
     }
@@ -418,11 +418,11 @@ const char* analyzeCmd (const char* par, const char* val )
     {
       ini_block.rtone[1] = ivalue ;                   // prepare to set ST_FREQLIMIT
     }
-    if (argument.indexOf ("la") > 0 )              // Low amplitue? (for bass)
+    if (argument.indexOf ("la") > 0 )              // Low amplitude? (for bass)
     {
       ini_block.rtone[2] = ivalue ;                   // prepare to set SB_AMPLITUDE
     }
-    if (argument.indexOf ("lf") > 0 )              // High frequency? (for bass)
+    if (argument.indexOf ("lf") > 0 )              // Low frequency? (for bass)
     {
       ini_block.rtone[3] = ivalue ;                   // prepare to set SB_FREQLIMIT
     }
@@ -453,7 +453,7 @@ const char* analyzeCmd (const char* par, const char* val )
     {
       ini_block.clk_offset = value.toInt() ;          // set offset
     }
-    if (argument.indexOf ("dst") > 0 )             // Offset duringe DST spec?
+    if (argument.indexOf ("dst") > 0 )             // Offset during DST spec?
     {
       ini_block.clk_dst = value.toInt() ;             // set DST offset
     }

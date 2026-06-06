@@ -446,7 +446,7 @@ const char interface_js[] PROGMEM = R"=====(
 							if(document.getElementById("firmware")) document.getElementById("firmware").innerHTML = data.firmware;
 			
 							// Uhrzeit und Datum
-							if(document.getElementById("timelabel")) document.getElementById("timelabel").innerHTML = data.time;
+							//if(document.getElementById("timelabel")) document.getElementById("timelabel").innerHTML = data.time;
 							if(document.getElementById("datelabel")) document.getElementById("datelabel").innerHTML = data.date;
 
 							// YouTube Link Update (wie zuvor)

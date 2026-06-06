@@ -1,110 +1,132 @@
+/**
+ * @brief Set I/O pin to "reserved". The pin is then not available for a programmable function.
+ * 
+ * @param rpinnr GPIO pin number to reserve
+ */
+void reservepin(int8_t rpinnr) {
+  uint8_t i = 0;
+  int8_t pin;
 
-
-
-//**************************************************************************************************
-//                                       R E S E R V E P I N                                       *
-//**************************************************************************************************
-// Set I/O pin to "reserved".                                                                      *
-// The pin is than not available for a programmable function.                                      *
-//**************************************************************************************************
-void reservepin(int8_t rpinnr )
-{
-  uint8_t i = 0 ;                                           // Index in progpin/touchpin array
-  int8_t  pin ;                                             // Pin number in progpin array
-
-  while(( pin = progpin[i].gpio)>= 0)                 // Find entry for requested pin
-  {
-    if(pin == rpinnr)                                   // Entry found?
-    {
-      if(progpin[i].reserved)                           // Already reserved?
-      {
+  // Reserve in progpin array
+  while ((pin = progpin[i].gpio) >= 0) {
+    if (pin == rpinnr) {
+      if (progpin[i].reserved) {
         dbgprint("Pin %d is already reserved!", rpinnr);
       }
-      //dbgprint("GPIO%02d unavailabe for 'gpio_'-command", pin);
-      progpin[i].reserved = true ;                          // pin is reserved now
-      break ;                                               // No need to continue
+      progpin[i].reserved = true;
+      break;
     }
-    i++ ;                                                   // Next entry
+    i++;
   }
-  // Also reserve touchpin numbers
-  i = 0 ;
-  while(( pin = touchpin[i].gpio)>= 0)                // Find entry for requested pin
-  {
-    if(pin == rpinnr)                                   // Entry found?
-    {
-      //dbgprint("GPIO%02d unavailabe for 'touch'-command", pin);
-      touchpin[i].reserved = true ;                         // pin is reserved now
-      break ;                                               // No need to continue
+
+  // Also reserve touch pin numbers
+  i = 0;
+  while ((pin = touchpin[i].gpio) >= 0) {
+    if (pin == rpinnr) {
+      touchpin[i].reserved = true;
+      break;
     }
-    i++ ;                                                   // Next entry
+    i++;
   }
 }
 
-
-
-//**************************************************************************************************
-//                                     G E T E N C R Y P T I O N T Y P E                           *
-//**************************************************************************************************
-// Read the encryption type of the network and return as a 4 byte name                             *
-//**************************************************************************************************
-const char* getEncryptionType ( wifi_auth_mode_t thisType )
-{
-  switch ( thisType )
-  {
+/**
+ * @brief Read the encryption type of the network and return as a 4 byte name.
+ * 
+ * @param thisType The WiFi authentication mode
+ * @return const char* String representation of the encryption type
+ */
+const char* getEncryptionType(wifi_auth_mode_t thisType) {
+  switch (thisType) {
     case WIFI_AUTH_OPEN:
-      return "OPEN" ;
+      return "OPEN";
     case WIFI_AUTH_WEP:
-      return "WEP" ;
+      return "WEP";
     case WIFI_AUTH_WPA_PSK:
-      return "WPA_PSK" ;
+      return "WPA_PSK";
     case WIFI_AUTH_WPA2_PSK:
-      return "WPA2_PSK" ;
+      return "WPA2_PSK";
     case WIFI_AUTH_WPA_WPA2_PSK:
-      return "WPA_WPA2_PSK" ;
+      return "WPA_WPA2_PSK";
     case WIFI_AUTH_MAX:
-      return "MAX" ;
+      return "MAX";
     default:
-      break ;
+      break;
   }
-  return "????" ;
+  return "????";
 }
 
+/**
+ * @brief Check if a network SSID is acceptable (exists in wifilist).
+ * 
+ * @param ssid The SSID to check
+ * @return const char* "Acceptable" if found, empty string otherwise
+ */
+static const char* isAcceptableNetwork(const String& ssid) {
+  for (int j = 0; j < wifilist.size(); j++) {
+    WifiInfo_t winfo = wifilist[j];
+    if (ssid.indexOf(winfo.ssid) == 0) {
+      return "Acceptable";
+    }
+  }
+  return "";
+}
 
-//**************************************************************************************************
-//                                        L I S T N E T W O R K S                                  *
-//**************************************************************************************************
-// List the available networks.                                                                    *
-// Acceptable networks are those who have an entry in the preferences.                             *
-// SSIDs of available networks will be saved for use in webinterface.                              *
-// OPTIMIERT: Zeigt nur die 4 stärksten Netzwerke auf dem Display!                                 *
-//**************************************************************************************************
-void listNetworks()
-{
-  WifiInfo_t       winfo ;            // Entry from wifilist
-  wifi_auth_mode_t encryption ;       // TKIP(WPA), WEP, etc.
-  const char*      acceptable ;       // Netwerk is acceptable for connection
-  int              i, j ;             // Loop control
-  char             displayLine[40];   // Buffer für Display-Zeilen
-  int              displayCount = 0;  // Zähler für angezeigte Netzwerke
-
-  dbgprint ( "Scan Networks" ) ;                         // Scan for nearby networks
-  tftlog ( "Scan Networks" ) ;
-
-  numSsid = WiFi.scanNetworks() ;
-  dbgprint ( "Scan completed" ) ;
-  tftlog ( "Scan Complete" ) ;
-
-  if ( numSsid <= 0 )
-  {
-    dbgprint ( "Couldn't get a wifi connection" ) ;
-    tftlog ( "Missing wifi connection" ) ;
-    return ;
+/**
+ * @brief Display a single network on the TFT.
+ * 
+ * @param index Network index (1-based)
+ * @param ssid Network SSID
+ * @param rssi Signal strength in dBm
+ * @param displayCount Reference to counter for displayed networks
+ */
+static void displayNetworkOnTft(int index, const String& ssid, int rssi, int& displayCount) {
+  if (displayCount >= MAX_DISPLAY_NETWORKS) {
+    return;
   }
   
-  // Anzahl der gefundenen Netzwerke anzeigen
-  dbgprint ( "Number of available networks: %d", numSsid ) ;
+  char displayLine[40];
+  String ssidShort = ssid;
   
-  // Zeige auf Display nur die Info dass wir filtern
+  if (ssidShort.length() > 16) {
+    ssidShort = ssidShort.substring(0, 16);
+  }
+  
+  sprintf(displayLine, "%d-%s %ddBm", index, ssidShort.c_str(), rssi);
+  tftlog(displayLine);
+  delay(400);
+  displayCount++;
+}
+
+/**
+ * @brief List the available networks.
+ *        Acceptable networks are those who have an entry in the preferences.
+ *        SSIDs of available networks will be saved for use in web interface.
+ *        Optimized: Shows only the strongest networks on the display.
+ */
+void listNetworks() {
+  wifi_auth_mode_t encryption;
+  const char* acceptable;
+  int i;
+  int displayCount = 0;
+  char displayLine[40];
+
+  dbgprint("Scan Networks");
+  tftlog("Scan Networks");
+
+  numSsid = WiFi.scanNetworks();
+  dbgprint("Scan completed");
+  tftlog("Scan Complete");
+
+  if (numSsid <= 0) {
+    dbgprint("Couldn't get a wifi connection");
+    tftlog("Missing wifi connection");
+    return;
+  }
+
+  dbgprint("Number of available networks: %d", numSsid);
+
+  // Show filtering info on display
   if (numSsid > MAX_DISPLAY_NETWORKS) {
     sprintf(displayLine, "Found %d (show top %d)", numSsid, MAX_DISPLAY_NETWORKS);
   } else {
@@ -112,406 +134,367 @@ void listNetworks()
   }
   tftlog(displayLine);
   delay(800);
-  
-  // ALLE Netzwerke im Serial Monitor ausgeben (wie bisher)
-  // Aber nur die MAX_DISPLAY_NETWORKS stärksten auf dem Display
-  for ( i = 0 ; i < numSsid ; i++ )
-  {
-    acceptable = "" ;                                    // Assume not acceptable
-    for ( j = 0 ; j < wifilist.size() ; j++ )            // Search in wifilist
-    {
-      winfo = wifilist[j] ;                              // Get one entry
-      if ( WiFi.SSID(i).indexOf ( winfo.ssid ) == 0 )    // Is this SSID acceptable?
-      {
-        acceptable = "Acceptable" ;
-        break ;
-      }
-    }
-    encryption = WiFi.encryptionType ( i ) ;
-    
-    // IMMER im Serial Monitor ausgeben (alle Netzwerke)
-    dbgprint ( "%2d - %-25s Signal: %3d dBm, Encryption %4s, %s",
-               i + 1, WiFi.SSID(i).c_str(), WiFi.RSSI(i),
-               getEncryptionType ( encryption ),
-               acceptable ) ;
-    
-    // Nur die ersten MAX_DISPLAY_NETWORKS Netzwerke auf dem Display anzeigen
-    // (WiFi.scanNetworks() sortiert bereits nach Signalstärke - stärkste zuerst!)
-    if (displayCount < MAX_DISPLAY_NETWORKS) {
-      String ssidShort = WiFi.SSID(i);
-      if (ssidShort.length() > 16) {
-        ssidShort = ssidShort.substring(0, 16);  // SSID auf 16 Zeichen kürzen
-      }
-      
-      // Display SSID and SSID strength
-      sprintf(displayLine, "%d-%s %ddBm",
-              i + 1, 
-              ssidShort.c_str(), 
-              WiFi.RSSI(i));
-      
-      tftlog(displayLine);
-      delay(400);  // Pause zwischen den Netzwerken
-      displayCount++;
-    }
-    
+
+  // Output all networks to serial monitor, but only strongest to display
+  for (i = 0; i < numSsid; i++) {
+    acceptable = isAcceptableNetwork(WiFi.SSID(i));
+    encryption = WiFi.encryptionType(i);
+
+    // Always print to serial monitor
+    dbgprint("%2d - %-25s Signal: %3d dBm, Encryption %4s, %s",
+             i + 1, WiFi.SSID(i).c_str(), WiFi.RSSI(i),
+             getEncryptionType(encryption), acceptable);
+
+    // Display only strongest networks (scanNetworks sorts by signal strength)
+    displayNetworkOnTft(i + 1, WiFi.SSID(i), WiFi.RSSI(i), displayCount);
+
     // Remember this network for later use
-    networks += WiFi.SSID(i) + String ( "|" ) ;
+    networks += WiFi.SSID(i) + String("|");
   }
-  
-  dbgprint ( "End of list" ) ;
-  
-  delay(1000);  // Letzte Zeile 1 Sekunde anzeigen
+
+  dbgprint("End of list");
+  delay(1000);
 }
 
+/**
+ * @brief Setup Access Point mode when WiFi connection fails.
+ * 
+ * @return true Always returns true for AP mode
+ */
+static bool setupAccessPoint() {
+  char* pfs;
+  IPAddress local_IP(192, 168, 4, 1);
+  IPAddress gateway(192, 168, 4, 1);
+  IPAddress subnet(255, 255, 255, 0);
+  
+  dbgprint("WiFi Failed! Setup AP: %s", NAME);
+  
+  WiFi.mode(WIFI_AP);
+  WiFi.softAPConfig(local_IP, gateway, subnet);
+  WiFi.softAP(NAME, NAME);
+  delay(1000);
+  
+  ipaddress = WiFi.softAPIP().toString();
+  pfs = dbgprint("IP = %s", ipaddress.c_str());
+  NetworkFound = true;
+  tftlog(pfs);
+  
+  return false;
+}
 
+/**
+ * @brief Connect to WiFi using the SSID's available in wifiMulti.
+ *        If only one AP is found in preferences (i.e. wifi_00) the connection is made without
+ *        using wifiMulti.
+ *        If connection fails, an AP is created and the function returns false.
+ * 
+ * @return true if connected to WiFi, false if in AP mode
+ */
+bool connectwifi() {
+  char* pfs;
+  bool localAP = false;
+  WifiInfo_t winfo;
 
+  WiFi.disconnect();
+  WiFi.softAPdisconnect(true);
 
-
-//**************************************************************************************************
-//                                       C O N N E C T W I F I                                     *
-//**************************************************************************************************
-// Connect to WiFi using the SSID's available in wifiMulti.                                        *
-// If only one AP if found in preferences (i.e. wifi_00) the connection is made without            *
-// using wifiMulti.                                                                                *
-// If connection fails, an AP is created and the function returns false.                           *
-//**************************************************************************************************
-bool connectwifi()
-{
-  char* pfs ;                                      
-  bool       localAP = false ;                          
-  WifiInfo_t winfo ;                                    
-
-  WiFi.disconnect() ;                                   
-  WiFi.softAPdisconnect(true) ;                         
-
-  if ( wifilist.size() )                                
-  {
-    if ( wifilist.size() == 1 )                         
-    {
-      winfo = wifilist[0] ;                             
-      WiFi.begin ( winfo.ssid, winfo.passphrase ) ;     
-      dbgprint ( "Try WiFi %s", winfo.ssid ) ;          
+  if (wifilist.size() > 0) {
+    if (wifilist.size() == 1) {
+      winfo = wifilist[0];
+      WiFi.begin(winfo.ssid, winfo.passphrase);
+      dbgprint("Try WiFi %s", winfo.ssid);
+    } else {
+      wifiMulti.run();
     }
-    else                                                
-    {
-      wifiMulti.run() ;                                 
+
+    // Wait max 15 seconds for connection
+    if (WiFi.waitForConnectResult() != WL_CONNECTED) {
+      localAP = true;
     }
-
-    // Warte max 15 Sek auf Verbindung
-    if ( WiFi.waitForConnectResult() != WL_CONNECTED ) 
-    {
-      localAP = true ;                                  
-    }
-  }
-  else
-  {
-    localAP = true ;                                    
+  } else {
+    localAP = true;
   }
 
-  if ( localAP )                                        
-  {
-    dbgprint ( "WiFi Failed! Setup AP: %s", NAME ) ;
-    
-    WiFi.mode(WIFI_AP); // WICHTIG: Modus hart auf Access Point stellen
-    
-    // IP-Konfiguration erzwingen
-    IPAddress local_IP(192, 168, 4, 1);
-    IPAddress gateway(192, 168, 4, 1);
-    IPAddress subnet(255, 255, 255, 0);
-    WiFi.softAPConfig(local_IP, gateway, subnet);
-    
-    // Hotspot starten
-    WiFi.softAP ( NAME, NAME ) ;                        
-    delay(1000);
-    ipaddress = WiFi.softAPIP().toString();
-    pfs = dbgprint ( "IP = %s", ipaddress.c_str() ) ;             
-    NetworkFound = true; // Damit der Webserver im Loop startet
-  }
-  else
-  {
-    ipaddress = WiFi.localIP().toString() ;             
-    tftlog((String("WiFi Name: ") + WiFi.SSID()).c_str()); 
-    pfs = dbgprint ( "IP = %s", ipaddress.c_str() ) ;   
-    NetworkFound = true;
+  if (localAP) {
+    return setupAccessPoint();
   }
 
-  tftlog ( pfs ) ;
+  ipaddress = WiFi.localIP().toString();
+  tftlog((String("WiFi Name: ") + WiFi.SSID()).c_str());
+  pfs = dbgprint("IP = %s", ipaddress.c_str());
+  NetworkFound = true;
+  tftlog(pfs);
+  
   delay(500);
-  tftlog ( "\f" ) ;
-  return ( localAP == false ) ;                         
+  tftlog("\f");
+  return true;
 }
 
-
-
-
-//**************************************************************************************************
-//                                       R E A D P R O G B U T T O N S                             *
-//**************************************************************************************************
-// Read the preferences for the programmable input pins and the touch pins.                        *
-//**************************************************************************************************
-void readprogbuttons()
-{
-  char        mykey[20] ;                                   // For numerated key
-  int8_t      pinnr ;                                       // GPIO pinnumber to fill
-  int         i ;                                           // Loop control
-  String      val ;                                         // Contents of preference entry
-
-  for ( i = 0 ; ( pinnr = progpin[i].gpio ) >= 0 ; i++ )    // Scan for all programmable pins
-  {
-    sprintf ( mykey, "gpio_%02d", pinnr ) ;                 // Form key in preferences
-    if ( nvsKeyExists ( mykey ) )
-    {
-      val = nvsGetValue ( mykey ) ;                           // Get the contents
-      if ( val.length() )                                   // Does it exists?
-      {
-        if ( !progpin[i].reserved )                         // Do not use reserved pins
-        {
-          progpin[i].avail = true ;                         // This one is active now
-          progpin[i].command = val ;                        // Set command
-          dbgprint ( "gpio_%02d will execute %s",           // Show result
-                     pinnr, val.c_str() ) ;
-        }
-      }
-    }
-  }
-  // Now for the touch pins 0..9, identified by their GPIO pin number
-  for ( i = 0 ; ( pinnr = touchpin[i].gpio ) >= 0 ; i++ )   // Scan for all programmable pins
-  {
-    sprintf ( mykey, "touch_%02d", i ) ;                    // Form key in preferences
-    if ( nvsKeyExists ( mykey ) )
-    {
-      val = nvsGetValue ( mykey ) ;                           // Get the contents
-      if ( val.length() )                                   // Does it exists?
-      {
-        if ( !touchpin[i].reserved )                        // Do not use reserved pins
-        {
-          touchpin[i].avail = true ;                        // This one is active now
-          touchpin[i].command = val ;                       // Set command
-          //pinMode ( touchpin[i].gpio,  INPUT ) ;          // Free floating input
-          dbgprint ( "touch_%02d will execute %s",          // Show result
-                     i, val.c_str() ) ;
-          dbgprint ( "Level is now %d",
-                     touchRead ( pinnr ) ) ;                // Sample the pin
-        }
-        else
-        {
-          dbgprint ( "touch_%02d pin (GPIO%02d) is reserved for I/O!",
-                     i, pinnr ) ;
-        }
+/**
+ * @brief Read the preferences for the programmable input pins.
+ * 
+ * @param i Index in pin array
+ * @param pinnr GPIO pin number
+ * @param mykey Buffer for key name
+ */
+static void readProgrammablePin(int i, int8_t pinnr, char* mykey) {
+  String val;
+  
+  if (nvsKeyExists(mykey)) {
+    val = nvsGetValue(mykey);
+    if (val.length()) {
+      if (!progpin[i].reserved) {
+        progpin[i].avail = true;
+        progpin[i].command = val;
+        dbgprint("gpio_%02d will execute %s", pinnr, val.c_str());
       }
     }
   }
 }
 
-
-
-//**************************************************************************************************
-//                                       R E A D I O P R E F S                                     *
-//**************************************************************************************************
-// Scan the preferences for IO-pin definitions.                                                    *
-//**************************************************************************************************
-void readIOprefs()
-{
-  struct iosetting
-  {
-    const char* gname ;                                   // Name in preferences
-    int8_t*     gnr ;                                     // GPIO pin number
-    int8_t      pdefault ;                                // Default pin
-  };
-  struct iosetting klist[] = {                            // List of I/O related keys
-    { "pin_enc_clk",  &ini_block.enc_clk_pin,  25 }, // Default Pinout
-    { "pin_enc_dt",   &ini_block.enc_dt_pin,   26 }, // Default Pinout
-    { "pin_enc_sw",   &ini_block.enc_sw_pin,   27 }, // Default Pinout
-    { "pin_ir",       &ini_block.ir_pin,       35 }, // Default Pinout
-    { "pin_sd_cs",    &ini_block.sd_cs_pin,    21 }, // Default Pinout
-    { "pin_tft_cs",   &ini_block.tft_cs_pin,   15 }, // Default Pinout
-    { "pin_tft_dc",   &ini_block.tft_dc_pin,    2 }, // Default Pinout
-    { "pin_vs_cs",    &ini_block.vs_cs_pin,     5 }, // Default Pinout
-    { "pin_vs_dcs",   &ini_block.vs_dcs_pin,   32 }, // Default Pinout
-    { "pin_vs_dreq",  &ini_block.vs_dreq_pin,    4 }, // Default Pinout
-
-    { "pin_tft_scl",   &ini_block.tft_scl_pin,      -1 }, // Display I2C version
-    { "pin_tft_sda",   &ini_block.tft_sda_pin,      -1 }, // Display I2C version
-    { "pin_tft_bl",    &ini_block.tft_bl_pin,       33 }, // Display backlight
-    { "pin_tft_blx",   &ini_block.tft_blx_pin,      -1 }, // Display backlight (inversed logic)
-    { "pin_shutdown",  &ini_block.vs_shutdown_pin,  -1 }, // Amplifier shut-down pin
-    { "pin_shutdownx", &ini_block.vs_shutdownx_pin, -1 }, // Amplifier shut-down pin (inversed logic)
-    { "pin_spi_sck",   &ini_block.spi_sck_pin,      18 },
-    { "pin_spi_miso",  &ini_block.spi_miso_pin,     19 },
-    { "pin_spi_mosi",  &ini_block.spi_mosi_pin,     23 },
-    { NULL,            NULL,                        0  }  // End of list
-  } ;
-  int         i ;                                         // Loop control
-  int         count = 0 ;                                 // Number of keys found
-  String      val ;                                       // Contents of preference entry
-  int8_t      ival ;                                      // Value converted to integer
-  int8_t*     p ;                                         // Points to variable
-
-  for ( i = 0 ; klist[i].gname ; i++ )                    // Loop trough all I/O related keys
-  {
-    p = klist[i].gnr ;                                    // Point to target variable
-    ival = klist[i].pdefault ;                            // Assume pin number to be the default
-    if ( nvsKeyExists ( klist[i].gname ) )                   // Does it exist?
-    {
-      val = nvsGetValue ( klist[i].gname ) ;                // Read value of key
-      if ( val.length() )                                 // Parameter in preference?
-      {
-        count++ ;                                         // count number of filled keys
-        ival = val.toInt() ;                              // Convert value to integer pinnumber
-        reservepin ( ival ) ;                             // Set pin to "reserved"
+/**
+ * @brief Read the preferences for the programmable touch pins.
+ * 
+ * @param i Index in touch pin array
+ * @param pinnr GPIO pin number
+ * @param mykey Buffer for key name
+ */
+static void readTouchPin(int i, int8_t pinnr, char* mykey) {
+  String val;
+  
+  if (nvsKeyExists(mykey)) {
+    val = nvsGetValue(mykey);
+    if (val.length()) {
+      if (!touchpin[i].reserved) {
+        touchpin[i].avail = true;
+        touchpin[i].command = val;
+        dbgprint("touch_%02d will execute %s", i, val.c_str());
+        dbgprint("Level is now %d", touchRead(pinnr));
+      } else {
+        dbgprint("touch_%02d pin (GPIO%02d) is reserved for I/O!", i, pinnr);
       }
     }
-    *p = ival ;                                           // Set pinnumber in ini_block
-    dbgprint ( "%s set to %d",                            // Show result
-               klist[i].gname,
-               ival ) ;
   }
 }
 
+/**
+ * @brief Read the preferences for the programmable input pins and the touch pins.
+ */
+void readprogbuttons() {
+  char mykey[20];
+  int8_t pinnr;
+  int i;
 
+  // Scan all programmable pins
+  for (i = 0; (pinnr = progpin[i].gpio) >= 0; i++) {
+    sprintf(mykey, "gpio_%02d", pinnr);
+    readProgrammablePin(i, pinnr, mykey);
+  }
 
-//**************************************************************************************************
-//                                       R E A D P R E F S                                         *
-//**************************************************************************************************
-// Read the preferences and interpret the commands.                                                *
-// If output == true, the key / value pairs are returned to the caller as a String.                *
-//**************************************************************************************************
-String readprefs ( bool output )
-{
-  uint16_t    i ;                                           // Loop control
-  String      val ;                                         // Contents of preference entry
-  String      cmd ;                                         // Command for analyzCmd
-  String      outstr = "" ;                                 // Outputstring
-  char*       key ;                                         // Point to nvskeys[i]
-  uint8_t     winx ;                                        // Index in wifilist
-  uint16_t    last2char = 0 ;                               // To detect paragraphs
+  // Scan all touch pins (0..9, identified by their GPIO pin number)
+  for (i = 0; (pinnr = touchpin[i].gpio) >= 0; i++) {
+    sprintf(mykey, "touch_%02d", i);
+    readTouchPin(i, pinnr, mykey);
+  }
+}
 
-  i = 0 ;
-  while ( *( key = nvskeys[i] ) )                           // Loop trough all available keys
-  {
-    val = nvsGetValue ( key ) ;                               // Read value of this key
-    cmd = String ( key ) +                                  // form command
-          String ( " = " ) +
-          val ;
-    if ( strstr ( key, "wifi_"  ) )                         // Is it a wifi ssid/password?
-    {
-      winx = atoi ( key + 5 ) ;                             // Get index in wifilist
-      if ( ( winx < wifilist.size() ) &&                    // Existing wifi spec in wifilist?
-           ( val.indexOf ( wifilist[winx].ssid ) == 0 ) )
-      {
-        val = String ( wifilist[winx].ssid ) +              // hide password
-              String ( "/*******" ) ;
+/**
+ * @brief Structure for I/O pin configuration mapping.
+ */
+struct iosetting {
+  const char* gname;      // Name in preferences
+  int8_t*     gnr;        // GPIO pin number
+  int8_t      pdefault;   // Default pin
+};
+
+/**
+ * @brief List of I/O related keys and their default pin mappings.
+ */
+static const struct iosetting klist[] = {
+  { "pin_enc_clk",  &ini_block.enc_clk_pin,  25 },
+  { "pin_enc_dt",   &ini_block.enc_dt_pin,   26 },
+  { "pin_enc_sw",   &ini_block.enc_sw_pin,   27 },
+  { "pin_ir",       &ini_block.ir_pin,       35 },
+  { "pin_sd_cs",    &ini_block.sd_cs_pin,    21 },
+  { "pin_tft_cs",   &ini_block.tft_cs_pin,   15 },
+  { "pin_tft_dc",   &ini_block.tft_dc_pin,    2 },
+  { "pin_vs_cs",    &ini_block.vs_cs_pin,     5 },
+  { "pin_vs_dcs",   &ini_block.vs_dcs_pin,   32 },
+  { "pin_vs_dreq",  &ini_block.vs_dreq_pin,   4 },
+  { "pin_tft_scl",  &ini_block.tft_scl_pin,   -1 },
+  { "pin_tft_sda",  &ini_block.tft_sda_pin,   -1 },
+  { "pin_tft_bl",   &ini_block.tft_bl_pin,    33 },
+  { "pin_tft_blx",  &ini_block.tft_blx_pin,   -1 },
+  { "pin_shutdown", &ini_block.vs_shutdown_pin,  -1 },
+  { "pin_shutdownx", &ini_block.vs_shutdownx_pin, -1 },
+  { "pin_spi_sck",  &ini_block.spi_sck_pin,   18 },
+  { "pin_spi_miso", &ini_block.spi_miso_pin,  19 },
+  { "pin_spi_mosi", &ini_block.spi_mosi_pin,  23 },
+  { NULL,           NULL,                      0 }
+};
+
+/**
+ * @brief Process a single I/O preference entry.
+ * 
+ * @param i Index in the I/O list
+ * @return true if key was found and processed
+ */
+static bool processIoPrefEntry(int i) {
+  int8_t* p = klist[i].gnr;
+  int8_t ival = klist[i].pdefault;
+  String val;
+  
+  if (nvsKeyExists(klist[i].gname)) {
+    val = nvsGetValue(klist[i].gname);
+    if (val.length()) {
+      ival = val.toInt();
+      reservepin(ival);
+    }
+  }
+  
+  *p = ival;
+  dbgprint("%s set to %d", klist[i].gname, ival);
+  
+  return (val.length() > 0);
+}
+
+/**
+ * @brief Scan the preferences for IO-pin definitions.
+ */
+void readIOprefs() {
+  int i;
+  int count = 0;
+
+  for (i = 0; klist[i].gname; i++) {
+    if (processIoPrefEntry(i)) {
+      count++;
+    }
+  }
+}
+
+/**
+ * @brief Format a preference line for output, hiding passwords if needed.
+ * 
+ * @param key The preference key
+ * @param val The preference value
+ * @param output Whether to format for output or not
+ * @return String Formatted line
+ */
+static String formatPrefLine(const char* key, String val, bool output) {
+  uint8_t winx;
+  
+  if (strstr(key, "wifi_")) {
+    winx = atoi(key + 5);
+    if ((winx < wifilist.size()) && (val.indexOf(wifilist[winx].ssid) == 0)) {
+      val = String(wifilist[winx].ssid) + String("/*******");
+    }
+    if (!output) {
+      return "";
+    }
+  }
+  
+  if (output) {
+    return String(key) + String(" = ") + val + String("\n");
+  }
+  
+  return String(key) + String(" = ") + val;
+}
+
+/**
+ * @brief Read the preferences and interpret the commands.
+ *        If output == true, the key/value pairs are returned to the caller as a String.
+ * 
+ * @param output If true, returns formatted string; if false, executes analyzeCmd
+ * @return String Formatted preference pairs or status message
+ */
+String readprefs(bool output) {
+  uint16_t i = 0;
+  String val;
+  String cmd;
+  String outstr = "";
+  char* key;
+  uint16_t last2char = 0;
+
+  while (*(key = nvskeys[i])) {
+    val = nvsGetValue(key);
+    cmd = formatPrefLine(key, val, output);
+    
+    if (output) {
+      if ((i > 0) && (*(uint16_t*)key != last2char)) {
+        outstr += String("#\n");
       }
-      cmd = String ( "" ) ;                                 // Do not analyze this
+      last2char = *(uint16_t*)key;
+      outstr += cmd;
+    } else if (cmd.length() > 0) {
+      analyzeCmd(cmd.c_str());
+    }
+    
+    i++;
+  }
+  
+  if (i == 0) {
+    outstr = String("No preferences found.\n"
+                    "Use defaults or run Esp32_radio_init first.\n");
+  }
+  
+  return outstr;
+}
+
+/**
+ * @brief Do some filtering on the input string:
+ *        - Remove comment part (starting with "#")
+ *        - Strip trailing CR
+ *        - Strip leading spaces
+ *        - Strip trailing spaces
+ * 
+ * @param str The string to chomp (modified in place)
+ */
+void chomp(String& str) {
+  int inx;
+  
+  if ((inx = str.indexOf("#")) >= 0) {
+    str.remove(inx);
+  }
+  str.trim();
+}
+
+/**
+ * @brief Find the namespace ID for the namespace passed as parameter.
+ * 
+ * @param ns Namespace name to search for
+ * @return uint8_t Namespace ID, or 0xFF if not found
+ */
+uint8_t FindNamespaceId(const char* ns) {
+  esp_err_t result = ESP_OK;
+  uint32_t offset = 0;
+  uint8_t i;
+  uint8_t bm;
+  uint8_t res = 0xFF;
+
+  while (offset < nvs->size) {
+    result = esp_partition_read(nvs, offset, &nvsbuf, sizeof(nvsbuf));
+    if (result != ESP_OK) {
+      dbgprint("Error reading NVS!");
+      break;
+    }
+    
+    i = 0;
+    while (i < 126) {
+      bm = (nvsbuf.Bitmap[i / 4] >> ((i % 4) * 2));
+      bm &= 0x03;
       
-    }
-
-    if ( output )
-    {
-      if ( ( i > 0 ) &&
-           ( *(uint16_t*)key != last2char ) )               // New paragraph?
-      {
-        outstr += String ( "#\n" ) ;                        // add separator
-      }
-      last2char = *(uint16_t*)key ;                         // Save 2 chars for next compare
-      outstr += String ( key ) +                            // Add to outstr
-                String ( " = " ) +
-                val +
-                String ( "\n" ) ;                           // Add newline
-    }
-    else
-    {
-      analyzeCmd ( cmd.c_str() ) ;                          // Analyze it
-    }
-    i++ ;                                                   // Next key
-  }
-  if ( i == 0 )
-  {
-    outstr = String ( "No preferences found.\n"
-                      "Use defaults or run Esp32_radio_init first.\n" ) ;
-  }
-  return outstr ;
-}
-
-
-
-
-//**************************************************************************************************
-//                                         C H O M P                                               *
-//**************************************************************************************************
-// Do some filtering on de inputstring:                                                            *
-//  - String comment part (starting with "#").                                                     *
-//  - Strip trailing CR.                                                                           *
-//  - Strip leading spaces.                                                                        *
-//  - Strip trailing spaces.                                                                       *
-//**************************************************************************************************
-// in use from http.h, interface.h, mp3.h, rotary_encoder.h
-void chomp ( String &str )
-{
-  int   inx ;                                         // Index in de input string
-
-  if ( ( inx = str.indexOf ( "#" ) ) >= 0 )           // Comment line or partial comment?
-  {
-    str.remove ( inx ) ;                              // remove
-  }
-  str.trim() ;                                        // Remove spaces and CR
-}
-
-
-//**************************************************************************************************
-//                                   F I N D N S I D                                               *
-//**************************************************************************************************
-// Find the namespace ID for the namespace passed as parameter.                                    *
-//**************************************************************************************************
-uint8_t FindNamespaceId ( const char* ns )
-{
-  esp_err_t                 result = ESP_OK ;                 // Result of reading partition
-  uint32_t                  offset = 0 ;                      // Offset in nvs partition
-  uint8_t                   i ;                               // Index in Entry 0..125
-  uint8_t                   bm ;                              // Bitmap for an entry
-  uint8_t                   res = 0xFF ;                      // Function result
-
-  while ( offset < nvs->size )
-  {
-    result = esp_partition_read ( nvs, offset,                // Read 1 page in nvs partition
-                                  &nvsbuf,
-                                  sizeof(nvsbuf) ) ;
-    if ( result != ESP_OK )
-    {
-      dbgprint ( "Error reading NVS!" ) ;
-      break ;
-    }
-    i = 0 ;
-    while ( i < 126 )
-    {
-
-      bm = ( nvsbuf.Bitmap[i / 4] >> ( ( i % 4 ) * 2 ) ) ;    // Get bitmap for this entry,
-      bm &= 0x03 ;                                            // 2 bits for one entry
-      if ( ( bm == 2 ) &&
-           ( nvsbuf.Entry[i].Ns == 0 ) &&
-           ( strcmp ( ns, nvsbuf.Entry[i].Key ) == 0 ) )
-      {
-        res = nvsbuf.Entry[i].Data & 0xFF ;                   // Return the ID
-        offset = nvs->size ;                                  // Stop outer loop as well
-        break ;
-      }
-      else
-      {
-        if ( bm == 2 )
-        {
-          i += nvsbuf.Entry[i].Span ;                         // Next entry
-        }
-        else
-        {
-          i++ ;
-        }
+      if ((bm == 2) && (nvsbuf.Entry[i].Ns == 0) && (strcmp(ns, nvsbuf.Entry[i].Key) == 0)) {
+        res = nvsbuf.Entry[i].Data & 0xFF;
+        offset = nvs->size;
+        break;
+      } else if (bm == 2) {
+        i += nvsbuf.Entry[i].Span;
+      } else {
+        i++;
       }
     }
-    offset += sizeof(nvs_page) ;                              // Prepare to read next page in nvs
+    offset += sizeof(nvs_page);
   }
-  return res ;
+  
+  return res;
 }
-
-
-
-
