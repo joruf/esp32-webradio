@@ -8,160 +8,116 @@
  * @note The original logic is kept exactly as in the working version to ensure
  *       continuous volume control after power toggle.
  */
+
 void checkRotaryEncoder()
 {
-  static int8_t  enc_preset ;
-  static String  enc_nodeID ;
-  static String  enc_filename ;
-  String         tmp ;
-  int16_t        inx ;
+  static int8_t  enc_preset = 0;
+  String         tmp;
+  int16_t        inx;
 
   // Inactivity timer: return to VOLUME mode after 4 seconds
   if ( enc_menu_mode != VOLUME )
   {
     if ( enc_inactivity > 40 )
     {
-      enc_inactivity = 0 ;
-      enc_menu_mode = VOLUME ;
-      dbgprint ( "Encoder mode back to VOLUME" ) ;
-      showTextOnTFT ( 2, "" ) ; // Clear display line
+      enc_inactivity = 0;
+      enc_menu_mode = VOLUME;
+      dbgprint( "Encoder mode back to VOLUME" );
+      showTextOnTFT( 2, "" );
     }
   }
 
-  // Activate backlight and reset timer on any activity
-  if ( singleclick || doubleclick || tripleclick || longclick || rotationcount != 0 ) {
-    enableBacklight ( true ) ;
-    bltimer = 0 ;
-  } else {
-    return ;
-  }
-
-  // --- Single click handling (power toggle in VOLUME mode) ---
-  if (singleclick) {
-    // In VOLUME mode: radio on/off (power toggle)
-    if (enc_menu_mode == VOLUME) {
-      singleclick = false;
-      dbgprint("Click in volume mode - Power Toggle");
-
-      if (datamode != STOPPED) { 
-        stopStream();
-        showTextOnTFT(1, "Radio aus"); 
-        showTextOnTFT(3, "Ausschalten..."); 
-      } 
-      else {
-        if (enc_preset < 0 || enc_preset > MAXPRESETS) enc_preset = 0;
-        ini_block.newpreset = enc_preset; 
-        playlist_num = 0;
-        currentpreset = -1; 
-        showTextOnTFT(1, "Radio an");
-        showTextOnTFT(3, "Verbinde...");
-        dbgprint("Starte Preset %d", enc_preset);
-      }
-    } 
-    // In other modes (PRESET/TRACK), the click is processed later as confirmation
-  }
-
-  // Double click: activate preset selection mode
-  if ( doubleclick )
+  // Activate backlight on any activity
+  if ( singleclick || longclick || doubleclick || rotationcount != 0 )
   {
-    dbgprint ( "Double click") ;
-    doubleclick = false ;
-    enc_menu_mode = PRESET ;
-    showTextOnTFT (3, msgTurnToSelectStation);
-    enc_preset = ini_block.newpreset;
+    enableBacklight( true );
+    bltimer = 0;
   }
-
-  // Single click confirmation for PRESET / TRACK mode
-  if ( singleclick )
+  else
   {
-    dbgprint ( "Single click (Mode confirmation)") ;
-    singleclick = false ;
-    switch ( enc_menu_mode )
-    {
-      case PRESET :
-        currentpreset = -1 ;
-        ini_block.newpreset = enc_preset ;
-        enc_menu_mode = VOLUME ;
-        showTextOnTFT ( 1, "Radio an" ) ;
-        showTextOnTFT ( 3, "Sender gewählt" ) ;
-        break ;
-      case TRACK :
-        host = enc_filename ;
-        hostreq = true ;
-        enc_menu_mode = VOLUME ;
-        showTextOnTFT ( 3, "" ) ;
-        break ;
-      default:
-        // VOLUME case is already handled above
-        break;
-    }
+    return;
   }
 
-  // Long click: stop or random SD track (currently disabled)
+  // --- Long click: enter preset selection mode (process FIRST) ---
   if ( longclick )
   {
-    /*
-    longclick = false;
-    dbgprint ( "Long click") ;
-    if ( datamode != STOPPED) {
-      stopStream();
-      showTextOnTFT(1, "Radio gestoppt");
-    } else {
-      if (SD_nodecount) {
-        host = getSDfilename ( "0" );
-        hostreq = true;
+    dbgprint( "Long click detected - Enter preset selection mode" );
+    longclick = false;           // Clear immediately
+    enc_menu_mode = PRESET;
+    showTextOnTFT( 3, msgTurnToSelectStation );
+    enc_preset = ini_block.newpreset;
+    return;                      // Exit, don't process single click in same cycle
+  }
+
+  // --- Single click: depends on current mode (only if longclick was false) ---
+  if ( singleclick )
+  {
+    singleclick = false;
+    if ( enc_menu_mode == VOLUME )
+    {
+      // Power toggle
+      dbgprint( "Single click - Power toggle" );
+      if ( datamode != STOPPED )
+      {
+        stopStream();
+        showTextOnTFT( 1, "Radio aus" );
+        showTextOnTFT( 3, "Ausschalten..." );
+        enableBacklight(false);
+      }
+      else
+      {
+        if ( enc_preset < 0 || enc_preset > MAXPRESETS )
+        {
+          enc_preset = 0;
+        }
+        ini_block.newpreset = enc_preset;
+        playlist_num = 0;
+        currentpreset = -1;
+        showTextOnTFT( 1, "Radio an" );
+        showTextOnTFT( 3, "Verbinde..." );
+        dbgprint( "Starte Preset %d", enc_preset );
       }
     }
-    */
-  }
-
-  // Triple click: SD track mode (currently disabled)
-  /*
-  if ( tripleclick )
-  {
-    dbgprint ( "Triple click") ;
-    tripleclick = false ;
-    if ( SD_nodecount )
+    else if ( enc_menu_mode == PRESET )
     {
-      enc_menu_mode = TRACK ;
-      showTextOnTFT ( 3, "Track wählen..." ) ;
-      enc_nodeID = selectnextSDnode ( SD_currentnode, +1 ) ;
-      if ( datamode != STOPPED ) datamode = STOPREQD ;
+      // Confirm selected preset and return to volume mode
+      dbgprint( "Single click - Confirm preset" );
+      currentpreset = -1;
+      ini_block.newpreset = enc_preset;
+      enc_menu_mode = VOLUME;
+      showTextOnTFT( 1, "Radio an" );
+      showTextOnTFT( 3, "Sender gewählt" );
     }
+    // TRACK mode is not used
   }
-  */
 
-  // Rotation handling (volume, preset, or track selection)
-  if ( rotationcount == 0 ) return ;
-  
+  // --- Rotation handling ---
+  if ( rotationcount == 0 ) return;
+
   switch ( enc_menu_mode )
   {
-    case VOLUME :
-      ini_block.reqvol = constrain(ini_block.reqvol + rotationcount, 0, 100);
-      muteflag = false ;
-      break ;
-      
-    case PRESET :
-      enc_preset += rotationcount ;
+    case VOLUME:
+      ini_block.reqvol = constrain( ini_block.reqvol + rotationcount, 0, 100 );
+      muteflag = false;
+      break;
+
+    case PRESET:
+      enc_preset += rotationcount;
       if ( enc_preset < 0 ) enc_preset = MAXPRESETS;
-      tmp = nvsGetHostFromPref ( enc_preset ) ;
-      if ( tmp == "" ) {
-        enc_preset = 0 ;
-        tmp = nvsGetHostFromPref ( enc_preset ) ;
+      tmp = nvsGetHostFromPref( enc_preset );
+      if ( tmp == "" )
+      {
+        enc_preset = 0;
+        tmp = nvsGetHostFromPref( enc_preset );
       }
-      inx = tmp.indexOf ( "#" ) ;
-      if ( inx > 0 ) tmp.remove ( 0, inx + 1 ) ;
-      chomp ( tmp ) ;
-      showTextOnTFT ( 3, tmp ) ;
-      break ;
-      
-    case TRACK :
-      enc_nodeID = selectnextSDnode ( enc_nodeID, rotationcount ) ;
-      enc_filename = getSDfilename ( enc_nodeID ) ;
-      tmp = enc_filename ;
-      while ( ( inx = tmp.indexOf ( "/" ) ) >= 0 ) tmp.remove ( 0, inx + 1 ) ;
-      showTextOnTFT ( 3, tmp ) ;
-      break ;
+      inx = tmp.indexOf( "#" );
+      if ( inx > 0 ) tmp.remove( 0, inx + 1 );
+      chomp( tmp );
+      showTextOnTFT( 3, tmp );
+      break;
+
+    default:
+      break;
   }
-  rotationcount = 0 ;
+  rotationcount = 0;
 }

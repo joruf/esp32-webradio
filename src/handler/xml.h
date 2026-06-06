@@ -1,10 +1,15 @@
 
 
-//**************************************************************************************************
-//                                          X M L P A R S E                                        *
-//**************************************************************************************************
-// Parses line with XML data and put result in variable specified by parameter.                    *
-//**************************************************************************************************
+/**
+ * @brief Parse a line of XML data and extract a value between tags.
+ * 
+ * Searches for an end tag like "</tag>" in the line and extracts the content
+ * before that tag as the result.
+ * 
+ * @param line The XML line to parse
+ * @param selstr The tag name to search for (without the "</" prefix)
+ * @param res Reference to string where the result will be stored
+ */
 void xmlparse ( String &line, const char *selstr, String &res )
 {
   String sel = "</" ;                                  // Will be like "</status-code"
@@ -19,13 +24,16 @@ void xmlparse ( String &line, const char *selstr, String &res )
 }
 
 
-//**************************************************************************************************
-//                                          X M L G E T H O S T                                    *
-//**************************************************************************************************
-// Parses streams from XML data.                                                                   *
-// Example URL for XML Data Stream:                                                                *
-// http://playerservices.streamtheworld.com/api/livestream?version=1.5&mount=IHR_TRANAAC&lang=en   *
-//**************************************************************************************************
+/**
+ * @brief Get streaming host from iHeartRadio XML API.
+ * 
+ * Connects to playerservices.streamtheworld.com, requests station information
+ * for the given mount point, and parses the XML response to extract the
+ * server IP, port, and mount point for the actual audio stream.
+ * 
+ * @param mount The station mount point (e.g., "IHR_TRAN")
+ * @return String The complete streaming URL (e.g., "server:port/mount_SC"), or empty string on error
+ */
 String xmlgethost  ( String mount )
 {
   const char* xmlhost = "playerservices.streamtheworld.com" ;  // XML data source
@@ -43,7 +51,7 @@ String xmlgethost  ( String mount )
   char     tmpstr[200] ;                            // Full GET command, later stream URL
   String   urlout ;                                 // Result URL
 
-  stop_mp3client() ; // Stop any current wificlient connections.
+  stop_mp3client(); // Stop any current wificlient connections.
   dbgprint ( "Connect to new iHeartRadio host: %s", mount.c_str() ) ;
   datamode = INIT ;                                   // Start default in metamode
   chunked = false ;                                   // Assume not chunked

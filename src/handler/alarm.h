@@ -34,6 +34,7 @@ void handleSleepTimer() {
         stopStream(); // Function from volume.h
         showTextOnTFT(1, "Sleep Timer"); // Info on display
         showTextOnTFT(3, "Radio off");
+        enableBacklight(false);
       }
     }
   } else {
@@ -90,10 +91,10 @@ static bool tryStopRadioAlarm(int8_t alrm_stop_hour, int8_t alrm_stop_min) {
         timeinfo.tm_sec <= 2) {   // Only within the first 2 seconds of the minute
         
         stopStream();
-        enableBacklight(true);
         showTextOnTFT(1, msgRadioAlarmOff);
         radioAlarmStatusChanged = ALRM_STOP;
         showTextOnTFT(3, msgPlayerStopped);
+        enableBacklight(false);
         return true;
     }
     return false;
