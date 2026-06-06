@@ -1,0 +1,11 @@
+# PlatformIO local build directories (never upload these)
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# VS Code configurations
+.vscode/
+
+# Local build logs or cache
+*.info
+*.log

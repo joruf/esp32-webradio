@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "../../../Arduino/ESP32_Webradio"
+		},
+		{
+			"name": "260606-114746-esp32dev",
+			"path": "../260606-114746-esp32dev"
+		}
+	],
+	"settings": {}
+}
