@@ -164,9 +164,9 @@ void showTimeOnTFT ( const char* str, uint16_t color )
 
   if ( str[0] == '\0' )                            // Empty string forces a refresh
   {
-    memset(oldStr, '.', sizeof(oldStr) - 1);
+    memset(oldStr, '\0', sizeof(oldStr));
     oldStr[sizeof(oldStr) - 1] = '\0';
-    return ;
+    return;
   }
   
   if ( tft )                                       // Is TFT active?

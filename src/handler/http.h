@@ -497,27 +497,14 @@ void handlehttp()
     }
   }
 
-  // Sendet Sendername, Songtitel, Uhrzeit und Datum als JSON
+  // Sends: sender name, song titel, time und date as JSON
   if (http_getcmd.startsWith("getJSON")) {
-    char time_str[10];  // Platz für "HH:MM:SS\0"
-    char date_str[12];  // Platz für "TT.MM.JJJJ\0"
-
-    // Falls noch keine Zeit vom NTP-Server geholt wurde (tm_year ist dann 0)
-    if (timeinfo.tm_year > 0) {
-      sprintf(time_str, "%02d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
-      sprintf(date_str, "%02d.%02d.%04d", timeinfo.tm_mday, timeinfo.tm_mon + 1, timeinfo.tm_year + 1900);
-    } else {
-      strcpy(time_str, "00:00:00");
-      strcpy(date_str, "01.01.2026"); // Oder Platzhalter
-    }
-
-    // JSON zusammenbauen
     String jsonResponse = "{";
     jsonResponse += "\"station\":\"" + icyname + "\",";
     jsonResponse += "\"title\":\"" + icystreamtitle + "\",";
     jsonResponse += "\"firmware\":\"" + String(FIRMWARE) + "\",";
-    jsonResponse += "\"time\":\"" + String(time_str) + "\",";
-    jsonResponse += "\"date\":\"" + String(date_str) + "\"";
+    jsonResponse += "\"time\":\"" + String(timetxt) + "\",";
+    jsonResponse += "\"date\":\"" + String(timetxt) + "\"";
     jsonResponse += "}";
 
     // Header für JSON senden

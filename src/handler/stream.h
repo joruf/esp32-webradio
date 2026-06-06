@@ -11,7 +11,7 @@ void showStreamDataOnTFT(const char *ml, bool full) {
     dbgprint("Streamtitle found, %d bytes", strlen(ml));
     dbgprint(ml);
 
-    // // Search for end of title
+    // Search for end of title
     p1 = (char*)ml + 12 ;                       // Begin of artist and title
     if(( p2 = strstr(ml, ";"))) {
       if(*p1 == '\'') { // Surrounded by quotes
@@ -21,7 +21,7 @@ void showStreamDataOnTFT(const char *ml, bool full) {
       *p2 = '\0' ;                              // Strip the rest of the line
     }
 
-    // Save last part of string as streamtitle.  Protect against buffer overflow
+    // Save last part of string as streamtitle. Protect against buffer overflow
     strncpy(streamtitle, p1, sizeof(streamtitle));
     streamtitle[sizeof(streamtitle)- 1] = '\0' ;
   } else if(full) { // Info probably from playlist
@@ -35,7 +35,7 @@ void showStreamDataOnTFT(const char *ml, bool full) {
   // Save for status request from browser
   icystreamtitle = streamtitle ;
 
-  // look for artist/title separator
+  // Look for artist/title separator
   if(( p1 = strstr(streamtitle, " - "))) {
     p2 = p1 + 3 ;                               // 2nd part of text at this position
     if(displaytype == T_NEXTION) {
@@ -63,16 +63,16 @@ void showStreamDataOnTFT(const char *ml, bool full) {
  * */
 bool connectToWebradioServer() {
   // ═══════════════════════════════════════════════════════════════
-  // NEU: ABFANGSCHUTZ FÜR HTML-ZEICHENFOLGEN & HTTPS
+  // NEW: PROTECTION AGAINST HTML STRINGS & HTTPS
   // ═══════════════════════════════════════════════════════════════
   if (host.startsWith("<") || host.indexOf("<html>") >= 0) {
-    dbgprint("❌ Abbr: Ungültiger Hostname (HTML-Daten empfangen)");
+    dbgprint("❌ Abort: Invalid Hostname (HTML data received)");
     showTextOnTFT(1, "Error: Invalid Stream");
     return false;
   }
 
   if (host.startsWith("https://")) {
-    dbgprint("❌ Abbr: HTTPS (SSL) wird nicht unterstützt: %s", host.c_str());
+    dbgprint("❌ Abort: HTTPS (SSL) is not supported: %s", host.c_str());
     showTextOnTFT(1, "Error: HTTPS not supported");
     return false;
   }
@@ -88,19 +88,19 @@ bool connectToWebradioServer() {
   dbgprint("Connect to new host %s", host.c_str());
 
   showTextOnTFT(0, "Webradio");                     // Set screen segment text top line
-  showTimeOnTFT("");                              // Clear time on TFT screen
+  showTimeOnTFT("");                         // Clear time on TFT screen
 
   datamode = INIT ;                                 // Start default in metamode
   chunked = false ;                                 // Assume not chunked
 
-  // m3u playlist
+  // M3U playlist
   if(host.endsWith(".m3u")) {
     playlist = host ;                               // Save copy of playlist URL
-    datamode = PLAYLISTINIT ;                       // start in PLAYLIST mode
+    datamode = PLAYLISTINIT ;                       // Start in PLAYLIST mode
 
     // If first entry to play
     if(playlist_num == 0) {
-      playlist_num = 1 ;                            // set index
+      playlist_num = 1 ;                            // Set index
     }
     dbgprint("Playlist request, entry %d", playlist_num);
   }
@@ -108,7 +108,7 @@ bool connectToWebradioServer() {
   // In the URL there may be an extension, like noisefm.ru:8000/play.m3u&t=.m3u
   inx = host.indexOf("/");                      // Search for begin of extension
   if(inx > 0) {
-    extension = host.substring(inx);            // change the default
+    extension = host.substring(inx);            // Change the default
     hostwoext = host.substring(0, inx);         // Host without extension
   }
 
@@ -160,7 +160,7 @@ void playStreamFromQueue(void * parameter) {
 
       // If FIFO is full
       while(!vs1053player->data_request()) {
-        vTaskDelay(1);                                          // take a break
+        vTaskDelay(1);                                          // Take a break
       }
 
       // Select the chunk type
@@ -188,24 +188,20 @@ void playStreamFromQueue(void * parameter) {
           break ;
       }
     }
-
-    //esp_task_wdt_reset();                                        // Protect against idle cpu
   }
-
-  //vTaskDelete(NULL);                                          // Will never arrive here
 }
 
 
 /**
  * @desc  Handle special (non-stream data) functions for spftask
- * runs once
+ * Runs once
  * */
 void handleDisplayData()
 {
-  // 1. TFT Update-Block (Nutzt ID hspectft) mit Schutz vor Dauerfeuer
+  // 1. TFT Update-Block (Use ID hspectft) with protection against flood
   bool updated = false;
   if(dsp_isUseSPI()) {
-    claimSPI("hspectft"); // claim SPI bus
+    claimSPI("hspectft"); // Claim SPI bus
   }
 
   if(tft) {
@@ -216,21 +212,21 @@ void handleDisplayData()
   }
 
   if(dsp_isUseSPI()) {
-    releaseSPI();     // release SPI bus
+    releaseSPI();     // Release SPI bus
   }
 
-  // Wenn gezeichnet wurde, geben wir der CPU/MP3-Queue kurz Zeit (10ms) zum Atmen!
+  // If drawn, give the CPU/MP3-Queue some breathing room (10ms)
   if (updated) {
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
 
-  // 2. Zeit- und Alarm-Berechnung (Kein SPI erforderlich!)
+  // 2. Time and Alarm calculation (No SPI required!)
   if(time_req && NetworkFound) {
     getCurrentTime();
     handleRadioAlarm(); 
   }
   
-  // 3. VS1053 Lautstärke- und Ton-Block (Extrem kurz halten!)
+  // 3. VS1053 Volume and Tone-Block (Keep extremely short!)
   static uint8_t last_vol = 255; 
   static bool last_sound_state = false;
   
@@ -249,9 +245,9 @@ void handleDisplayData()
     last_sound_state = current_sound_state;
   }
 
-  // 4. TFT Update-Anforderungen setzen
+  // 4. Set TFT Update requests
   if(time_req) {
-    time_req = false; // clear request
+    time_req = false; // Clear request
     if(NetworkFound) {
       showTimeOnTFT(timetxt);
       displayVolumeOnTFT();
