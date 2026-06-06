@@ -516,13 +516,13 @@ VS1053* vs1053player ;
 #include "handler/helper.h"
 #include "handler/sd.h"
 #include "handler/upgrade.h"
+#include "handler/volume.h"
 #include "handler/alarm.h"
 #include "handler/loop.h"
 #include "handler/setup.h"
 #include "handler/xml.h"
 #include "handler/time.h"
 #include "handler/http.h"
-#include "handler/volume.h"
 #include "handler/rotary_encoder.h"
 #include "handler/interface.h"
 #include "handler/display.h"
@@ -882,7 +882,7 @@ void loop()
   cmdclient = cmdserver.available();               // Check Input from client?
   if(cmdclient)                                 // Client connected?
   {
-    dbgprint("Command client available");
+    //dbgprint("Command client available");
     handlehttp();
   }
 

@@ -205,7 +205,8 @@ const char* analyzeCmd (const char* par, const char* val )
   ivalue = value.toInt() ;                            // Also as an integer
   ivalue = abs (ivalue);                           // Make positive
   relative = argument.indexOf ("up") == 0 ;         // + relative setting?
-  if (argument.indexOf ("down") == 0 )             // - relative setting?
+  dbgprint("API Request: ", argument);
+  if (argument.indexOf("down") == 0 )             // - relative setting?
   {
     relative = true ;                                 // It's relative
     ivalue = - ivalue ;                               // But with negative value
@@ -253,18 +254,26 @@ const char* analyzeCmd (const char* par, const char* val )
   }
   else if (argument == "mute")                      // Mute/unmute request
   {
-	if (isSoundPlaying() == false) {
-	    playSound(true);
-	} else if (isSoundPlaying() == true) {
-	    playSound(false);
-	}
+    if (datamode == STOPPED) {
+      runStream(true, currentpreset); // Play stream
+    } else {
+      runStream(false); // Stop stream
+    }
+    /*
+    if (isSoundPlaying() == false) {
+        playSound(true);
+    } else if (isSoundPlaying() == true) {
+        playSound(false);
+    }
+    */
     //muteflag = !muteflag ;                            // Request volume to zero/normal
   }
   else if (argument.indexOf ("ir_") >= 0 )         // Ir setting?
   { // Do not handle here
   }
-  else if (argument.indexOf ("sleeptime") >= 0 )    // NEW: Sleep timer request?
+  else if (argument.indexOf ("sleeptime") >= 0 )    // Sleep timer request?
   {
+    dbgprint("SleepTimer set");
     int mins = value.toInt();
     if (mins > 0) {
       sleeptimer_ms = (int32_t)mins * 60 * 1000;    // Convert minutes to milliseconds

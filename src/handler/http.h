@@ -427,7 +427,7 @@ void handlehttp()
   {
     return ;                                                 // No client active
   }
-  dbgprint ( "handlehttp started" ) ;
+  //dbgprint ( "handlehttp started" ) ;
   while ( true )                                             // Loop till command/file seen
   {
     c = rinbyt ( first ) ;                                   // Get a byte

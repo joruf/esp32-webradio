@@ -67,7 +67,7 @@ void IRAM_ATTR timer10sec()
       // if the connection is confused on playing, start the same channel again
       if(( morethanonce > 0)|| (playlist_num > 0)) {                // If happened more than once or playlist is active
   		  //datamode = STOPREQD ;                     // Stop player
-    	  playStream(currentpreset); 				//Start the channel again
+    	  runStream(true, currentpreset); 				//Start the channel again
       }
       morethanonce++ ;                            // Count the fails
 

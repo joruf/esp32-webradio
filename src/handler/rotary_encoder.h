@@ -59,23 +59,19 @@ void checkRotaryEncoder()
       dbgprint( "Single click - Power toggle" );
       if ( datamode != STOPPED )
       {
-        stopStream();
-        showTextOnTFT( 1, "Radio aus" );
-        showTextOnTFT( 3, "Ausschalten..." );
-        enableBacklight(false);
+        runStream(false);
       }
       else
       {
+        
         if ( enc_preset < 0 || enc_preset > MAXPRESETS )
         {
           enc_preset = 0;
         }
         ini_block.newpreset = enc_preset;
+        runStream(true, currentpreset); 
         playlist_num = 0;
         currentpreset = -1;
-        showTextOnTFT( 1, "Radio an" );
-        showTextOnTFT( 3, "Verbinde..." );
-        dbgprint( "Starte Preset %d", enc_preset );
       }
     }
     else if ( enc_menu_mode == PRESET )

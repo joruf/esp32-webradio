@@ -19,6 +19,7 @@ int32_t sleeptimer_ms = -1; // -1 means timer is disabled
  */
 void handleSleepTimer() {
   static uint32_t last_millis = 0;
+  static uint32_t last_debug_output = 0;
   
   if (sleeptimer_ms > 0) {
     uint32_t current_millis = millis();
@@ -27,14 +28,16 @@ void handleSleepTimer() {
 
     sleeptimer_ms -= diff;
 
+    // Debug output only once per second
+    if (current_millis - last_debug_output >= 1000) {
+        last_debug_output = current_millis;
+        dbgprint("SleepTimer running: %d", sleeptimer_ms / 1000);
+    }
+    
     if (sleeptimer_ms <= 0) {
       sleeptimer_ms = -1; // Reset timer
       if (datamode != STOPPED) {
-        dbgprint("Sleep Timer expired. Stopping radio.");
-        stopStream(); // Function from volume.h
-        showTextOnTFT(1, "Sleep Timer"); // Info on display
-        showTextOnTFT(3, "Radio off");
-        enableBacklight(false);
+        runStream(false);
       }
     }
   } else {
@@ -56,7 +59,7 @@ static bool tryStartRadioAlarm(int8_t alrm_start_hour, int8_t alrm_start_min) {
         timeinfo.tm_sec == 0) {
         
         // 1. Use the configured alarm station (ini_block.newpreset)
-        playStream(ini_block.newpreset);
+        runStream(true, ini_block.newpreset);
 
         // 2. Signal that the MP3 loop should start immediately
         // (This also happens in the background on web click)
@@ -90,7 +93,7 @@ static bool tryStopRadioAlarm(int8_t alrm_stop_hour, int8_t alrm_stop_min) {
         timeinfo.tm_min == alrm_stop_min && 
         timeinfo.tm_sec <= 2) {   // Only within the first 2 seconds of the minute
         
-        stopStream();
+        runStream(false);
         showTextOnTFT(1, msgRadioAlarmOff);
         radioAlarmStatusChanged = ALRM_STOP;
         showTextOnTFT(3, msgPlayerStopped);
