@@ -1,7 +1,8 @@
-//filename: defaultprefs.h
+// filename: defaultprefs.h
 
 // Default preferences in raw data format for PROGMEM
-// Required when pressing the "Load default Values" button on webpage/config.html
+// Required when pressing the "Load default Values" button on
+// webpage/config.html
 const char defprefs_txt[] PROGMEM = R"=====(
 alrm_start = "6:30"           # Format: hh:min 12:30
 alrm_stop = "7:30"            # Format: hh:min 13:00
@@ -45,4 +46,4 @@ toneha = 0
 tonehf = 0
 tonela = 0
 tonelf = 0
-)=====" ;
+)=====";

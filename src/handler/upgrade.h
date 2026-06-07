@@ -2,13 +2,14 @@
 
 /**
  * @brief Scan for content-length information in header line.
- *        If the line contains content-length information, set the clength counter.
- * 
+ *        If the line contains content-length information, set the clength
+ * counter.
+ *
  * @param metalinebf Header line to scan
  */
-void scan_content_length(const char* metalinebf) {
+void scan_content_length(const char *metalinebf) {
   if (strstr(metalinebf, "Content-Length")) {
-    char* p;
+    char *p;
     clength = atoi(metalinebf + 15);
     p = dbgprint("Content-Length is %d", clength);
     dsp_println(p);
@@ -20,7 +21,7 @@ void scan_content_length(const char* metalinebf) {
  * @brief Update via WiFi has been started by Arduino IDE or update request.
  */
 void otastart() {
-  char* p;
+  char *p;
   p = dbgprint("OTA update Started");
   dsp_println(p);
   delay(2000);
@@ -28,7 +29,7 @@ void otastart() {
 
 /**
  * @brief Wait for NEXTION ACK response.
- * 
+ *
  * @param timeout Maximum time to wait in milliseconds
  * @return int The received ACK byte, or -1 on timeout
  */
@@ -45,7 +46,7 @@ static int waitForNextionAck(uint32_t timeout) {
 
 /**
  * @brief Update NEXTION image from OTA stream.
- * 
+ *
  * @param clength Size of the update data
  * @return true if update was successful, false otherwise
  */
@@ -60,9 +61,9 @@ bool do_nextion_update(uint32_t clength) {
 
   vTaskDelete(xspftask);
   delay(1000);
-  
-  nxtserial->printf("\xFF\xFF\xFF");  // Empty command
-  
+
+  nxtserial->printf("\xFF\xFF\xFF"); // Empty command
+
   // Read garbage input
   for (int i = 0; i < 100; i++) {
     if (nxtserial->available()) {
@@ -70,60 +71,60 @@ bool do_nextion_update(uint32_t clength) {
     }
     delay(20);
   }
-  
+
   nxtserial->printf("whmi-wri %d,9600,0\xFF\xFF\xFF", clength);
-  
+
   c = waitForNextionAck(2000);
   if (c != 0x05) {
     return false;
   }
-  
+
   while (clength) {
     k = (clength > 4096) ? 4096 : clength;
     k = otaclient.read(tmpbuff, k);
     dbgprint("TFT file, read %d bytes", k);
     nxtserial->write(tmpbuff, k);
-    
+
     c = waitForNextionAck(2000);
     if (c != 0x05) {
       break;
     }
     clength -= k;
   }
-  
+
   otaclient.flush();
-  
+
   if (clength == 0) {
     dbgprint("Update successfully completed");
     res = true;
   }
-  
+
   return res;
 }
 
 /**
  * @brief Update software from OTA stream.
- * 
+ *
  * @param clength Size of the update data
  * @return true if update was successful, false otherwise
  */
 bool do_software_update(uint32_t clength) {
   bool res = false;
-  
+
   if (!Update.begin(clength)) {
     dbgprint("Not enough space to begin OTA");
     otaclient.flush();
     return false;
   }
-  
+
   dbgprint("Begin OTA update, length is %d", clength);
-  
+
   if (Update.writeStream(otaclient) == clength) {
     dbgprint("Written %d bytes successfully", clength);
   } else {
     dbgprint("Write failed!");
   }
-  
+
   if (Update.end()) {
     dbgprint("OTA done");
     if (Update.isFinished()) {
@@ -135,18 +136,18 @@ bool do_software_update(uint32_t clength) {
   } else {
     dbgprint("Error Occurred. Error %s", Update.getError());
   }
-  
+
   return res;
 }
 
 /**
  * @brief Parse HTTP response headers for OTA update.
- * 
+ *
  * @param line Current header line
  * @param newlstmod Output buffer for Last-Modified timestamp
  * @return true if headers are complete (empty line), false otherwise
  */
-static bool parseOtaHeaders(const String& line, String& newlstmod) {
+static bool parseOtaHeaders(const String &line, String &newlstmod) {
   if (line.startsWith("HTTP/1.1")) {
     if (line.indexOf(" 200 ") < 0) {
       dsp_erase();
@@ -157,31 +158,31 @@ static bool parseOtaHeaders(const String& line, String& newlstmod) {
       return false;
     }
   }
-  
+
   scan_content_length(line.c_str());
-  
+
   if (line.startsWith("Last-Modified: ")) {
     newlstmod = line.substring(15);
   }
-  
+
   return true;
 }
 
 /**
  * @brief Connect to update server and request the binary file.
- * 
+ *
  * @param updatehost Hostname of the update server
  * @param binfile Path to the binary file
  * @return true if connection successful, false otherwise
  */
-static bool connectToUpdateServer(const char* updatehost, const char* binfile) {
+static bool connectToUpdateServer(const char *updatehost, const char *binfile) {
   dsp_erase();
   dsp_println("Connecting to host");
   dsp_println(updatehost);
   delay(2000);
-  
+
   dbgprint("Connecting to %s for %s", updatehost, binfile);
-  
+
   if (!otaclient.connect(updatehost, 80)) {
     dsp_erase();
     dsp_println("Connecting failed");
@@ -189,24 +190,23 @@ static bool connectToUpdateServer(const char* updatehost, const char* binfile) {
     delay(2000);
     return false;
   }
-  
+
   dsp_erase();
   dsp_println("Loading bin file");
   delay(2000);
-  
+
   otaclient.printf("GET %s HTTP/1.1\r\n"
                    "Host: %s\r\n"
                    "Cache-Control: no-cache\r\n"
                    "Connection: close\r\n\r\n",
-                   binfile,
-                   updatehost);
-  
+                   binfile, updatehost);
+
   return true;
 }
 
 /**
  * @brief Wait for response from update server.
- * 
+ *
  * @param timeout_ms Timeout in milliseconds
  * @return true if data available, false on timeout
  */
@@ -227,80 +227,82 @@ static bool waitForResponse(uint32_t timeout_ms) {
 
 /**
  * @brief Perform the actual update (software or NEXTION image).
- * 
+ *
  * @param binfile Path to the binary file
  * @param newlstmod New Last-Modified timestamp
  * @param lstmodkey NVS key for storing timestamp
  * @return true if update was successful, false otherwise
  */
-static bool performUpdate(const char* binfile, const String& newlstmod, const char* lstmodkey) {
+static bool performUpdate(const char *binfile, const String &newlstmod,
+                          const char *lstmodkey) {
   dsp_erase();
   dsp_println("Updating sketch");
-  
+
   bool success = false;
-  
+
   if (strstr(binfile, ".bin")) {
     success = do_software_update(clength);
   }
-  
+
   if (strstr(binfile, ".tft")) {
     success = do_nextion_update(clength);
   }
-  
+
   if (success) {
     nvsAddValue(lstmodkey, newlstmod);
   }
-  
+
   return success;
 }
 
 /**
  * @brief Update software by download from remote host.
- * 
+ *
  * @param lstmodkey NVS key for storing Last-Modified timestamp
  * @param updatehost Hostname of the update server
  * @param binfile Path to the binary file
  */
-void update_software(const char* lstmodkey, const char* updatehost, const char* binfile) {
+void update_software(const char *lstmodkey, const char *updatehost,
+                     const char *binfile) {
   String line;
   String lstmod;
   String newlstmod;
-  
+
   dsp_erase();
   dsp_println("OTA Update");
   delay(2000);
-  
+
   updatereq = false;
   otastart();
   stop_mp3client();
   lstmod = nvsGetValue(lstmodkey);
-  
+
   if (!connectToUpdateServer(updatehost, binfile)) {
     return;
   }
-  
+
   if (!waitForResponse(20000)) {
     return;
   }
-  
+
   // Parse HTTP response headers
   dsp_erase();
   while (otaclient.available()) {
     line = otaclient.readStringUntil('\n');
     line.trim();
-    
+
     dsp_println(line.c_str());
     dbgprint(line.c_str());
-    
+
     if (!line.length()) {
       break;
     }
-    
+
     if (!parseOtaHeaders(line, newlstmod)) {
       return;
     }
   }
-  
+
   // Check if update is needed
   if (newlstmod == lstmod) {
     dsp_erase();
@@ -311,7 +313,7 @@ void update_software(const char* lstmodkey, const char* updatehost, const char* 
     otaclient.flush();
     return;
   }
-  
+
   // Perform the update
   if (clength > 0) {
     performUpdate(binfile, newlstmod, lstmodkey);

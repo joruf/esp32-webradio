@@ -1,14 +1,15 @@
 /**
  * @brief Extract stream title from metadata string.
- * 
+ *
  * @param ml Metadata string
  * @param streamtitle Output buffer for extracted title
  * @param bufsize Size of the output buffer
  * @return true if stream title was found, false otherwise
  */
-static bool extractStreamTitle(const char* ml, char* streamtitle, size_t bufsize) {
-  char* p1;
-  char* p2;
+static bool extractStreamTitle(const char *ml, char *streamtitle,
+                               size_t bufsize) {
+  char *p1;
+  char *p2;
 
   if (!strstr(ml, "StreamTitle=")) {
     return false;
@@ -18,13 +19,13 @@ static bool extractStreamTitle(const char* ml, char* streamtitle, size_t bufsize
   dbgprint(ml);
 
   // Search for end of title
-  p1 = (char*)ml + 12;  // Begin of artist and title
+  p1 = (char *)ml + 12; // Begin of artist and title
   if ((p2 = strstr(ml, ";"))) {
-    if (*p1 == '\'') {  // Surrounded by quotes
+    if (*p1 == '\'') { // Surrounded by quotes
       p1++;
       p2--;
     }
-    *p2 = '\0';  // Strip the rest of the line
+    *p2 = '\0'; // Strip the rest of the line
   }
 
   // Save last part of string as streamtitle. Protect against buffer overflow
@@ -35,40 +36,40 @@ static bool extractStreamTitle(const char* ml, char* streamtitle, size_t bufsize
 
 /**
  * @brief Format stream title with artist/title separator.
- * 
+ *
  * @param streamtitle Input/output stream title buffer
  */
-static void formatStreamTitle(char* streamtitle) {
-  char* p1;
-  char* p2;
+static void formatStreamTitle(char *streamtitle) {
+  char *p1;
+  char *p2;
 
   // Look for artist/title separator
   if ((p1 = strstr(streamtitle, " - "))) {
-    p2 = p1 + 3;  // 2nd part of text at this position
-    
+    p2 = p1 + 3; // 2nd part of text at this position
+
     if (displaytype == T_NEXTION) {
-      *p1++ = '\\';  // Replace 3 characters by "\r"
+      *p1++ = '\\'; // Replace 3 characters by "\r"
       *p1++ = 'r';
     } else {
-      *p1++ = '\n';  // Replace 3 characters by newline
+      *p1++ = '\n'; // Replace 3 characters by newline
     }
 
     // Remove leading space in title
     if (*p2 == ' ') {
       p2++;
     }
-    strcpy(p1, p2);  // Shift 2nd part of title
+    strcpy(p1, p2); // Shift 2nd part of title
   }
 }
 
 /**
  * @brief Show artist and song title if present in metadata.
  *        Show always if full=true.
- * 
+ *
  * @param ml Metadata string or plain text
  * @param full If true, show even without StreamTitle tag
  */
-void showStreamDataOnTFT(const char* ml, bool full) {
+void showStreamDataOnTFT(const char *ml, bool full) {
   char streamtitle[150];
 
   if (extractStreamTitle(ml, streamtitle, sizeof(streamtitle))) {
@@ -89,15 +90,16 @@ void showStreamDataOnTFT(const char* ml, bool full) {
 
 /**
  * @brief Parse host string to extract components.
- * 
+ *
  * @param host Full host string
  * @param hostwoext Output: host without extension
  * @param port Output: port number
  * @param extension Output: URL extension
  */
-static void parseHostString(const String& host, String& hostwoext, uint16_t& port, String& extension) {
+static void parseHostString(const String &host, String &hostwoext,
+                            uint16_t &port, String &extension) {
   int inx;
-  
+
   hostwoext = host;
   port = 80;
   extension = "/";
@@ -123,7 +125,7 @@ static void parseHostString(const String& host, String& hostwoext, uint16_t& por
 static void handlePlaylistRequest() {
   playlist = host;
   datamode = PLAYLISTINIT;
-  
+
   if (playlist_num == 0) {
     playlist_num = 1;
   }
@@ -132,40 +134,36 @@ static void handlePlaylistRequest() {
 
 /**
  * @brief Send HTTP request to the web radio server.
- * 
+ *
  * @param hostwoext Host without extension
  * @param port Port number
  * @param extension URL extension
  */
-static void sendHttpRequest(const String& hostwoext, uint16_t port, const String& extension) {
+static void sendHttpRequest(const String &hostwoext, uint16_t port,
+                            const String &extension) {
   String auth = nvsGetValue("basicauth");
-  
+
   if (auth != "") {
     auth = base64::encode(auth.c_str());
     auth = String("Authorization: Basic ") + auth + String("\r\n");
   }
 
-  mp3client.print(String("GET ") +
-                  extension +
-                  String(" HTTP/1.1\r\n") +
-                  String("Host: ") +
-                  hostwoext +
-                  String("\r\n") +
-                  String("Icy-MetaData:1\r\n") +
-                  auth +
+  mp3client.print(String("GET ") + extension + String(" HTTP/1.1\r\n") +
+                  String("Host: ") + hostwoext + String("\r\n") +
+                  String("Icy-MetaData:1\r\n") + auth +
                   String("Connection: close\r\n\r\n"));
 }
 
 /**
  * @brief Connect to the Internet radio server specified by newpreset.
- * 
+ *
  * @return true if connection successful, false otherwise
  */
 bool connectToWebradioServer() {
   String hostwoext;
   uint16_t port = 80;
   String extension = "/";
-  const char* s;
+  const char *s;
 
   stop_mp3client();
   dbgprint("Connect to new host %s", host.c_str());
@@ -184,7 +182,8 @@ bool connectToWebradioServer() {
   // Parse host components
   parseHostString(host, hostwoext, port, extension);
 
-  s = dbgprint("Connect to %s on port %d, extension %s", hostwoext.c_str(), port, extension.c_str());
+  s = dbgprint("Connect to %s on port %d, extension %s", hostwoext.c_str(),
+               port, extension.c_str());
   showTextOnTFT(1, s);
 
   if (mp3client.connect(hostwoext.c_str(), port)) {
@@ -231,10 +230,10 @@ static void processQStopSong() {
  * @brief Play stream data from input queue.
  *        Handle all I/O to VS1053B during normal playing.
  *        Handles display of text, time and volume on TFT as well.
- * 
+ *
  * @param parameter Task parameter (unused)
  */
-void playStreamFromQueue(void* parameter) {
+void playStreamFromQueue(void *parameter) {
   while (true) {
     if (xQueueReceive(dataqueue, &inchunk, 5)) {
       // Wait if FIFO is full
@@ -244,17 +243,17 @@ void playStreamFromQueue(void* parameter) {
 
       // Select the chunk type
       switch (inchunk.datatyp) {
-        case QDATA:
-          processQDataChunk();
-          break;
-        case QSTARTSONG:
-          processQStartSong();
-          break;
-        case QSTOPSONG:
-          processQStopSong();
-          break;
-        default:
-          break;
+      case QDATA:
+        processQDataChunk();
+        break;
+      case QSTARTSONG:
+        processQStartSong();
+        break;
+      case QSTOPSONG:
+        processQStopSong();
+        break;
+      default:
+        break;
       }
     }
   }
@@ -293,7 +292,7 @@ static void handleTimeAndAlarmUpdate() {
  */
 static void handleVs1053VolumeAndTone() {
   claimSPI("hspec");
-  
+
   if (isSoundPlaying() == false) {
     vs1053player->setVolume(0);
   } else {
@@ -304,7 +303,7 @@ static void handleVs1053VolumeAndTone() {
     reqtone = false;
     vs1053player->setTone(ini_block.rtone);
   }
-  
+
   releaseSPI();
 }
 
