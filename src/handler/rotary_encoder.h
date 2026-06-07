@@ -9,7 +9,6 @@
  * @note The original logic is kept exactly as in the working version to ensure
  *       continuous volume control after power toggle.
  */
-
 void checkRotaryEncoder() {
   static int8_t enc_preset = 0;
   String tmp;

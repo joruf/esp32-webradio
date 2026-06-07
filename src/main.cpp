@@ -38,7 +38,7 @@
 
 // Define the version number, also used for webserver as Last-Modified header and to
 // check version for update.  The format must be exactly as specified by the HTTP standard!
-#define FIRMWARE "v2.09 2026-01-22"
+#define FIRMWARE "v2.10 2026-06-06"
 /*
 Firmware Changes:
 2.00  2025-03-06  Reload time changes on problems with the data connection.

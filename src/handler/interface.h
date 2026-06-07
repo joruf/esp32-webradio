@@ -225,22 +225,26 @@ const char *analyzeCmd(const char *par, const char *val) {
   } else {
     dbgprint("Command: %s (without parameter)", argument.c_str());
   }
-  if (argument.indexOf("volume") >= 0) // Volume setting?
+  if (argument.indexOf("volume") >= 0) // Volume setting
   {
     // Volume may be of the form "upvolume", "downvolume" or "volume" for
     // relative or absolute setting
     oldvol = vs1053player->getVolume(); // Get current volume
     if (relative)                       // + relative setting?
     {
-      ini_block.reqvol = oldvol + ivalue; // Up/down by 0.5 or more dB
+      adjustVolume(ivalue);
+      // ini_block.reqvol = oldvol + ivalue; // Up/down by 0.5 or more dB
     } else {
-      ini_block.reqvol = ivalue; // Absolue setting
+      setVolume(ivalue);
+      // ini_block.reqvol = ivalue; // Absolute setting
     }
     if (ini_block.reqvol > 127) // Wrapped around?
     {
-      ini_block.reqvol = 0; // keep at zero
+      setVolume(0);
+      // ini_block.reqvol = 0; // keep at zero
     }
     if (ini_block.reqvol > 100) {
+      setVolume(100);
       ini_block.reqvol = 100; // Limit to normal values
     }
     playSound(true);
@@ -253,15 +257,6 @@ const char *analyzeCmd(const char *par, const char *val) {
     } else {
       runStream(false); // Stop stream
     }
-    /*
-    if (isSoundPlaying() == false) {
-        playSound(true);
-    } else if (isSoundPlaying() == true) {
-        playSound(false);
-    }
-    */
-    // muteflag = !muteflag ;                            // Request volume to
-    // zero/normal
   } else if (argument.indexOf("ir_") >= 0)       // Ir setting?
   {                                              // Do not handle here
   } else if (argument.indexOf("sleeptime") >= 0) // Sleep timer request?
@@ -306,9 +301,11 @@ const char *analyzeCmd(const char *par, const char *val) {
   } else if (argument == "stop") // (un)Stop requested?
   {
     if (datamode & (HEADER | DATA | METADATA | PLAYLISTINIT | PLAYLISTHEADER | PLAYLISTDATA)) {
-      datamode = STOPREQD; // Request STOP
+      runStream(false);
+      // datamode = STOPREQD; // Request STOP
     } else {
-      hostreq = true; // Request UNSTOP
+      runStream(true, currentpreset);
+      // hostreq = true; // Request UNSTOP
     }
   } else if ((value.length() > 0) && ((argument == "mp3track") || // Select a track from SD card?
                                       (argument == "station")))   // Station in the form address:port
