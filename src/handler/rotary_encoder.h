@@ -78,29 +78,29 @@ void checkRotaryEncoder() {
     return;
 
   switch (enc_menu_mode) {
-  case VOLUME:
-    ini_block.reqvol = constrain(ini_block.reqvol + rotationcount, 0, 100);
-    muteflag = false;
-    break;
+    case VOLUME:
+      ini_block.reqvol = constrain(ini_block.reqvol + rotationcount, 0, 100);
+      muteflag = false;
+      break;
 
-  case PRESET:
-    enc_preset += rotationcount;
-    if (enc_preset < 0)
-      enc_preset = MAXPRESETS;
-    tmp = nvsGetHostFromPref(enc_preset);
-    if (tmp == "") {
-      enc_preset = 0;
+    case PRESET:
+      enc_preset += rotationcount;
+      if (enc_preset < 0)
+        enc_preset = MAXPRESETS;
       tmp = nvsGetHostFromPref(enc_preset);
-    }
-    inx = tmp.indexOf("#");
-    if (inx > 0)
-      tmp.remove(0, inx + 1);
-    chomp(tmp);
-    showTextOnTFT(3, tmp);
-    break;
+      if (tmp == "") {
+        enc_preset = 0;
+        tmp = nvsGetHostFromPref(enc_preset);
+      }
+      inx = tmp.indexOf("#");
+      if (inx > 0)
+        tmp.remove(0, inx + 1);
+      chomp(tmp);
+      showTextOnTFT(3, tmp);
+      break;
 
-  default:
-    break;
+    default:
+      break;
   }
   rotationcount = 0;
 }

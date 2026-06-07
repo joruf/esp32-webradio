@@ -22,10 +22,9 @@ void fillkeylist() {
     }
     i = 0;
     while (i < 126) {
-      bm =
-          (nvsbuf.Bitmap[i / 4] >> ((i % 4) * 2)); // Get bitmap for this entry,
-      bm &= 0x03;                                  // 2 bits for one entry
-      if (bm == 2)                                 // Entry is active?
+      bm = (nvsbuf.Bitmap[i / 4] >> ((i % 4) * 2)); // Get bitmap for this entry,
+      bm &= 0x03;                                   // 2 bits for one entry
+      if (bm == 2)                                  // Entry is active?
       {
         if (nvsbuf.Entry[i].Ns == namespace_ID) // Namespace right?
         {
@@ -98,17 +97,13 @@ void mk_lsan() {
 String getradiostatus() {
   char pnr[3]; // Preset as 2 character, i.e. "03"
 
-  sprintf(pnr, "%02d", ini_block.newpreset); // Current preset
-  return String("preset=") +                 // Add preset setting
-         String(pnr) + String("\nvolume=") + // Add volume setting
-         String(String(ini_block.reqvol)) +
-         String("\ntoneha=") + // Add tone setting HA
-         String(ini_block.rtone[0]) +
-         String("\ntonehf=") + // Add tone setting HF
-         String(ini_block.rtone[1]) +
-         String("\ntonela=") + // Add tone setting LA
-         String(ini_block.rtone[2]) +
-         String("\ntonelf=") + // Add tone setting LF
+  sprintf(pnr, "%02d", ini_block.newpreset);                      // Current preset
+  return String("preset=") +                                      // Add preset setting
+         String(pnr) + String("\nvolume=") +                      // Add volume setting
+         String(String(ini_block.reqvol)) + String("\ntoneha=") + // Add tone setting HA
+         String(ini_block.rtone[0]) + String("\ntonehf=") +       // Add tone setting HF
+         String(ini_block.rtone[1]) + String("\ntonela=") +       // Add tone setting LA
+         String(ini_block.rtone[2]) + String("\ntonelf=") +       // Add tone setting LF
          String(ini_block.rtone[3]);
 }
 
@@ -202,14 +197,11 @@ void writeprefs() {
           {
             winx = key.substring(5).toInt(); // Get index in wifilist
             if ((winx < wifilist.size()) &&  // Existing wifi spec in wifilist?
-                (contents.indexOf(wifilist[winx].ssid) == 0) &&
-                (contents.indexOf("/****") > 0)) // Hidden password?
+                (contents.indexOf(wifilist[winx].ssid) == 0) && (contents.indexOf("/****") > 0)) // Hidden password?
             {
-              contents =
-                  String(wifilist[winx].ssid) + // Retrieve ssid and password
-                  String("/") + String(wifilist[winx].passphrase);
-              dstr = String(wifilist[winx].ssid) +
-                     String("/*******"); // Hide in debug line
+              contents = String(wifilist[winx].ssid) + // Retrieve ssid and password
+                         String("/") + String(wifilist[winx].passphrase);
+              dstr = String(wifilist[winx].ssid) + String("/*******"); // Hide in debug line
             }
           }
 
@@ -270,9 +262,8 @@ void getsettings() {
       }
       chomp(statstr); // Remove garbage from description
       dbgprint("statstr is %s", statstr.c_str());
-      val += String("preset_") + String(i) + String("=") + statstr +
-             String("\n");     // Add delimeter
-      if (val.length() > 1000) // Time to flush?
+      val += String("preset_") + String(i) + String("=") + statstr + String("\n"); // Add delimeter
+      if (val.length() > 1000)                                                     // Time to flush?
       {
         cmdclient.print(val); // send
         val = "";             // Start new string
@@ -303,8 +294,7 @@ void handlehttpreply() {
         {
           handleWebpage(String("index.html")); // Okay, send the startpage
         } else {
-          handleWebpage(
-              String("config.html")); // Or the configuration page if in AP mode
+          handleWebpage(String("config.html")); // Or the configuration page if in AP mode
         }
       } else {
         if (http_getcmd.length()) // Command to analyze?
@@ -319,18 +309,15 @@ void handlehttpreply() {
               //              datamode = STOPREQD ;                         //
               //              Stop playing
             }
-            sndstr += readprefs(true); // Read and send
-          } else if (http_getcmd.startsWith(
-                         "getdefs")) // Is it a "Get default preferences"?
+            sndstr += readprefs(true);                  // Read and send
+          } else if (http_getcmd.startsWith("getdefs")) // Is it a "Get default preferences"?
           {
-            sndstr += String(defprefs_txt + 1); // read initial values
-          } else if (http_getcmd.startsWith(
-                         "saveprefs")) // Is is a "Save preferences"
+            sndstr += String(defprefs_txt + 1);           // read initial values
+          } else if (http_getcmd.startsWith("saveprefs")) // Is is a "Save preferences"
           {
-            writeprefs();                     // handle it
-            sndstr += String("Config saved"); // Give reply
-          } else if (http_getcmd.startsWith(
-                         "mp3list")) // Is is a "Get SD MP3 tracklist"?
+            writeprefs();                               // handle it
+            sndstr += String("Config saved");           // Give reply
+          } else if (http_getcmd.startsWith("mp3list")) // Is is a "Get SD MP3 tracklist"?
           {
             if (datamode != STOPPED) // Still playing?
             {
@@ -340,17 +327,16 @@ void handlehttpreply() {
             cmdclient.print(sndstr); // send header
             n = listsdtracks("/");   // Handle it
             dbgprint("%d tracks found on SD card", n);
-            return; // Do not send empty line
-          } else if (http_getcmd.startsWith(
-                         "settings")) // Is is a "Get settings" (like presets
-                                      // and tone)?
+            return;                                      // Do not send empty line
+          } else if (http_getcmd.startsWith("settings")) // Is is a "Get settings" (like presets
+                                                         // and tone)?
           {
             cmdclient.print(sndstr); // send header
             getsettings();           // Handle settings request
             return;                  // Do not send empty line
           } else {
             p = analyzeCmd(http_getcmd.c_str()); // do so
-            sndstr += String(p); // Content of HTTP response follows the header
+            sndstr += String(p);                 // Content of HTTP response follows the header
           }
           sndstr += String("\n"); // The HTTP response ends with a blank line
           cmdclient.print(sndstr);
@@ -361,8 +347,7 @@ void handlehttpreply() {
         } else {
           httpheader(String("text/html")); // Send header
           // the content of the HTTP response follows the header:
-          cmdclient.println(
-              "Dummy response\n"); // Text ending with double newline
+          cmdclient.println("Dummy response\n"); // Text ending with double newline
           dbgprint("Dummy response sent");
         }
       }
@@ -431,9 +416,8 @@ void handlehttp() {
             http_rqfile = "";                       // No file
           } else if (inx > 0)                       // Filename present?
           {
-            http_rqfile = http_getcmd.substring(0, inx); // Remember filename
-            http_getcmd = http_getcmd.substring(
-                inx + 1); // Remove filename from GET command
+            http_rqfile = http_getcmd.substring(0, inx);  // Remember filename
+            http_getcmd = http_getcmd.substring(inx + 1); // Remove filename from GET command
           } else {
             http_rqfile = http_getcmd; // No parameters, set filename
             http_getcmd = "";

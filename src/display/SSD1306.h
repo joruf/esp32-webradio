@@ -47,11 +47,10 @@ SSD1306 *tft = NULL;
 scrseg_struct tftdata[TFTSECS] = // Screen divided in 3 segments + 1 overlay
     {
         // One text line is 8 pixels
-        {false, WHITE, 0, 8, ""}, // 1 top line
-        {false, CYAN, 8, 32, ""}, // 4 lines in the middle
-        {false, YELLOW, 40, 22,
-         ""}, // 3 lines at the bottom, leave room for indicator
-        {false, GREEN, 40, 22, ""} // 3 lines at the bottom for rotary encoder
+        {false, WHITE, 0, 8, ""},    // 1 top line
+        {false, CYAN, 8, 32, ""},    // 4 lines in the middle
+        {false, YELLOW, 40, 22, ""}, // 3 lines at the bottom, leave room for indicator
+        {false, GREEN, 40, 22, ""}   // 3 lines at the bottom for rotary encoder
 };
 
 // Various macro's to mimic the ST7735 version of display functions
@@ -59,21 +58,19 @@ scrseg_struct tftdata[TFTSECS] = // Screen divided in 3 segments + 1 overlay
 #define dsp_setTextSize(a) // Set the text size
 #define dsp_setTextColor(a)
 #define dsp_print(a) tft->print(a) // Print a string
-#define dsp_println(a)                                                         \
-  tft->print(a);                                                               \
-  tft->print('\n')                               // Print string plus newline
-#define dsp_setCursor(a, b) tft->setCursor(a, b) // Position the cursor
-#define dsp_fillRect(a, b, c, d, e)                                            \
-  tft->fillRect(a, b, c, d, e)      // Fill a rectangle
-#define dsp_erase() tft->clear()    // Clear the screen
-#define dsp_getwidth() 128          // Get width of screen
-#define dsp_getheight() 64          // Get height of screen
-#define dsp_update() tft->display() // Updates to the physical screen
-#define dsp_isUseSPI() false        // Does not use SPI
+#define dsp_println(a)                                                                                                 \
+  tft->print(a);                                                                                                       \
+  tft->print('\n')                                               // Print string plus newline
+#define dsp_setCursor(a, b) tft->setCursor(a, b)                 // Position the cursor
+#define dsp_fillRect(a, b, c, d, e) tft->fillRect(a, b, c, d, e) // Fill a rectangle
+#define dsp_erase() tft->clear()                                 // Clear the screen
+#define dsp_getwidth() 128                                       // Get width of screen
+#define dsp_getheight() 64                                       // Get height of screen
+#define dsp_update() tft->display()                              // Updates to the physical screen
+#define dsp_isUseSPI() false                                     // Does not use SPI
 
 bool dsp_begin() {
-  dbgprint("Init SSD1306, I2C pins %d,%d", ini_block.tft_sda_pin,
-           ini_block.tft_scl_pin);
+  dbgprint("Init SSD1306, I2C pins %d,%d", ini_block.tft_sda_pin, ini_block.tft_scl_pin);
   if ((ini_block.tft_sda_pin >= 0) && (ini_block.tft_scl_pin >= 0)) {
     tft = new SSD1306(ini_block.tft_sda_pin,
                       ini_block.tft_scl_pin); // Create an instant for TFT
@@ -98,13 +95,11 @@ bool dsp_begin() {
 #define OLED_CMD_DISPLAY_ON 0xAF
 
 // Addressing Command Table (pg.30)
-#define OLED_CMD_SET_MEMORY_ADDR_MODE                                          \
-  0x20 // follow with 0x00 = HORZ mode = Behave like a KS108 graphic LCD
-#define OLED_CMD_SET_COLUMN_RANGE                                              \
-  0x21 // can be used only in HORZ/VERT mode - follow with 0x00 and 0x7F =
-       // COL127
-#define OLED_CMD_SET_PAGE_RANGE                                                \
-  0x22 // can be used only in HORZ/VERT mode - follow with 0x00 and 0x07 = PAGE7
+#define OLED_CMD_SET_MEMORY_ADDR_MODE 0x20 // follow with 0x00 = HORZ mode = Behave like a KS108 graphic LCD
+#define OLED_CMD_SET_COLUMN_RANGE                                                                                      \
+  0x21                               // can be used only in HORZ/VERT mode - follow with 0x00 and 0x7F =
+                                     // COL127
+#define OLED_CMD_SET_PAGE_RANGE 0x22 // can be used only in HORZ/VERT mode - follow with 0x00 and 0x07 = PAGE7
 
 // Hardware Config (pg.31)
 #define OLED_CMD_SET_DISPLAY_START_LINE 0x40
@@ -276,8 +271,7 @@ void SSD1306::display() {
     if (ssdbuf[pg].dirty) {
       cmd = i2c_cmd_link_create();
       i2c_master_start(cmd);
-      i2c_master_write_byte(cmd, (OLED_I2C_ADDRESS << 1) | I2C_MASTER_WRITE,
-                            true);
+      i2c_master_write_byte(cmd, (OLED_I2C_ADDRESS << 1) | I2C_MASTER_WRITE, true);
       i2c_master_write_byte(cmd, OLED_CONTROL_BYTE_CMD_SINGLE, true);
       i2c_master_write_byte(cmd, 0xB0 | pg, true); // Set page address
       i2c_master_write_byte(cmd, OLED_CONTROL_BYTE_DATA_STREAM, true);
@@ -322,8 +316,7 @@ void SSD1306::setCursor(uint8_t x, uint8_t y) // Position the cursor
 // Fill a rectangle.  It will clear a number of pages (lines of texts ). * Not
 // very fast.... *
 //***********************************************************************************************
-void SSD1306::fillRect(uint8_t x, uint8_t y, uint8_t w, uint8_t h,
-                       uint8_t color) {
+void SSD1306::fillRect(uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint8_t color) {
   uint8_t pg;     // Page to fill
   uint8_t pat;    // Fill pattern
   uint8_t xc, yc; // Running x and y in rectangle
@@ -357,12 +350,10 @@ SSD1306::SSD1306(uint8_t sda, uint8_t scl) {
   esp_err_t espRc;
   i2c_cmd_handle_t cmd;
 
-  ssdbuf = (page_struct *)malloc(
-      8 * sizeof(page_struct)); // Create buffer for screen
-  i2c_config_t i2c_config = {   // Set-up of I2C configuration
-                             I2C_MODE_MASTER,    (gpio_num_t)sda,
-                             GPIO_PULLUP_ENABLE, (gpio_num_t)scl,
-                             GPIO_PULLUP_ENABLE, 1000000};
+  ssdbuf = (page_struct *)malloc(8 * sizeof(page_struct)); // Create buffer for screen
+  i2c_config_t i2c_config = {                              // Set-up of I2C configuration
+                             I2C_MODE_MASTER, (gpio_num_t)sda,    GPIO_PULLUP_ENABLE,
+                             (gpio_num_t)scl, GPIO_PULLUP_ENABLE, 1000000};
   font = SSD1306font;
   i2c_param_config(I2C_NUM_0, &i2c_config);
   i2c_driver_install(I2C_NUM_0, I2C_MODE_MASTER, 0, 0, 0);
@@ -428,8 +419,8 @@ void displayVolumeOnTFT() {
     newvol = vs1053player->getVolume(); // Get current volume setting
     if (newvol != oldvol)               // Volume changed?
     {
-      oldvol = newvol;                              // Remember for next compare
-      pos = map(newvol, 0, 100, 0, dsp_getwidth()); // Compute position on TFT
+      oldvol = newvol;                                   // Remember for next compare
+      pos = map(newvol, 0, 100, 0, dsp_getwidth());      // Compute position on TFT
       dsp_fillRect(0, dsp_getheight() - 2, pos, 2, RED); // Paint red part
       dsp_fillRect(pos, dsp_getheight() - 2, dsp_getwidth() - pos, 2,
                    GREEN); // Paint green part
@@ -446,10 +437,9 @@ void displayVolumeOnTFT() {
 // screen is 8 pixels high and 6 pixels wide. *
 //**************************************************************************************************
 void showTimeOnTFT(const char *str, uint16_t color) {
-  static char oldstr[9] = "........"; // For compare
-  uint8_t i;                          // Index in strings
-  uint16_t pos =
-      dsp_getwidth() + TIMEPOS; // X-position of character, TIMEPOS is negative
+  static char oldstr[9] = "........";      // For compare
+  uint8_t i;                               // Index in strings
+  uint16_t pos = dsp_getwidth() + TIMEPOS; // X-position of character, TIMEPOS is negative
 
   if (str[0] == '\0') // Empty string?
   {

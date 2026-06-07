@@ -33,14 +33,13 @@ esp_err_t nvsClear() {
  */
 String nvsGetValue(const char *key) {
   static char nvs_buf[NVSBUFSIZE]; // Buffer for contents
-  size_t len = NVSBUFSIZE; // Max length of the string, later real length
+  size_t len = NVSBUFSIZE;         // Max length of the string, later real length
 
   nvsOpen();         // Be sure to open nvs
   nvs_buf[0] = '\0'; // Return empty string on error
   nvserr = nvs_get_str(nvshandle, key, nvs_buf, &len);
   if (nvserr) {
-    dbgprint("nvs_get_str failed %X for key %s, keylen is %d, len is %d!",
-             nvserr, key, strlen(key), len);
+    dbgprint("nvs_get_str failed %X for key %s, keylen is %d, len is %d!", nvserr, key, strlen(key), len);
     dbgprint("Contents: %s", nvs_buf);
   }
   return String(nvs_buf);

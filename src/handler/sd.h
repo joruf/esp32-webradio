@@ -123,8 +123,7 @@ String getSDfilename(String nodeID) {
   {
     inx = nodeID.indexOf(","); // Find position of comma
     if (inx >= 0) {
-      nodeID = nodeID.substring(inx +
-                                1); // Remove sequence in this level from nodeID
+      nodeID = nodeID.substring(inx + 1); // Remove sequence in this level from nodeID
     }
     claimSPI("sdopen"); // Claim SPI bus
     root = SD.open(p);  // Open the directory (this level)
@@ -153,15 +152,15 @@ String getSDfilename(String nodeID) {
 // will be send to the webinterface if parameter "send"is true. *
 //**************************************************************************************************
 int listsdtracks(const char *dirname, int level = 0, bool send = true) {
-  const uint16_t SD_MAXDEPTH = 4;    // Maximum depts.  Note: see mp3play_html.
-  static uint16_t fcount, oldfcount; // Total number of files
+  const uint16_t SD_MAXDEPTH = 4;           // Maximum depts.  Note: see mp3play_html.
+  static uint16_t fcount, oldfcount;        // Total number of files
   static uint16_t SD_node[SD_MAXDEPTH + 1]; // Node ISs, max levels deep
   static String SD_outbuf;                  // Output buffer for cmdclient
-  uint16_t ldirname; // Length of dirname to remove from filename
-  File root, file;   // Handle to root and directory entry
-  String filename;   // Copy of filename for lowercase test
-  uint16_t i;        // Loop control to compute single node id
-  String tmpstr;     // Tijdelijke opslag node ID
+  uint16_t ldirname;                        // Length of dirname to remove from filename
+  File root, file;                          // Handle to root and directory entry
+  String filename;                          // Copy of filename for lowercase test
+  uint16_t i;                               // Loop control to compute single node id
+  String tmpstr;                            // Tijdelijke opslag node ID
 
   if (strcmp(dirname, "/") == 0) // Are we at the root directory?
   {
@@ -208,17 +207,16 @@ int listsdtracks(const char *dirname, int level = 0, bool send = true) {
       if (level < SD_MAXDEPTH) // dig deeper
       {
         listsdtracks(file.name(), level + 1, send); // Note: called recursively
-        SD_node[level + 1] = 0; // Forget counter for one level up
+        SD_node[level + 1] = 0;                     // Forget counter for one level up
       }
     } else {
       filename = String(file.name()); // Copy filename
       filename.toLowerCase();         // Force lowercase
       if (filename.endsWith(".mp3"))  // It is a file, but is it an MP3?
       {
-        fcount++;          // count total number of MP3 files
-        tmpstr = String(); // Empty
-        for (i = 0; i < SD_MAXDEPTH;
-             i++) // Add a line containing the node to SD_outbuf
+        fcount++;                         // count total number of MP3 files
+        tmpstr = String();                // Empty
+        for (i = 0; i < SD_MAXDEPTH; i++) // Add a line containing the node to SD_outbuf
         {
           if (i) // Need to add separating comma?
           {
@@ -228,11 +226,10 @@ int listsdtracks(const char *dirname, int level = 0, bool send = true) {
         }
         if (send) // Need to add to string for webinterface?
         {
-          SD_outbuf +=
-              tmpstr +                // Form line for mp3play_html page
-              utf8ascii(file.name() + // Filename starts after directoryname
-                        ldirname) +
-              String("\n");
+          SD_outbuf += tmpstr +                // Form line for mp3play_html page
+                       utf8ascii(file.name() + // Filename starts after directoryname
+                                 ldirname) +
+                       String("\n");
         }
         SD_nodelist += tmpstr + String("\n"); // Add to nodelist
         // dbgprint ( "Track: %s",                       // Show debug info
@@ -291,8 +288,8 @@ void handle_ID3(String &path) {
 
   showTextOnTFT(2, "Playing from local file"); // Assume no ID3
   p = (char *)path.c_str() + 1;                // Point to filename
-  showStreamDataOnTFT(p, true); // Show the filename as title (middle part)
-  mp3file = SD.open(path);      // Open the file
+  showStreamDataOnTFT(p, true);                // Show the filename as title (middle part)
+  mp3file = SD.open(path);                     // Open the file
   mp3file.read((uint8_t *)&ID3head,
                sizeof(ID3head)); // Read first part of ID3 info
   if (strncmp(ID3head.fid, "ID3", 3) == 0) {
@@ -370,9 +367,9 @@ bool connecttofile() {
   showTimeOnTFT("");                    // Clear time on TFT screen
   path = host.substring(9);             // Path, skip the "localhost" part
   claimSPI("sdopen3");                  // Claim SPI bus
-  handle_ID3(path);                    // See if there are ID3 tags in this file
-  mp3filelength = mp3file.available(); // Get length
-  releaseSPI();                        // Release SPI bus
+  handle_ID3(path);                     // See if there are ID3 tags in this file
+  mp3filelength = mp3file.available();  // Get length
+  releaseSPI();                         // Release SPI bus
   if (!mp3file) {
     dbgprint("Error opening file %s", path.c_str()); // No luck
     return false;

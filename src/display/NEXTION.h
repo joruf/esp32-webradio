@@ -80,8 +80,7 @@ void dsp_update() // Updates to the physical screen
     for (inx = 0; inx < TFTSECS; inx++) {
       if (tftdata[inx].update_req) {
         dbgprint("Nextion t%d.txt=\"%s\"", inx, tftdata[inx].str.c_str());
-        nxtserial->printf("t%d.txt=\"%s\"\xFF\xFF\xFF", inx,
-                          tftdata[inx].str.c_str());
+        nxtserial->printf("t%d.txt=\"%s\"\xFF\xFF\xFF", inx, tftdata[inx].str.c_str());
         tftdata[inx].update_req = false;
       }
     }

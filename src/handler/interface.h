@@ -59,8 +59,7 @@ void handleWebpage(const String &pagename) {
     // if (pagename.indexOf ("index.html") >= 0 ) {
     if (pagename == "/" || pagename.indexOf("index.html") >= 0) {
       p = index_html;
-      l = sizeof(index_html) -
-          1; // We have to reduce the length to get the right char length
+      l = sizeof(index_html) - 1; // We have to reduce the length to get the right char length
     } else if (pagename.indexOf("mp3play.html") >= 0) {
       p = mp3play_html;
       l = sizeof(mp3play_html) - 1;
@@ -120,7 +119,7 @@ void handleWebpage(const String &pagename) {
           l = 0;
         } else {
           cmdclient.write(p, TCPCHUNKSIZE); // Send part of the page
-          p += TCPCHUNKSIZE; // Update startpoint and rest of bytes
+          p += TCPCHUNKSIZE;                // Update startpoint and rest of bytes
           l -= TCPCHUNKSIZE;
         }
       }
@@ -270,8 +269,7 @@ const char *analyzeCmd(const char *par, const char *val) {
     dbgprint("SleepTimer set");
     int mins = value.toInt();
     if (mins > 0) {
-      sleeptimer_ms =
-          (int32_t)mins * 60 * 1000; // Convert minutes to milliseconds
+      sleeptimer_ms = (int32_t)mins * 60 * 1000; // Convert minutes to milliseconds
       dbgprint("Sleep Timer set to %d min", mins);
     } else {
       sleeptimer_ms = -1; // Deactivate
@@ -285,9 +283,8 @@ const char *analyzeCmd(const char *par, const char *val) {
     if (localfile && ((datamode & DATA) != 0) && // MP3 player active?
         relative) {
       datamode = STOPREQD; // Force stop MP3 player
-      tmpstr =
-          selectnextSDnode(SD_currentnode,
-                           ivalue); // Select the next or previous file on SD
+      tmpstr = selectnextSDnode(SD_currentnode,
+                                ivalue); // Select the next or previous file on SD
       host = getSDfilename(tmpstr);
       hostreq = true;              // Request this host
       sprintf(reply, "Playing %s", // Reply new filename
@@ -308,15 +305,13 @@ const char *analyzeCmd(const char *par, const char *val) {
     }
   } else if (argument == "stop") // (un)Stop requested?
   {
-    if (datamode & (HEADER | DATA | METADATA | PLAYLISTINIT | PLAYLISTHEADER |
-                    PLAYLISTDATA)) {
+    if (datamode & (HEADER | DATA | METADATA | PLAYLISTINIT | PLAYLISTHEADER | PLAYLISTDATA)) {
       datamode = STOPREQD; // Request STOP
     } else {
       hostreq = true; // Request UNSTOP
     }
-  } else if ((value.length() > 0) &&
-             ((argument == "mp3track") || // Select a track from SD card?
-              (argument == "station")))   // Station in the form address:port
+  } else if ((value.length() > 0) && ((argument == "mp3track") || // Select a track from SD card?
+                                      (argument == "station")))   // Station in the form address:port
   {
     if (argument.startsWith("mp3")) // MP3 track to search for
     {
@@ -327,8 +322,7 @@ const char *analyzeCmd(const char *par, const char *val) {
       }
       value = getSDfilename(value); // like "localhost/........"
     }
-    if (datamode & (HEADER | DATA | METADATA | PLAYLISTINIT | PLAYLISTHEADER |
-                    PLAYLISTDATA)) {
+    if (datamode & (HEADER | DATA | METADATA | PLAYLISTINIT | PLAYLISTHEADER | PLAYLISTDATA)) {
       datamode = STOPREQD; // Request STOP
     }
     host = value;   // Save it for storage and selection later
@@ -358,12 +352,10 @@ const char *analyzeCmd(const char *par, const char *val) {
     } else {
       av = mp3client.available(); // Available in stream
     }
-    sprintf(reply,
-            "Free memory is %d, chunks in queue %d, stream %d, bitrate %d kbps",
-            ESP.getFreeHeap(), uxQueueMessagesWaiting(dataqueue), av, mbitrate);
+    sprintf(reply, "Free memory is %d, chunks in queue %d, stream %d, bitrate %d kbps", ESP.getFreeHeap(),
+            uxQueueMessagesWaiting(dataqueue), av, mbitrate);
     dbgprint("Stack maintask is %d", uxTaskGetStackHighWaterMark(maintask));
-    dbgprint("Stack playStreamFromQueue is %d",
-             uxTaskGetStackHighWaterMark(xplayStreamFromQueue));
+    dbgprint("Stack playStreamFromQueue is %d", uxTaskGetStackHighWaterMark(xplayStreamFromQueue));
     dbgprint("Stack spftask  is %d", uxTaskGetStackHighWaterMark(xspftask));
     dbgprint("ADC reading is %d", adcval);
     dbgprint("scaniocount is %d", scaniocount);
@@ -408,8 +400,7 @@ const char *analyzeCmd(const char *par, const char *val) {
       ini_block.rtone[3] = ivalue; // prepare to set SB_FREQLIMIT
     }
     reqtone = true; // Set change request
-    sprintf(reply, "Parameter for bass/treble %s set to %d", argument.c_str(),
-            ivalue);
+    sprintf(reply, "Parameter for bass/treble %s set to %d", argument.c_str(), ivalue);
   } else if (argument == "rate") // Rate command?
   {
     vs1053player->AdjustRate(ivalue); // adjust
@@ -445,8 +436,7 @@ const char *analyzeCmd(const char *par, const char *val) {
       ini_block.bat0 = ivalue; // set it
     }
   } else {
-    sprintf(reply, "%s called with illegal parameter: %s", NAME,
-            argument.c_str());
+    sprintf(reply, "%s called with illegal parameter: %s", NAME, argument.c_str());
   }
   return reply; // Return reply to the caller
 }

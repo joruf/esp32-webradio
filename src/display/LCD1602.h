@@ -31,11 +31,10 @@
 #define WHITE RED | GREEN | BLUE
 
 #define DELAY_ENABLE_PULSE_SETTLE 50 // Command requires > 37us to settle
-#define FLAG_BACKLIGHT_ON                                                      \
-  0b00001000                    // Bit 3, backlight enabled (disabled if clear)
-#define FLAG_ENABLE 0b00000100  // Bit 2, Enable
-#define FLAG_RS_DATA 0b00000001 // Bit 0, RS=data (command if clear)
-#define FLAG_RS_COMMAND 0b00000000 // Command
+#define FLAG_BACKLIGHT_ON 0b00001000 // Bit 3, backlight enabled (disabled if clear)
+#define FLAG_ENABLE 0b00000100       // Bit 2, Enable
+#define FLAG_RS_DATA 0b00000001      // Bit 0, RS=data (command if clear)
+#define FLAG_RS_COMMAND 0b00000000   // Command
 
 #define COMMAND_CLEAR_DISPLAY 0x01
 #define COMMAND_RETURN_HOME 0x02
@@ -101,8 +100,7 @@ private:
 LCD1602 *tft = NULL;
 
 bool dsp_begin() {
-  dbgprint("Init LCD1602, I2C pins %d,%d", ini_block.tft_sda_pin,
-           ini_block.tft_scl_pin);
+  dbgprint("Init LCD1602, I2C pins %d,%d", ini_block.tft_sda_pin, ini_block.tft_scl_pin);
   if ((ini_block.tft_sda_pin >= 0) && (ini_block.tft_scl_pin >= 0)) {
     tft = new LCD1602(ini_block.tft_sda_pin,
                       ini_block.tft_scl_pin); // Create an instance for TFT
@@ -151,18 +149,16 @@ void LCD1602::strobe(uint8_t cmd) {
 void LCD1602::scommand(uint8_t cmd) {
   hnd = i2c_cmd_link_create(); // Create a link
   if (i2c_master_start(hnd) |
-      i2c_master_write_byte(
-          hnd,
-          (I2C_ADDRESS << 1) | // Add I2C address to output buffer
-              I2C_MASTER_WRITE,
-          ACKENA) |
+      i2c_master_write_byte(hnd,
+                            (I2C_ADDRESS << 1) | // Add I2C address to output buffer
+                                I2C_MASTER_WRITE,
+                            ACKENA) |
       i2c_master_write_byte(hnd, cmd | bl, // Add command including BL state
                             ACKENA) |
       i2c_master_stop(hnd) |               // End of data for I2C
       i2c_master_cmd_begin(I2C_NUM_0, hnd, // Send bufferd data to LCD
                            10 / portTICK_PERIOD_MS)) {
-    dbgprint(
-        "LCD1602 communication error!"); // Something went wrong (not connected)
+    dbgprint("LCD1602 communication error!"); // Something went wrong (not connected)
   }
   i2c_cmd_link_delete(hnd); // Link not needed anymore
 }
@@ -230,8 +226,8 @@ void LCD1602::reset() {
   }
   strobe(0x02 << 4); // 4-bit
   delayMicroseconds(4500);
-  write_cmd(COMMAND_FUNCTION_SET | FLAG_FUNCTION_SET_MODE_4BIT |
-            FLAG_FUNCTION_SET_LINES_2 | FLAG_FUNCTION_SET_DOTS_5X8);
+  write_cmd(COMMAND_FUNCTION_SET | FLAG_FUNCTION_SET_MODE_4BIT | FLAG_FUNCTION_SET_LINES_2 |
+            FLAG_FUNCTION_SET_DOTS_5X8);
   write_cmd(COMMAND_DISPLAY_CONTROL | FLAG_DISPLAY_CONTROL_DISPLAY_ON);
   sclear();
   write_cmd(COMMAND_ENTRY_MODE_SET | FLAG_ENTRY_MODE_SET_ENTRY_INCREMENT);
@@ -256,8 +252,7 @@ LCD1602::LCD1602(uint8_t sda, uint8_t scl) {
   i2c_config.master.clk_speed = 100000;
   if (i2c_param_config(I2C_NUM_0, &i2c_config) != ESP_OK) {
     dbgprint("param_config error!");
-  } else if (i2c_driver_install(I2C_NUM_0, I2C_MODE_MASTER, 0, 0, 0) !=
-             ESP_OK) {
+  } else if (i2c_driver_install(I2C_NUM_0, I2C_MODE_MASTER, 0, 0, 0) != ESP_OK) {
     dbgprint("driver_install error!");
   }
   reset();

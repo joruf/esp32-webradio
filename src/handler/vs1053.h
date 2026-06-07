@@ -72,16 +72,14 @@ protected:
 public:
   // Constructor.  Only sets pin values.  Doesn't touch the chip.  Be sure to
   // call begin()!
-  VS1053(int8_t _cs_pin, int8_t _dcs_pin, int8_t _dreq_pin,
-         int8_t _shutdown_pin, int8_t _shutdownx_pin);
+  VS1053(int8_t _cs_pin, int8_t _dcs_pin, int8_t _dreq_pin, int8_t _shutdown_pin, int8_t _shutdownx_pin);
   uint16_t read_register(uint8_t _reg) const;
   void begin(); // Begin operation.  Sets pins correctly,
   // and prepares SPI bus.
   void startSong(); // Prepare to start playing. Call this each
   // time a new song starts.
-  inline bool
-  playChunk(uint8_t *data, // Play a chunk of data.  Copies the data to
-            size_t len);   // the chip.  Blocks until complete.
+  inline bool playChunk(uint8_t *data, // Play a chunk of data.  Copies the data to
+                        size_t len);   // the chip.  Blocks until complete.
   // Returns true if more data can be added
   // to fifo
   void stopSong(); // Finish playing a song. Call this after
@@ -94,10 +92,9 @@ public:
   {                                // higher is louder.
     return curvol;
   }
-  void
-  printDetails(const char *header);  // Print config details to serial output
-  void softReset();                  // Do a soft reset
-  bool testComm(const char *header); // Test communication with module
+  void printDetails(const char *header); // Print config details to serial output
+  void softReset();                      // Do a soft reset
+  bool testComm(const char *header);     // Test communication with module
   inline bool data_request() const { return (digitalRead(dreq_pin) == HIGH); }
   void AdjustRate(long ppm2); // Fine tune the datarate
 };
@@ -106,10 +103,9 @@ public:
 // VS1053 class implementation. *
 //**************************************************************************************************
 
-VS1053::VS1053(int8_t _cs_pin, int8_t _dcs_pin, int8_t _dreq_pin,
-               int8_t _shutdown_pin, int8_t _shutdownx_pin)
-    : cs_pin(_cs_pin), dcs_pin(_dcs_pin), dreq_pin(_dreq_pin),
-      shutdown_pin(_shutdown_pin), shutdownx_pin(_shutdownx_pin) {}
+VS1053::VS1053(int8_t _cs_pin, int8_t _dcs_pin, int8_t _dreq_pin, int8_t _shutdown_pin, int8_t _shutdownx_pin)
+    : cs_pin(_cs_pin), dcs_pin(_dcs_pin), dreq_pin(_dreq_pin), shutdown_pin(_shutdown_pin),
+      shutdownx_pin(_shutdownx_pin) {}
 
 uint16_t VS1053::read_register(uint8_t _reg) const {
   uint16_t result;
@@ -283,7 +279,7 @@ void VS1053::setVolume(uint8_t vol) {
     value = map(vol, 0, 100, 0xF8, 0x00); // 0..100% to one channel
     value = (value << 8) | value;
     write_register(SCI_VOL, value); // Volume left and right
-    output_enable(vol != 0); // Enable/disable amplifier through shutdown pin(s)
+    output_enable(vol != 0);        // Enable/disable amplifier through shutdown pin(s)
   }
 }
 
@@ -304,8 +300,7 @@ void VS1053::startSong() {
 }
 
 bool VS1053::playChunk(uint8_t *data, size_t len) {
-  return okay &&
-         sdi_send_buffer(data, len); // True if more data can be added to fifo
+  return okay && sdi_send_buffer(data, len); // True if more data can be added to fifo
 }
 
 void VS1053::stopSong() {
@@ -351,9 +346,8 @@ void VS1053::printDetails(const char *header) {
   }
 }
 
-void VS1053::output_enable(
-    bool ena) {          // Enable amplifier through shutdown pin(s)
-  if (shutdown_pin >= 0) // Shutdown in use?
+void VS1053::output_enable(bool ena) { // Enable amplifier through shutdown pin(s)
+  if (shutdown_pin >= 0)               // Shutdown in use?
   {
     digitalWrite(shutdown_pin, !ena); // Shut down or enable audio output
   }

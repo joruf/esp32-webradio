@@ -11,8 +11,7 @@ void claimSPI(const char *p) {
 
   while (xSemaphoreTake(SPIsem, ctry) != pdTRUE) { // Claim SPI bus
     if (count++ > 10) {
-      dbgprint("SPI semaphore not taken within %d ticks by CPU %d, id %s",
-               count * ctry, xPortGetCoreID(), p);
+      dbgprint("SPI semaphore not taken within %d ticks by CPU %d, id %s", count * ctry, xPortGetCoreID(), p);
     }
   }
 }

@@ -17,8 +17,7 @@ void showTextOnTFT(uint16_t inx, const char *str) {
 }
 
 /**
- * @brief Requests display of a text on the TFT display (String reference
- * version).
+ * @brief Requests display of a text on the TFT display (String reference version).
  *
  * @param inx Index of the TFT segment (must be < TFTSECS)
  * @param str String to display (as String reference)
@@ -46,8 +45,7 @@ void IRAM_ATTR enableBacklight(bool enable) {
     digitalWrite(ini_block.tft_bl_pin, enable); // Enable/disable backlight
   }
 
-  if (ini_block.tft_blx_pin >=
-      0) { // Backlight for TFT (inversed logic) control?
+  if (ini_block.tft_blx_pin >= 0) {               // Backlight for TFT (inversed logic) control?
     digitalWrite(ini_block.tft_blx_pin, !enable); // Enable/disable backlight
   }
 
@@ -75,9 +73,7 @@ void tftlog(const char *str) {
  * @param p Pointer to the segment to display
  * @param width Width of the area to clear
  */
-static void clearSegmentBackground(scrseg_struct *p, uint16_t width) {
-  dsp_fillRect(0, p->y, width, p->height, BLACK);
-}
+static void clearSegmentBackground(scrseg_struct *p, uint16_t width) { dsp_fillRect(0, p->y, width, p->height, BLACK); }
 
 /**
  * @brief Draws a divider line above a segment (if space permits and desired).

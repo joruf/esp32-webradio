@@ -47,29 +47,24 @@ void IRAM_ATTR timer10sec() {
   static uint8_t morethanonce = 0;      // Counter for succesive fails
   uint32_t bytesplayed;                 // Bytes send to MP3 converter
 
-  if (datamode & (INIT | HEADER | DATA | METADATA | PLAYLISTINIT |
-                  PLAYLISTHEADER | PLAYLISTDATA)) { // Test op playing
-    bytesplayed =
-        totalcount - oldtotalcount; // Nunber of bytes played in the 10 seconds
-    oldtotalcount = totalcount;     // Save for comparison in next cycle
-    if (bytesplayed == 0)           // Still playing?
+  if (datamode & (INIT | HEADER | DATA | METADATA | PLAYLISTINIT | PLAYLISTHEADER | PLAYLISTDATA)) { // Test op playing
+    bytesplayed = totalcount - oldtotalcount; // Nunber of bytes played in the 10 seconds
+    oldtotalcount = totalcount;               // Save for comparison in next cycle
+    if (bytesplayed == 0)                     // Still playing?
     {
 
       if (morethanonce > 10) { // No! Happened too many times?
         ESP.restart();         // Reset the CPU, probably no return
       }
 
-      if (datamode &
-          (PLAYLISTDATA | PLAYLISTINIT | PLAYLISTHEADER)) { // In playlist mode?
-        playlist_num = 0;                                   // end of playlist
+      if (datamode & (PLAYLISTDATA | PLAYLISTINIT | PLAYLISTHEADER)) { // In playlist mode?
+        playlist_num = 0;                                              // end of playlist
       }
 
       // if the connection is confused on playing, start the same channel again
-      if ((morethanonce > 0) ||
-          (playlist_num >
-           0)) { // If happened more than once or playlist is active
-                 // datamode = STOPREQD ;                     // Stop player
-        runStream(true, currentpreset); // Start the channel again
+      if ((morethanonce > 0) || (playlist_num > 0)) { // If happened more than once or playlist is active
+                                                      // datamode = STOPREQD ;                     // Stop player
+        runStream(true, currentpreset);               // Start the channel again
       }
       morethanonce++; // Count the fails
 
@@ -131,11 +126,9 @@ void IRAM_ATTR timer100() {
     time_req = true; // show current time request
 
     // In loop.h innerhalb von timer100 -> if(( count10sec % 10)== 0)
-    if (bltimer <
-        BACKLIGHT_TIME) { // Nur hochzählen, wenn Limit noch nicht erreicht
-      if (++bltimer ==
-          BACKLIGHT_TIME) {     // Wenn Limit genau jetzt erreicht wurde
-        enableBacklight(false); // Display aus
+    if (bltimer < BACKLIGHT_TIME) {      // Nur hochzählen, wenn Limit noch nicht erreicht
+      if (++bltimer == BACKLIGHT_TIME) { // Wenn Limit genau jetzt erreicht wurde
+        enableBacklight(false);          // Display aus
         dbgprint("TFT blanking activated");
       }
     }
@@ -206,8 +199,7 @@ void scanserial() {
         strncpy(cmd, serialcmd.c_str(), sizeof(cmd));
         if (nxtserial) // NEXTION test possible?
         {
-          if (serialcmd.startsWith(
-                  "N:")) // Command meant to test Nextion display?
+          if (serialcmd.startsWith("N:")) // Command meant to test Nextion display?
           {
             nxtserial->printf("%s\xFF\xFF\xFF", cmd + 2);
           }
@@ -326,8 +318,7 @@ void scandigital() {
   oldmillis = millis();                            // 100 msec over
   for (i = 0; (pinnr = progpin[i].gpio) >= 0; i++) // Scan all inputs
   {
-    if (!progpin[i].avail ||
-        progpin[i].reserved) // Skip unused and reserved pins
+    if (!progpin[i].avail || progpin[i].reserved) // Skip unused and reserved pins
     {
       continue;
     }
@@ -337,19 +328,16 @@ void scandigital() {
       progpin[i].cur = level; // And the new level
       if (!level)             // HIGH to LOW change?
       {
-        dbgprint("GPIO_%02d is now LOW, execute %s", pinnr,
-                 progpin[i].command.c_str());
-        reply = analyzeCmd(
-            progpin[i].command.c_str()); // Analyze command and handle it
-        dbgprint(reply);                 // Result for debugging
+        dbgprint("GPIO_%02d is now LOW, execute %s", pinnr, progpin[i].command.c_str());
+        reply = analyzeCmd(progpin[i].command.c_str()); // Analyze command and handle it
+        dbgprint(reply);                                // Result for debugging
       }
     }
   }
   // Now for the touch pins
   for (i = 0; (pinnr = touchpin[i].gpio) >= 0; i++) // Scan all inputs
   {
-    if (!touchpin[i].avail ||
-        touchpin[i].reserved) // Skip unused and reserved pins
+    if (!touchpin[i].avail || touchpin[i].reserved) // Skip unused and reserved pins
     {
       continue;
     }
@@ -369,11 +357,9 @@ void scandigital() {
       touchpin[i].cur = level; // And the new level
       if (!level)              // HIGH to LOW change?
       {
-        dbgprint("TOUCH_%02d is now %d ( < %d ), execute %s", pinnr, tlevel,
-                 THRESHOLD, touchpin[i].command.c_str());
-        reply = analyzeCmd(
-            touchpin[i].command.c_str()); // Analyze command and handle it
-        dbgprint(reply);                  // Result for debugging
+        dbgprint("TOUCH_%02d is now %d ( < %d ), execute %s", pinnr, tlevel, THRESHOLD, touchpin[i].command.c_str());
+        reply = analyzeCmd(touchpin[i].command.c_str()); // Analyze command and handle it
+        dbgprint(reply);                                 // Result for debugging
       }
     }
   }

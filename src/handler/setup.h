@@ -39,20 +39,20 @@ void reservepin(int8_t rpinnr) {
  */
 const char *getEncryptionType(wifi_auth_mode_t thisType) {
   switch (thisType) {
-  case WIFI_AUTH_OPEN:
-    return "OPEN";
-  case WIFI_AUTH_WEP:
-    return "WEP";
-  case WIFI_AUTH_WPA_PSK:
-    return "WPA_PSK";
-  case WIFI_AUTH_WPA2_PSK:
-    return "WPA2_PSK";
-  case WIFI_AUTH_WPA_WPA2_PSK:
-    return "WPA_WPA2_PSK";
-  case WIFI_AUTH_MAX:
-    return "MAX";
-  default:
-    break;
+    case WIFI_AUTH_OPEN:
+      return "OPEN";
+    case WIFI_AUTH_WEP:
+      return "WEP";
+    case WIFI_AUTH_WPA_PSK:
+      return "WPA_PSK";
+    case WIFI_AUTH_WPA2_PSK:
+      return "WPA2_PSK";
+    case WIFI_AUTH_WPA_WPA2_PSK:
+      return "WPA_WPA2_PSK";
+    case WIFI_AUTH_MAX:
+      return "MAX";
+    default:
+      break;
   }
   return "????";
 }
@@ -81,8 +81,7 @@ static const char *isAcceptableNetwork(const String &ssid) {
  * @param rssi Signal strength in dBm
  * @param displayCount Reference to counter for displayed networks
  */
-static void displayNetworkOnTft(int index, const String &ssid, int rssi,
-                                int &displayCount) {
+static void displayNetworkOnTft(int index, const String &ssid, int rssi, int &displayCount) {
   if (displayCount >= MAX_DISPLAY_NETWORKS) {
     return;
   }
@@ -130,8 +129,7 @@ void listNetworks() {
 
   // Show filtering info on display
   if (numSsid > MAX_DISPLAY_NETWORKS) {
-    sprintf(displayLine, "Found %d (show top %d)", numSsid,
-            MAX_DISPLAY_NETWORKS);
+    sprintf(displayLine, "Found %d (show top %d)", numSsid, MAX_DISPLAY_NETWORKS);
   } else {
     sprintf(displayLine, "Found %d networks", numSsid);
   }
@@ -144,9 +142,8 @@ void listNetworks() {
     encryption = WiFi.encryptionType(i);
 
     // Always print to serial monitor
-    dbgprint("%2d - %-25s Signal: %3d dBm, Encryption %4s, %s", i + 1,
-             WiFi.SSID(i).c_str(), WiFi.RSSI(i), getEncryptionType(encryption),
-             acceptable);
+    dbgprint("%2d - %-25s Signal: %3d dBm, Encryption %4s, %s", i + 1, WiFi.SSID(i).c_str(), WiFi.RSSI(i),
+             getEncryptionType(encryption), acceptable);
 
     // Display only strongest networks (scanNetworks sorts by signal strength)
     displayNetworkOnTft(i + 1, WiFi.SSID(i), WiFi.RSSI(i), displayCount);
@@ -315,26 +312,16 @@ struct iosetting {
  * @brief List of I/O related keys and their default pin mappings.
  */
 static const struct iosetting klist[] = {
-    {"pin_enc_clk", &ini_block.enc_clk_pin, 25},
-    {"pin_enc_dt", &ini_block.enc_dt_pin, 26},
-    {"pin_enc_sw", &ini_block.enc_sw_pin, 27},
-    {"pin_ir", &ini_block.ir_pin, 35},
-    {"pin_sd_cs", &ini_block.sd_cs_pin, 21},
-    {"pin_tft_cs", &ini_block.tft_cs_pin, 15},
-    {"pin_tft_dc", &ini_block.tft_dc_pin, 2},
-    {"pin_vs_cs", &ini_block.vs_cs_pin, 5},
-    {"pin_vs_dcs", &ini_block.vs_dcs_pin, 32},
-    {"pin_vs_dreq", &ini_block.vs_dreq_pin, 4},
-    {"pin_tft_scl", &ini_block.tft_scl_pin, -1},
-    {"pin_tft_sda", &ini_block.tft_sda_pin, -1},
-    {"pin_tft_bl", &ini_block.tft_bl_pin, 33},
-    {"pin_tft_blx", &ini_block.tft_blx_pin, -1},
-    {"pin_shutdown", &ini_block.vs_shutdown_pin, -1},
-    {"pin_shutdownx", &ini_block.vs_shutdownx_pin, -1},
-    {"pin_spi_sck", &ini_block.spi_sck_pin, 18},
-    {"pin_spi_miso", &ini_block.spi_miso_pin, 19},
-    {"pin_spi_mosi", &ini_block.spi_mosi_pin, 23},
-    {NULL, NULL, 0}};
+    {"pin_enc_clk", &ini_block.enc_clk_pin, 25},      {"pin_enc_dt", &ini_block.enc_dt_pin, 26},
+    {"pin_enc_sw", &ini_block.enc_sw_pin, 27},        {"pin_ir", &ini_block.ir_pin, 35},
+    {"pin_sd_cs", &ini_block.sd_cs_pin, 21},          {"pin_tft_cs", &ini_block.tft_cs_pin, 15},
+    {"pin_tft_dc", &ini_block.tft_dc_pin, 2},         {"pin_vs_cs", &ini_block.vs_cs_pin, 5},
+    {"pin_vs_dcs", &ini_block.vs_dcs_pin, 32},        {"pin_vs_dreq", &ini_block.vs_dreq_pin, 4},
+    {"pin_tft_scl", &ini_block.tft_scl_pin, -1},      {"pin_tft_sda", &ini_block.tft_sda_pin, -1},
+    {"pin_tft_bl", &ini_block.tft_bl_pin, 33},        {"pin_tft_blx", &ini_block.tft_blx_pin, -1},
+    {"pin_shutdown", &ini_block.vs_shutdown_pin, -1}, {"pin_shutdownx", &ini_block.vs_shutdownx_pin, -1},
+    {"pin_spi_sck", &ini_block.spi_sck_pin, 18},      {"pin_spi_miso", &ini_block.spi_miso_pin, 19},
+    {"pin_spi_mosi", &ini_block.spi_mosi_pin, 23},    {NULL, NULL, 0}};
 
 /**
  * @brief Process a single I/O preference entry.
@@ -488,8 +475,7 @@ uint8_t FindNamespaceId(const char *ns) {
       bm = (nvsbuf.Bitmap[i / 4] >> ((i % 4) * 2));
       bm &= 0x03;
 
-      if ((bm == 2) && (nvsbuf.Entry[i].Ns == 0) &&
-          (strcmp(ns, nvsbuf.Entry[i].Key) == 0)) {
+      if ((bm == 2) && (nvsbuf.Entry[i].Ns == 0) && (strcmp(ns, nvsbuf.Entry[i].Key) == 0)) {
         res = nvsbuf.Entry[i].Data & 0xFF;
         offset = nvs->size;
         break;

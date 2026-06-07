@@ -35,10 +35,10 @@ void xmlparse(String &line, const char *selstr, String &res) {
  */
 String xmlgethost(String mount) {
   const char *xmlhost = "playerservices.streamtheworld.com"; // XML data source
-  const char *xmlget = "GET /api/livestream" // XML get parameters
-                       "?version=1.5"        // API Version of IHeartRadio
-                       "&mount=%sAAC"        // MountPoint with Station Callsign
-                       "&lang=en";           // Language
+  const char *xmlget = "GET /api/livestream"                 // XML get parameters
+                       "?version=1.5"                        // API Version of IHeartRadio
+                       "&mount=%sAAC"                        // MountPoint with Station Callsign
+                       "&lang=en";                           // Language
 
   String stationServer = ""; // Radio stream server
   String stationPort = "";   // Radio stream port

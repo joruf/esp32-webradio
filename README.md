@@ -121,6 +121,30 @@ git clone https://github.com/joruf/ESP32_Webradio.git
 - Build & Upload: Open the project folder in VS Code. PlatformIO will automatically fetch the required dependencies (Adafruit GFX/ST7735, PubSubClient, etc.) defined in your platformio.ini.
 - Flash: Upload the firmware to your ESP32 via USB.
 
+### Generating Doxygen Documentation
+
+This repository includes a `Doxyfile` for generating API documentation from the `src` and `include` folders.
+
+- Install Doxygen on Linux:
+
+```bash
+sudo apt install doxygen
+```
+
+- Generate the docs:
+
+```bash
+doxygen Doxyfile
+```
+
+- Open the generated HTML docs:
+
+```bash
+xdg-open docs/doxygen/html/index.html
+```
+
+The generated documentation is written to `docs/doxygen/html`.
+
 ---
 
 ## REST API & JSON Endpoint

@@ -54,8 +54,7 @@ void handleSleepTimer() {
  * @return true  if alarm was started, otherwise false
  */
 static bool tryStartRadioAlarm(int8_t alrm_start_hour, int8_t alrm_start_min) {
-  if (timeinfo.tm_hour == alrm_start_hour &&
-      timeinfo.tm_min == alrm_start_min && timeinfo.tm_sec == 0) {
+  if (timeinfo.tm_hour == alrm_start_hour && timeinfo.tm_min == alrm_start_min && timeinfo.tm_sec == 0) {
 
     // 1. Use the configured alarm station (ini_block.newpreset)
     runStream(true, ini_block.newpreset);
@@ -108,8 +107,7 @@ static bool tryStopRadioAlarm(int8_t alrm_stop_hour, int8_t alrm_stop_min) {
  * or clears the display when stopped.
  */
 static void updateAlarmDisplayFeedback(void) {
-  if (radioAlarmStatusChanged == ALRM_START ||
-      radioAlarmStatusChanged == ALRM_STOP) {
+  if (radioAlarmStatusChanged == ALRM_START || radioAlarmStatusChanged == ALRM_STOP) {
     radioAlarmStatusChanged = ALRM_NONE;
 
     if (radioAlarmStatusChanged == ALRM_START) {
@@ -143,20 +141,15 @@ void handleRadioAlarm(void) {
 
   // --- RADIO ALARM START ---
   if (ini_block.alrm_start != "none" && ini_block.alrm_start.length() >= 4) {
-    int8_t alrm_tm_start_hour =
-        getValue(ini_block.alrm_start.c_str(), ':', 0).toInt();
-    int8_t alrm_tm_start_min =
-        getValue(ini_block.alrm_start.c_str(), ':', 1).toInt();
+    int8_t alrm_tm_start_hour = getValue(ini_block.alrm_start.c_str(), ':', 0).toInt();
+    int8_t alrm_tm_start_min = getValue(ini_block.alrm_start.c_str(), ':', 1).toInt();
     tryStartRadioAlarm(alrm_tm_start_hour, alrm_tm_start_min);
   }
 
   // --- RADIO ALARM STOP ---
-  if (ini_block.alrm_stop.c_str() != "none" &&
-      ini_block.alrm_stop.length() >= 4) {
-    int8_t alrm_tm_stop_hour =
-        getValue(ini_block.alrm_stop.c_str(), ':', 0).toInt();
-    int8_t alrm_tm_stop_min =
-        getValue(ini_block.alrm_stop.c_str(), ':', 1).toInt();
+  if (ini_block.alrm_stop.c_str() != "none" && ini_block.alrm_stop.length() >= 4) {
+    int8_t alrm_tm_stop_hour = getValue(ini_block.alrm_stop.c_str(), ':', 0).toInt();
+    int8_t alrm_tm_stop_min = getValue(ini_block.alrm_stop.c_str(), ':', 1).toInt();
     tryStopRadioAlarm(alrm_tm_stop_hour, alrm_tm_stop_min);
   }
 }

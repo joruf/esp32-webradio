@@ -71,9 +71,7 @@ void bubbleSortKeys(uint16_t n) {
  * @return uint32_t The updated, filtered ADC value
  * @note The filtered value is stored in the global 'adcval' variable
  */
-static uint32_t filterADCValue(uint32_t raw_value) {
-  return (15 * adcval + raw_value) / 16;
-}
+static uint32_t filterADCValue(uint32_t raw_value) { return (15 * adcval + raw_value) / 16; }
 
 /**
  * @brief TFT display and ADC measurement task.

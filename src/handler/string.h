@@ -6,8 +6,7 @@
  * @note Uses static buffer to handle multi-byte UTF8 sequences
  */
 byte utf8ascii(byte ascii) {
-  static const byte lut_C3[] = {
-      "AAAAAAACEEEEIIIIDNOOOOO#0UUUU###aaaaaaaceeeeiiiidnooooo##uuuuyyy"};
+  static const byte lut_C3[] = {"AAAAAAACEEEEIIIIDNOOOOO#0UUUU###aaaaaaaceeeeiiiidnooooo##uuuuyyy"};
   static byte c1 = 0; // Last character buffer
   byte res = 0;       // Result, default 0
 
@@ -16,19 +15,19 @@ byte utf8ascii(byte ascii) {
     res = ascii; // Return unmodified
   } else {
     switch (c1) { // Conversion depending on first UTF8-character
-    case 0xC2:
-      res = '~';
-      break;
-    case 0xC3:
-      res = lut_C3[ascii - 128];
-      break;
-    case 0x82:
-      if (ascii == 0xAC) {
-        res = 'E'; // Special case Euro symbol
-      }
-      break;
-    default:
-      break;
+      case 0xC2:
+        res = '~';
+        break;
+      case 0xC3:
+        res = lut_C3[ascii - 128];
+        break;
+      case 0x82:
+        if (ascii == 0xAC) {
+          res = 'E'; // Special case Euro symbol
+        }
+        break;
+      default:
+        break;
     }
     c1 = ascii; // Remember actual character
   }

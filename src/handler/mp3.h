@@ -72,8 +72,7 @@ void handleNextDataByteFromServer(uint8_t b) {
 
   if (datamode == DATA) { // Handle next byte of MP3/Ogg data
     *outqp++ = b;
-    if (outqp ==
-        (outchunk.buf + sizeof(outchunk.buf))) { // If the buffer is full
+    if (outqp == (outchunk.buf + sizeof(outchunk.buf))) { // If the buffer is full
       // Send data to playStreamFromQueue queue.  If the buffer cannot be placed
       // within 200 ticks, the queue is full, while the sender tries to send
       // more.  The chunk will be discarded it that case.
@@ -108,38 +107,34 @@ void handleNextDataByteFromServer(uint8_t b) {
         (b == '\0'))        // Ignore NULL
     {
       // NOTHING TO DO
-    } else if (b == '\n') {              // Linefeed
-      LFcount++;                         // Count linefeeds
-      metalinebf[metalinebfx] = '\0';    // Take care of delimiter
-      if (checkHeaderLine(metalinebf)) { // if there is a reasonable input
+    } else if (b == '\n') {                     // Linefeed
+      LFcount++;                                // Count linefeeds
+      metalinebf[metalinebfx] = '\0';           // Take care of delimiter
+      if (checkHeaderLine(metalinebf)) {        // if there is a reasonable input
         dbgprint("Headerline: %s", metalinebf); // Show headerline
         String metaline = String(metalinebf);   // Convert to string
         String lcml = metaline;                 // Use lower case for compare
         lcml.toLowerCase();
 
-        if (lcml.startsWith(
-                "location: http://")) {  // On redirection get the new URL
-          host = metaline.substring(17); // get new URL
-          hostreq = true;                // And request this one
+        if (lcml.startsWith("location: http://")) { // On redirection get the new URL
+          host = metaline.substring(17);            // get new URL
+          hostreq = true;                           // And request this one
         }
 
-        if (lcml.indexOf("content-type") >=
-            0) {         // Line with "Content-Type: xxxx/yyy"
-          ctseen = true; // remember seeing this
-          String ct = metaline.substring(13); // Set contentstype. Not used yet
+        if (lcml.indexOf("content-type") >= 0) { // Line with "Content-Type: xxxx/yyy"
+          ctseen = true;                         // remember seeing this
+          String ct = metaline.substring(13);    // Set contentstype. Not used yet
           ct.trim();
           dbgprint("%s seen.", ct.c_str());
         }
 
         if (lcml.startsWith("icy-br:")) {
-          bitrate = metaline.substring(7)
-                        .toInt(); // Found bitrate tag, read the bitrate
-          if (bitrate == 0) {     // For Ogg br is like "Quality 2"
-            bitrate = 87;         // Dummy bitrate
+          bitrate = metaline.substring(7).toInt(); // Found bitrate tag, read the bitrate
+          if (bitrate == 0) {                      // For Ogg br is like "Quality 2"
+            bitrate = 87;                          // Dummy bitrate
           }
         } else if (lcml.startsWith("icy-metaint:")) {
-          metaint = metaline.substring(12)
-                        .toInt(); // Found metaint tag, read the value
+          metaint = metaline.substring(12).toInt(); // Found metaint tag, read the value
         } else if (lcml.startsWith("icy-name:")) {
           icyname = metaline.substring(9); // Get station name
           icyname.trim();                  // Remove leading and trailing spaces
@@ -153,20 +148,18 @@ void handleNextDataByteFromServer(uint8_t b) {
         }
       }
 
-      metalinebfx = 0; // Reset this line
-      if ((LFcount == 2) &&
-          ctseen) { // If Content type seen and a double LF available
+      metalinebfx = 0;                // Reset this line
+      if ((LFcount == 2) && ctseen) { // If Content type seen and a double LF available
         dbgprint("Switch to DATA, bitrate is %d"
                  ", metaint is %d",
-                 bitrate, metaint); // Show bitrate and metaint
-        datamode = DATA;            // Expecting data now
-        datacount = metaint;        // Number of bytes before first metadata
+                 bitrate, metaint);           // Show bitrate and metaint
+        datamode = DATA;                      // Expecting data now
+        datacount = metaint;                  // Number of bytes before first metadata
         queueFunctionForPlayTask(QSTARTSONG); // Queue a request to start song
       }
     } else {
-      metalinebf[metalinebfx++] =
-          (char)b; // Normal character, put new char in metaline
-      if (metalinebfx >= METASIZ) { // Prevent overflow
+      metalinebf[metalinebfx++] = (char)b; // Normal character, put new char in metaline
+      if (metalinebfx >= METASIZ) {        // Prevent overflow
         metalinebfx--;
       }
       LFcount = 0; // Reset double CRLF detection
@@ -180,13 +173,11 @@ void handleNextDataByteFromServer(uint8_t b) {
       metacount = b * 16 + 1; // New count for metadata including length byte
       if (metacount > 1) {
         dbgprint("Metadata block %d bytes",
-                 metacount -
-                     1); // Most of the time there are zero bytes of metadata
+                 metacount - 1); // Most of the time there are zero bytes of metadata
       }
     } else {
-      metalinebf[metalinebfx++] =
-          (char)b; // Normal character, put new char in metaline
-      if (metalinebfx >= METASIZ) { // Prevent overflow
+      metalinebf[metalinebfx++] = (char)b; // Normal character, put new char in metaline
+      if (metalinebfx >= METASIZ) {        // Prevent overflow
         metalinebfx--;
       }
     }
@@ -200,8 +191,7 @@ void handleNextDataByteFromServer(uint8_t b) {
         // "StreamTitle='60s 03 05 Magic60s';StreamUrl='';"
         // Isolate the StreamTitle, remove leading and trailing quotes if
         // present.
-        showStreamDataOnTFT(
-            metalinebf); // Show artist and title if present in metadata
+        showStreamDataOnTFT(metalinebf); // Show artist and title if present in metadata
       }
 
       if (metalinebfx > (METASIZ - 10)) { // If Unlikely metaline length
@@ -237,17 +227,16 @@ void handleNextDataByteFromServer(uint8_t b) {
       LFcount++;                                  // Count linefeeds
       metalinebf[metalinebfx] = '\0';             // Take care of delimeter
       dbgprint("Playlistheader: %s", metalinebf); // Show playlistheader
-      scan_content_length(metalinebf); // Check if it is a content-length line
-      metalinebfx = 0;                 // Ready for next line
+      scan_content_length(metalinebf);            // Check if it is a content-length line
+      metalinebfx = 0;                            // Ready for next line
       if (LFcount == 2) {
         dbgprint("Switch to PLAYLISTDATA, search for entry %d", playlist_num);
         datamode = PLAYLISTDATA; // Expecting data now
         return;
       }
     } else {
-      metalinebf[metalinebfx++] =
-          (char)b; // Normal character, put new char in metaline
-      if (metalinebfx >= METASIZ) { // Prevent overflow
+      metalinebf[metalinebfx++] = (char)b; // Normal character, put new char in metaline
+      if (metalinebfx >= METASIZ) {        // Prevent overflow
         metalinebfx--;
       }
       LFcount = 0; // Reset double CRLF detection
@@ -263,8 +252,8 @@ void handleNextDataByteFromServer(uint8_t b) {
       // ignore
     }
 
-    if (b != '\n') { // If Linefeed
-                     // No, normal character in playlistdata,
+    if (b != '\n') {                       // If Linefeed
+                                           // No, normal character in playlistdata,
       metalinebf[metalinebfx++] = (char)b; // add it to metaline
       if (metalinebfx >= METASIZ) {        // Prevent overflow
         metalinebfx--;
@@ -335,13 +324,11 @@ void mp3loop() {
 
   // Try to keep the Queue to playStreamFromQueue filled up by adding as much
   // bytes as possible Check if playing
-  if (datamode & (INIT | HEADER | DATA | METADATA | PLAYLISTINIT |
-                  PLAYLISTHEADER | PLAYLISTDATA)) {
-    timing = millis();          // Start time this function
-    maxchunk = sizeof(tmpbuff); // Reduce byte count for this mp3loop()
-    qspace =
-        uxQueueSpacesAvailable(dataqueue) * // Compute free space in data queue
-        sizeof(qdata_struct);
+  if (datamode & (INIT | HEADER | DATA | METADATA | PLAYLISTINIT | PLAYLISTHEADER | PLAYLISTDATA)) {
+    timing = millis();                           // Start time this function
+    maxchunk = sizeof(tmpbuff);                  // Reduce byte count for this mp3loop()
+    qspace = uxQueueSpacesAvailable(dataqueue) * // Compute free space in data queue
+             sizeof(qdata_struct);
 
     if (localfile) {      // If playing file from SD card
       av = mp3filelength; // Bytes left in file
@@ -355,8 +342,8 @@ void mp3loop() {
         maxchunk = qspace;     // No, limit to free queue space
       }
 
-      if (maxchunk) {       // Check if there is anything to read
-        claimSPI("sdread"); // Claim SPI bus
+      if (maxchunk) {                          // Check if there is anything to read
+        claimSPI("sdread");                    // Claim SPI bus
         res = mp3file.read(tmpbuff, maxchunk); // Read a block of data
         releaseSPI();                          // Release SPI bus
         mp3filelength -= res;                  // Number of bytes left
@@ -374,8 +361,7 @@ void mp3loop() {
 
       // Check if there is anything to read
       if (maxchunk) {
-        res = mp3client.read(
-            tmpbuff, maxchunk); // Read a number of bytes from the stream
+        res = mp3client.read(tmpbuff, maxchunk); // Read a number of bytes from the stream
       } else {
         if (datamode == PLAYLISTDATA) { // If End of playlist
           playlist_num = 0;             // And reset
@@ -429,24 +415,21 @@ void mp3loop() {
     }
   }
 
-  if (ini_block.newpreset !=
-      currentpreset) {         // If New station or next from playlist requested
-    if (datamode != STOPPED) { // If still busy stop the request
+  if (ini_block.newpreset != currentpreset) { // If New station or next from playlist requested
+    if (datamode != STOPPED) {                // If still busy stop the request
       datamode = STOPREQD;
     } else {
       if (playlist_num) { // If playing from playlist
 
         // retrieve URL of playlist
-        playlist_num +=
-            ini_block.newpreset - currentpreset; // Next entry in playlist
-        ini_block.newpreset = currentpreset;     // Stay at current preset
+        playlist_num += ini_block.newpreset - currentpreset; // Next entry in playlist
+        ini_block.newpreset = currentpreset;                 // Stay at current preset
       } else {
         host = nvsGetHostFromPref(); // Lookup preset in preferences
         chomp(host);                 // Get rid of part after "#"
       }
 
-      dbgprint("New preset/file requested (%d/%d) from %s", ini_block.newpreset,
-               playlist_num, host.c_str());
+      dbgprint("New preset/file requested (%d/%d) from %s", ini_block.newpreset, playlist_num, host.c_str());
 
       if (host != "") { // if Preset in ini-file
         hostreq = true; // Force this station as new preset

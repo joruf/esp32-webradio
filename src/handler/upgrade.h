@@ -233,8 +233,7 @@ static bool waitForResponse(uint32_t timeout_ms) {
  * @param lstmodkey NVS key for storing timestamp
  * @return true if update was successful, false otherwise
  */
-static bool performUpdate(const char *binfile, const String &newlstmod,
-                          const char *lstmodkey) {
+static bool performUpdate(const char *binfile, const String &newlstmod, const char *lstmodkey) {
   dsp_erase();
   dsp_println("Updating sketch");
 
@@ -262,8 +261,7 @@ static bool performUpdate(const char *binfile, const String &newlstmod,
  * @param updatehost Hostname of the update server
  * @param binfile Path to the binary file
  */
-void update_software(const char *lstmodkey, const char *updatehost,
-                     const char *binfile) {
+void update_software(const char *lstmodkey, const char *updatehost, const char *binfile) {
   String line;
   String lstmod;
   String newlstmod;

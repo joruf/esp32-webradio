@@ -16,9 +16,8 @@ static bool formatTimeString(const char *days[]) {
     return false;
   }
 
-  sprintf(timetxt, "%s %02d.%02d.%02d %02d:%02d", days[timeinfo.tm_wday],
-          timeinfo.tm_mday, timeinfo.tm_mon + 1, timeinfo.tm_year % 100,
-          timeinfo.tm_hour, timeinfo.tm_min);
+  sprintf(timetxt, "%s %02d.%02d.%02d %02d:%02d", days[timeinfo.tm_wday], timeinfo.tm_mday, timeinfo.tm_mon + 1,
+          timeinfo.tm_year % 100, timeinfo.tm_hour, timeinfo.tm_min);
 
   return true;
 }
@@ -30,8 +29,7 @@ static bool formatTimeString(const char *days[]) {
  * @param delaycount Reference to delay counter
  * @param days Array of day name abbreviations
  */
-static void syncTimeWithNtp(int16_t &retrycount, int16_t &delaycount,
-                            const char *days[]) {
+static void syncTimeWithNtp(int16_t &retrycount, int16_t &delaycount, const char *days[]) {
   dbgprint("Sync TOD");
 
   if (getLocalTime(&timeinfo)) {

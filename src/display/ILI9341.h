@@ -34,20 +34,18 @@ scrseg_struct tftdata[TFTSECS] = // Screen divided in 3 segments + 1 overlay
 Adafruit_ILI9341 *tft = NULL; // For instance of display driver
 
 // Various macro's to mimic the ILI9341 version of display functions
-#define dsp_setRotation()                                                      \
-  tft->setRotation(3)              // Use landscape format (3 for upside down)
-#define dsp_print(a) tft->print(a) // Print a string
-#define dsp_println(b) tft->println(b) // Print a string followed by newline
-#define dsp_fillRect(a, b, c, d, e)                                            \
-  tft->fillRect(a, b, c, d, e);                  // Fill a rectange
-#define dsp_setTextSize(a) tft->setTextSize(a)   // Set the text size
-#define dsp_setTextColor(a) tft->setTextColor(a) // Set the text color
-#define dsp_setCursor(a, b) tft->setCursor(a, b) // Position the cursor
-#define dsp_erase() tft->fillScreen(BLACK);      // Clear the screen
-#define dsp_getwidth() 320                       // Adjust to your display
-#define dsp_getheight() 240                      // Get height of screen
-#define dsp_update()        // Updates to the physical screen
-#define dsp_isUseSPI() true // Does use SPI
+#define dsp_setRotation() tft->setRotation(3)                     // Use landscape format (3 for upside down)
+#define dsp_print(a) tft->print(a)                                // Print a string
+#define dsp_println(b) tft->println(b)                            // Print a string followed by newline
+#define dsp_fillRect(a, b, c, d, e) tft->fillRect(a, b, c, d, e); // Fill a rectange
+#define dsp_setTextSize(a) tft->setTextSize(a)                    // Set the text size
+#define dsp_setTextColor(a) tft->setTextColor(a)                  // Set the text color
+#define dsp_setCursor(a, b) tft->setCursor(a, b)                  // Position the cursor
+#define dsp_erase() tft->fillScreen(BLACK);                       // Clear the screen
+#define dsp_getwidth() 320                                        // Adjust to your display
+#define dsp_getheight() 240                                       // Get height of screen
+#define dsp_update()                                              // Updates to the physical screen
+#define dsp_isUseSPI() true                                       // Does use SPI
 
 bool dsp_begin() {
   tft = new Adafruit_ILI9341(ini_block.tft_cs_pin,
@@ -104,8 +102,8 @@ void displayVolumeOnTFT() {
     newvol = vs1053player->getVolume(); // Get current volume setting
     if (newvol != oldvol)               // Volume changed?
     {
-      oldvol = newvol;                              // Remember for next compare
-      pos = map(newvol, 0, 100, 0, dsp_getwidth()); // Compute position on TFT
+      oldvol = newvol;                                   // Remember for next compare
+      pos = map(newvol, 0, 100, 0, dsp_getwidth());      // Compute position on TFT
       dsp_fillRect(0, dsp_getheight() - 2, pos, 2, RED); // Paint red part
       dsp_fillRect(pos, dsp_getheight() - 2, dsp_getwidth() - pos, 2,
                    GREEN); // Paint green part
@@ -122,10 +120,9 @@ void displayVolumeOnTFT() {
 // screen is 8 pixels high and 6 pixels wide. *
 //**************************************************************************************************
 void showTimeOnTFT(const char *str, uint16_t color) {
-  static char oldstr[9] = "........"; // For compare
-  uint8_t i;                          // Index in strings
-  uint16_t pos =
-      dsp_getwidth() + TIMEPOS; // X-position of character, TIMEPOS is negative
+  static char oldstr[9] = "........";      // For compare
+  uint8_t i;                               // Index in strings
+  uint16_t pos = dsp_getwidth() + TIMEPOS; // X-position of character, TIMEPOS is negative
 
   if (str[0] == '\0') // Empty string?
   {

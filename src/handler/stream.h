@@ -6,8 +6,7 @@
  * @param bufsize Size of the output buffer
  * @return true if stream title was found, false otherwise
  */
-static bool extractStreamTitle(const char *ml, char *streamtitle,
-                               size_t bufsize) {
+static bool extractStreamTitle(const char *ml, char *streamtitle, size_t bufsize) {
   char *p1;
   char *p2;
 
@@ -96,8 +95,7 @@ void showStreamDataOnTFT(const char *ml, bool full) {
  * @param port Output: port number
  * @param extension Output: URL extension
  */
-static void parseHostString(const String &host, String &hostwoext,
-                            uint16_t &port, String &extension) {
+static void parseHostString(const String &host, String &hostwoext, uint16_t &port, String &extension) {
   int inx;
 
   hostwoext = host;
@@ -139,8 +137,7 @@ static void handlePlaylistRequest() {
  * @param port Port number
  * @param extension URL extension
  */
-static void sendHttpRequest(const String &hostwoext, uint16_t port,
-                            const String &extension) {
+static void sendHttpRequest(const String &hostwoext, uint16_t port, const String &extension) {
   String auth = nvsGetValue("basicauth");
 
   if (auth != "") {
@@ -148,10 +145,8 @@ static void sendHttpRequest(const String &hostwoext, uint16_t port,
     auth = String("Authorization: Basic ") + auth + String("\r\n");
   }
 
-  mp3client.print(String("GET ") + extension + String(" HTTP/1.1\r\n") +
-                  String("Host: ") + hostwoext + String("\r\n") +
-                  String("Icy-MetaData:1\r\n") + auth +
-                  String("Connection: close\r\n\r\n"));
+  mp3client.print(String("GET ") + extension + String(" HTTP/1.1\r\n") + String("Host: ") + hostwoext + String("\r\n") +
+                  String("Icy-MetaData:1\r\n") + auth + String("Connection: close\r\n\r\n"));
 }
 
 /**
@@ -182,8 +177,7 @@ bool connectToWebradioServer() {
   // Parse host components
   parseHostString(host, hostwoext, port, extension);
 
-  s = dbgprint("Connect to %s on port %d, extension %s", hostwoext.c_str(),
-               port, extension.c_str());
+  s = dbgprint("Connect to %s on port %d, extension %s", hostwoext.c_str(), port, extension.c_str());
   showTextOnTFT(1, s);
 
   if (mp3client.connect(hostwoext.c_str(), port)) {
@@ -243,17 +237,17 @@ void playStreamFromQueue(void *parameter) {
 
       // Select the chunk type
       switch (inchunk.datatyp) {
-      case QDATA:
-        processQDataChunk();
-        break;
-      case QSTARTSONG:
-        processQStartSong();
-        break;
-      case QSTOPSONG:
-        processQStopSong();
-        break;
-      default:
-        break;
+        case QDATA:
+          processQDataChunk();
+          break;
+        case QSTARTSONG:
+          processQStartSong();
+          break;
+        case QSTOPSONG:
+          processQStopSong();
+          break;
+        default:
+          break;
       }
     }
   }

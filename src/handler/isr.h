@@ -29,17 +29,15 @@ void IRAM_ATTR isr_IR() {
   t0 = t1;                              // Save for next compare
   if ((intval > 300) && (intval < 800)) // Short pulse?
   {
-    ir_locvalue = ir_locvalue << 1; // Shift in a "zero" bit
-    ir_loccount++;                  // Count number of received bits
-    ir_0 =
-        (ir_0 * 3 + intval) / 4; // Compute average durartion of a short pulse
+    ir_locvalue = ir_locvalue << 1;              // Shift in a "zero" bit
+    ir_loccount++;                               // Count number of received bits
+    ir_0 = (ir_0 * 3 + intval) / 4;              // Compute average durartion of a short pulse
   } else if ((intval > 1400) && (intval < 1900)) // Long pulse?
   {
     ir_locvalue = (ir_locvalue << 1) + 1; // Shift in a "one" bit
     ir_loccount++;                        // Count number of received bits
-    ir_1 =
-        (ir_1 * 3 + intval) / 4; // Compute average durartion of a short pulse
-  } else if (ir_loccount == 65)  // Value is correct after 65 level changes
+    ir_1 = (ir_1 * 3 + intval) / 4;       // Compute average durartion of a short pulse
+  } else if (ir_loccount == 65)           // Value is correct after 65 level changes
   {
     while (mask_in) // Convert 32 bits to 16 bits
     {
@@ -157,8 +155,7 @@ void IRAM_ATTR isr_enc_turn() {
       };
   // Read current state of CLK, DT pin. Result is a 2 bit binary number: 00, 01,
   // 10 or 11.
-  act_state = (digitalRead(ini_block.enc_clk_pin) << 1) +
-              digitalRead(ini_block.enc_dt_pin);
+  act_state = (digitalRead(ini_block.enc_clk_pin) << 1) + digitalRead(ini_block.enc_dt_pin);
   inx = (old_state << 2) + act_state; // Form index in enc_states
   locrotcount += enc_states[inx];     // Get delta: 0, +1 or -1
   if (locrotcount == 4) {

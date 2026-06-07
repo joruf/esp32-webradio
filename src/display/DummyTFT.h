@@ -28,8 +28,7 @@ void *tft = NULL;
 
 bool dsp_begin() { return false; }
 
-void dsp_fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color) {
-}; // Fill a rectange
+void dsp_fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color) {}; // Fill a rectange
 
 #define TFTSECS 1
 scrseg_struct tftdata[TFTSECS] = // Screen divided in 3 segments + 1 overlay
@@ -39,22 +38,22 @@ scrseg_struct tftdata[TFTSECS] = // Screen divided in 3 segments + 1 overlay
 };
 
 //**************************************************************************************************
-//                                      D I S P L A Y B A T T E R Y *
+//                                      D I S P L A Y B A T T E R Y                                *
 //**************************************************************************************************
-// Dummy routine for this type of display. *
+// Dummy routine for this type of display.                                                         *
 //**************************************************************************************************
 void displayBatteryChargeOnTFT() {}
 
 //**************************************************************************************************
-//                                      D I S P L A Y V O L U M E *
+//                                      D I S P L A Y V O L U M E                                  *
 //**************************************************************************************************
-// Dummy routine for this type of display. *
+// Dummy routine for this type of display.                                                         *
 //**************************************************************************************************
 void displayVolumeOnTFT() {}
 
 //**************************************************************************************************
-//                                      D I S P L A Y T I M E *
+//                                      D I S P L A Y T I M E                                      *
 //**************************************************************************************************
-// Dummy routine for this type of display. *
+// Dummy routine for this type of display.                                                         *
 //**************************************************************************************************
 void showTimeOnTFT(const char *str, uint16_t color) {}
