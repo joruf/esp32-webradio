@@ -113,8 +113,8 @@ You can change all pins in the web interface – the settings are saved in NVS.
 - Clone the repository:
 
 ```Bash
-cd ESP32_Webradio
-git clone https://github.com/joruf/ESP32_Webradio.git
+cd ESP32-Webradio
+git clone https://github.com/joruf/ESP32-Webradio.git
 ```
 
 - Open in VS Code: Ensure the PlatformIO extension is installed.
