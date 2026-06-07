@@ -28,7 +28,6 @@ const char about_html[] PROGMEM = R"=====(
 	
 	<body itemscope itemtype="http://schema.org/WebPage">	
 
-
 		<nav class="navbar navbar-default navbar-static-top">
 			<div id="body" class="container">
 				<div class="navbarDistance">
@@ -86,14 +85,9 @@ const char about_html[] PROGMEM = R"=====(
 			</div>
 		</div>
 		
-		
 		<footer class="navbar navbar-default navbar-fixed-bottom">
 		</footer>
-
-	
-	
 	</body>
-
 </html>
 
 )=====";

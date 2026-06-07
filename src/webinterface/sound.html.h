@@ -27,8 +27,6 @@ const char sound_html[] PROGMEM = R"=====(
 	</head>
 	
 	<body itemscope itemtype="http://schema.org/WebPage">	
-
-
 		<nav class="navbar navbar-default navbar-static-top">
 			<div id="body" class="container">
 				<div class="navbarDistance">
@@ -40,11 +38,9 @@ const char sound_html[] PROGMEM = R"=====(
 				</div>
 			</div>
 		</nav>
-		
 	
 		<div id="body" class="container">
 			<h1>Sound Settings</h1>
-
 
 			<div class="panel panel-default">
 				<div class="panel-heading">Webradio Control<br /><small>Click to adapt the sound output</small></div>
@@ -134,23 +130,16 @@ const char sound_html[] PROGMEM = R"=====(
 						</div>
 					</div>
 
-
 				</div>
 			</div>
-
-
 		</div>	
-
 	
 		<footer class="navbar navbar-default navbar-fixed-bottom">
 			<input id="command_log" type="text" style="width:100%" placeholder="Waiting for a command...." disabled><br>
 		</footer>
 
-	
-	
 		<script src="interface.js"></script>
 	</body>
-
 </html>
 
 )=====";

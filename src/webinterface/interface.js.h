@@ -184,7 +184,6 @@ const char interface_js[] PROGMEM = R"=====(
     });
 
 
-
     /**
      * General
      */
@@ -201,16 +200,12 @@ const char interface_js[] PROGMEM = R"=====(
     }
 
 
-
-
-
     /**
      * Index.html
      */
     function handlepreset(prestNbr) {
         httpGet("preset=" + prestNbr);
     }
-
 
 
     function handletone(id, toneVal) {
@@ -226,7 +221,6 @@ const char interface_js[] PROGMEM = R"=====(
     }
 
     
-    
     function setstat() {
         var theUrl = "/?station=" + station.value + "&_t=" + Date.now();
         var xhr = new XMLHttpRequest();
@@ -238,7 +232,6 @@ const char interface_js[] PROGMEM = R"=====(
         xhr.open("GET", theUrl, false);
         xhr.send();
     }
-
 
 
     function selectItemByValue(elmnt, value) {
@@ -253,7 +246,6 @@ const char interface_js[] PROGMEM = R"=====(
             }
         }
     }
-
 
 
     // Fill preset list initially
@@ -290,8 +282,6 @@ const char interface_js[] PROGMEM = R"=====(
     fillPresetList();
 
 
-
-
     /**
      * Config.html
      */
@@ -313,7 +303,6 @@ const char interface_js[] PROGMEM = R"=====(
         console.log("Pref loaded");
     }
     loadPref("getprefs");
-
 
 
     // Save the preferences
@@ -378,9 +367,6 @@ const char interface_js[] PROGMEM = R"=====(
     configInitially();
 
 
-
-
-
     /**
      * mp3play.html
      */
@@ -389,7 +375,6 @@ const char interface_js[] PROGMEM = R"=====(
             httpGet("mp3track=" + presctrl.value);
         }
     }
-
 
 
     /* MP3-List
@@ -420,7 +405,6 @@ const char interface_js[] PROGMEM = R"=====(
         xhr.send();
     }
     fillMP3List();
-
 
 
     /** Continuous JSON data */

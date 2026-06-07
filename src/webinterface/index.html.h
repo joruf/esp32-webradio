@@ -29,7 +29,6 @@ const char index_html[] PROGMEM = R"=====(
 	
 	<body itemscope itemtype="http://schema.org/WebPage">	
 
-
 		<nav class="navbar navbar-default navbar-static-top">
 			<div id="body" class="container">
 				<div class="navbarDistance">
@@ -43,12 +42,10 @@ const char index_html[] PROGMEM = R"=====(
 				<input id="command_log" type="text" style="width:100%" placeholder="Waiting for a command...." disabled><br>
 			</div>
 		</nav>
-		
-	
+			
 		<div id="body" class="container">
 			<h1>Webradio</h1>
 	
-
 			<div class="row panel panel-default">
 				<div class="panel-heading">
 					Metadata
@@ -63,7 +60,6 @@ const char index_html[] PROGMEM = R"=====(
 					</a>
 				</div>
 			</div>
-
 
 			<div class="row panel panel-default">
 				<div class="panel-heading">Webradio Control</div>
@@ -114,10 +110,9 @@ const char index_html[] PROGMEM = R"=====(
 						</button>
 					</div>
 					-->
-						
+
 				</div>
 			</div>
-
 
 			<div class="row panel panel-default">
 				<div class="panel-heading">Radio Channel List<br /><small>Click on a radio station to change the channel or insert a new stream</small></div>
@@ -137,7 +132,6 @@ const char index_html[] PROGMEM = R"=====(
 				</div>
 			</div>
 
-	
 			<div class="row panel panel-default">
 				<div class="panel-heading">Extra</div>
 				<div class=" row panel-body">
@@ -169,10 +163,8 @@ const char index_html[] PROGMEM = R"=====(
 			<small>Firmware: <span id="firmware">...</span></small>
 		</div>
 	
-	
 		<script src="interface.js"></script>
 	</body>
-
 </html>
 
 )=====";

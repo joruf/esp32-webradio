@@ -28,7 +28,6 @@ const char config_html[] PROGMEM = R"=====(
 	
 	<body itemscope itemtype="http://schema.org/WebPage">	
 
-
 		<nav class="navbar navbar-default navbar-static-top">
 			<div id="body" class="container">
 				<div class="navbarDistance">
@@ -43,10 +42,8 @@ const char config_html[] PROGMEM = R"=====(
 			</div>
 		</nav>
 		
-
 		<div id="body" class="container">
 			<h1>Configuration</h1>
-
 
 			<div class="row panel panel-default">
 				<div class="panel-heading">Sleep-Timer</div>
@@ -69,7 +66,6 @@ const char config_html[] PROGMEM = R"=====(
 					</div>
 				</div>
 			</div>
-
 
 			<div class="row panel panel-default">
 				<div class="panel-heading">Alarm-Clock (with shut-off)</div>
@@ -268,7 +264,6 @@ const char config_html[] PROGMEM = R"=====(
 				</div>
 			</div>
 
-
 			<div class="row panel panel-default">
 				<div class="panel-heading">Configuration File</div>
 				<div class="panel-body">
@@ -292,15 +287,10 @@ const char config_html[] PROGMEM = R"=====(
 					</div>
 				</div>
 			</div>
-
-
 		</div>
-
-
-	
+		
 		<script src="interface.js"></script>
 	</body>
-
 </html>
 
 )=====";

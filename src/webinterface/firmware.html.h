@@ -28,7 +28,6 @@ const char firmware_html[] PROGMEM = R"=====(
 	
 	<body itemscope itemtype="http://schema.org/WebPage">	
 
-
 		<nav class="navbar navbar-default navbar-static-top">
 			<div id="body" class="container">
 				<div class="navbarDistance">
@@ -40,7 +39,6 @@ const char firmware_html[] PROGMEM = R"=====(
 				</div>
 			</div>
 		</nav>
-		
 	
 		<div id="body" class="container">
 			<h1>Firmware Upgrade</h1>
@@ -60,18 +58,13 @@ const char firmware_html[] PROGMEM = R"=====(
 			<div>
 				<button class="btn btn-alert" onclick="httpGet('update')">Install latest Firmware Update</button>
 			</div>
-
 		</div>	
-
 	
 		<footer class="navbar navbar-default navbar-fixed-bottom">
 		</footer>
 
-	
-	
 		<script src="interface.js"></script>
 	</body>
-
 </html>
 
 )=====";

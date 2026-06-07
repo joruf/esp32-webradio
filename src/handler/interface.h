@@ -48,7 +48,7 @@ void handleWebpage (const String& pagename )
   }
   else
   {
-	//    // Files is in PROGMEM
+	  // Files is in PROGMEM
     //if (pagename.indexOf ("index.html") >= 0 ) {
     if (pagename == "/" || pagename.indexOf("index.html") >= 0) { 
         p = index_html;

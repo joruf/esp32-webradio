@@ -25,9 +25,7 @@ const char mp3play_html[] PROGMEM = R"=====(
 		<title>Webradio - MP3 Player</title>
 	</head>
 	
-	<body itemscope itemtype="http://schema.org/WebPage">	
-
-
+	<body itemscope itemtype="http://schema.org/WebPage">
 		<nav class="navbar navbar-default navbar-static-top">
 			<div id="body" class="container">
 				<div class="navbarDistance">
@@ -39,11 +37,9 @@ const char mp3play_html[] PROGMEM = R"=====(
 				</div>
 			</div>
 		</nav>
-		
-	
+
 		<div id="body" class="container">
 			<h1>MP3 Player</h1>	
-	
 	
 			<div class="panel panel-default">
 				<div class="panel-heading">MP3 File List<br /><small>Click on a MP3 files to play it</small></div>
@@ -78,22 +74,15 @@ const char mp3play_html[] PROGMEM = R"=====(
 						</div>
 					</div>
 					
-
 				</div>
 			</div>
-
-
 		</div>	
-
 	
 		<footer class="navbar navbar-default navbar-fixed-bottom">
 			<input id="command_log" type="text" style="width:100%" placeholder="Waiting for a command...." disabled><br>
 		</footer>
-
-	
 	
 		<script src="interface.js"></script>
 	</body>
-
 </html>
 )=====";
