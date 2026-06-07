@@ -10,3 +10,4 @@
 # Local build logs or cache
 *.info
 *.log
+bin/
