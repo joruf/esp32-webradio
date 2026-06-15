@@ -88,6 +88,82 @@ void showStreamDataOnTFT(const char *ml, bool full) {
 }
 
 /**
+ * @brief Check whether a playlist line is a plausible stream URL or host.
+ *
+ * @param line Playlist line without trailing newline
+ * @return true if the line should be treated as a stream entry
+ */
+static bool isValidPlaylistEntry(const char *line) {
+  size_t len;
+  size_t i;
+  bool hasDot = false;
+  bool hasAlnum = false;
+
+  if (line == nullptr) {
+    return false;
+  }
+
+  len = strlen(line);
+  if (len < 5) {
+    return false;
+  }
+
+  if (line[0] == '<' || line[0] == '!' || line[0] == '#') {
+    return false;
+  }
+
+  if (strncasecmp(line, "http://", 7) == 0 || strncasecmp(line, "https://", 8) == 0) {
+    return true;
+  }
+
+  for (i = 0; i < len; i++) {
+    char c = line[i];
+    if (c == '<' || c == '>' || c == '{' || c == '}') {
+      return false;
+    }
+    if (c == '.') {
+      hasDot = true;
+    }
+    if (isalnum((unsigned char)c)) {
+      hasAlnum = true;
+    }
+  }
+
+  if (strstr(line, "localhost") != nullptr) {
+    return true;
+  }
+
+  return hasAlnum && hasDot;
+}
+
+/**
+ * @brief Apply an HTTP Location header value to the active host.
+ *
+ * @param location Location header value (with or without scheme)
+ * @return true if host was updated
+ */
+static bool applyHttpLocationHeader(const String &location) {
+  String target = location;
+  target.trim();
+
+  if (target.length() == 0) {
+    return false;
+  }
+
+  if (target.startsWith("http://")) {
+    host = target.substring(7);
+    return true;
+  }
+  if (target.startsWith("https://")) {
+    host = target.substring(8);
+    return true;
+  }
+
+  host = target;
+  return true;
+}
+
+/**
  * @brief Parse host string to extract components.
  *
  * @param host Full host string
@@ -187,6 +263,10 @@ bool connectToWebradioServer() {
   }
 
   dbgprint("Request %s failed!", host.c_str());
+  if ((host.indexOf('<') >= 0) || (host.indexOf('>') >= 0)) {
+    playlist_num = 0;
+    datamode = STOPPED;
+  }
   return false;
 }
 

@@ -66,6 +66,9 @@ void handleWebpage(const String &pagename) {
     } else if (pagename.indexOf("sound.html") >= 0) {
       p = sound_html;
       l = sizeof(sound_html) - 1;
+    } else if (pagename.indexOf("scheduler.html") >= 0) {
+      p = scheduler_html;
+      l = sizeof(scheduler_html) - 1;
     } else if (pagename.indexOf("config.html") >= 0) {
       p = config_html;
       l = sizeof(config_html) - 1;
@@ -170,7 +173,7 @@ const char *analyzeCmd(const char *str) {
  * - Time synchronization (clk_server, clk_offset, clk_dst)
  * - Battery calibration (bat0, bat100)
  * - WiFi networks (getnetworks)
- * - Alarm times (alrm_start, alrm_stop)
+ * - Alarm schedules (alrm_config)
  * - Backlight (backlight_on, backlight_off)
  *
  * @param par Parameter name (e.g. "volume", "preset", "station")
@@ -360,12 +363,17 @@ const char *analyzeCmd(const char *par, const char *val) {
     max_mp3loop_time = 0; // Start new check
   }
 
-  // Alarm clock time
+  // Alarm clock schedules (JSON object)
+  else if (argument == "alrm_config") {
+    applyAlarmConfig(value);
+    dbgprint("Alarm configuration updated");
+  }
+
+  // Legacy alarm keys (migrated automatically on boot)
   else if (argument == "alrm_start") {
-    ini_block.alrm_start = value;
-    dbgprint("alarm clock saved %s", value);
+    dbgprint("Legacy alrm_start ignored, use alrm_config");
   } else if (argument == "alrm_stop") {
-    ini_block.alrm_stop = value;
+    dbgprint("Legacy alrm_stop ignored, use alrm_config");
   }
 
   else if (argument.startsWith("backlight")) // Backlight ON/OFF

@@ -26,6 +26,23 @@ esp_err_t nvsClear() {
 }
 
 /**
+ * @brief Erase all NVS data and commit the change.
+ *
+ * @return esp_err_t ESP_OK on success, otherwise error code
+ */
+esp_err_t nvsEraseAllCommitted() {
+  esp_err_t err;
+
+  nvsOpen();
+  err = nvs_erase_all(nvshandle);
+  if (err != ESP_OK) {
+    return err;
+  }
+
+  return nvs_commit(nvshandle);
+}
+
+/**
  * @brief Read a string value from NVS.
  *
  * @param key The key to look up

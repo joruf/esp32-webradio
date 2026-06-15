@@ -38,7 +38,7 @@
 
 // Define the version number, also used for webserver as Last-Modified header and to
 // check version for update.  The format must be exactly as specified by the HTTP standard!
-#define FIRMWARE "v2.10 2026-06-06"
+#define FIRMWARE "v2.11 2026-06-15"
 /*
 Firmware Changes:
 2.00  2025-03-06  Reload time changes on problems with the data connection.
@@ -58,6 +58,8 @@ Display NetworkList listNetworks() into the display. 2.09  2026-01-22  IR remote
 2.10  2026-06-06  Code switch from Arduino IDE to VSCode PlatformIO
                   Bugfixes vs1053 semaphores
                   Time format expanded with date
+2.11  2026-06-15  Web config as JSON/NVS with form UI. Scheduler page (sleep timer, alarms). Preset reorder.
+                  Bugfixes playlist redirect, EEPROM/config load, alarm save.
 */
 
 // ESP32-Radio can be updated (OTA) to the latest version from a remote server.
@@ -214,8 +216,7 @@ struct ini_struct {
   int8_t spi_mosi_pin;     // GPIO connected to SPI MOSI pin
   uint16_t bat0;           // ADC value for 0 percent battery charge
   uint16_t bat100;         // ADC value for 100 percent battery charge
-  String alrm_start;       //
-  String alrm_stop;        //
+  String alrm_config;      // Alarm schedules as extensible JSON object
 };
 
 struct WifiInfo_t // For list with WiFi info
@@ -458,6 +459,7 @@ touchpin_struct touchpin[] = // Touch pins and programmed function
 #include "webinterface/mp3play.html.h"
 #include "webinterface/sound.html.h"
 #include "webinterface/config.html.h"
+#include "webinterface/scheduler.html.h"
 #include "webinterface/firmware.html.h"
 #include "webinterface/about.html.h"
 #include "webinterface/index.css.h"
@@ -503,6 +505,8 @@ VS1053 *vs1053player;
 //**************************************************************************************************
 #include "handler/spi.h"
 #include "handler/helper.h"
+#include "handler/alarm_config.h"
+#include "handler/radio_config.h"
 #include "handler/sd.h"
 #include "handler/upgrade.h"
 #include "handler/volume.h"
@@ -522,19 +526,138 @@ VS1053 *vs1053player;
 // ═════════════════════════════════════════════════════════════════
 // C H E C K   A N D   I N I T   C O N F I G
 // ═════════════════════════════════════════════════════════════════
-// Prüft beim Booten, ob bereits eine Konfiguration im NVS existiert.
-// Wenn nicht (First-Boot), werden die Defaults geladen und neu gestartet.
-// ═════════════════════════════════════════════════════════════════
-void checkAndInitConfig() {
-  if (!nvsKeyExists("wifi_00")) {
-    dbgprint("⚠️ Keine Konfiguration im NVS gefunden! Erster Start oder Reset.");
-    saveDefaultConfig();
-    dbgprint("✅ Default-Konfiguration erfolgreich geschrieben. Starte System neu...");
-    delay(1000);
-    ESP.restart(); // Sauberer Reboot, damit alle neuen Keys frisch eingelesen werden!
-  } else {
-    dbgprint("ℹ️ Konfiguration im NVS gefunden. Normaler Systemstart.");
+/**
+ * @brief Count active NVS keys in the global key table.
+ *
+ * @return uint16_t Number of stored keys
+ */
+static uint16_t countNvsKeys() {
+  uint16_t i = 0;
+
+  while (nvskeys[i][0] != '\0' && i < MAXKEYS) {
+    i++;
   }
+  return i;
+}
+
+/**
+ * @brief Validate WiFi credentials format SSID/password.
+ *
+ * @param wifi Raw NVS value
+ * @return true if format is valid
+ */
+static bool isValidWifiEntry(const String &wifi) {
+  int sep = wifi.indexOf('/');
+  if (sep <= 0) {
+    return false;
+  }
+
+  String ssid = wifi.substring(0, sep);
+  String pass = wifi.substring(sep + 1);
+  ssid.trim();
+  pass.trim();
+  return (ssid.length() > 0 && pass.length() > 0);
+}
+
+/**
+ * @brief Check whether at least one radio preset exists in NVS.
+ *
+ * @return true if a preset entry was found
+ */
+static bool hasAnyPresetInNvs() {
+  char key[12];
+  uint16_t i;
+
+  for (i = 0; i < MAXPRESETS; i++) {
+    sprintf(key, "preset_%02d", i);
+    if (nvsKeyExists(key) && nvsGetValue(key).length() > 0) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * @brief Validate the current NVS configuration.
+ *
+ * @param reason Output text describing the validation failure
+ * @return true if configuration is usable
+ */
+static bool validateNvsConfig(String &reason) {
+  if (!nvsKeyExists("wifi_00")) {
+    reason = "missing wifi_00";
+    return false;
+  }
+
+  if (!isValidWifiEntry(nvsGetValue("wifi_00"))) {
+    reason = "invalid wifi_00 format (expected SSID/password)";
+    return false;
+  }
+
+  if (!nvsKeyExists("preset")) {
+    reason = "missing active preset key";
+    return false;
+  }
+
+  if (!hasAnyPresetInNvs()) {
+    reason = "no radio presets found";
+    return false;
+  }
+
+  if (!nvsKeyExists("volume")) {
+    reason = "missing volume key";
+    return false;
+  }
+
+  if (!nvsKeyExists("clk_server")) {
+    reason = "missing time server key";
+    return false;
+  }
+
+  if (nvsKeyExists("alrm_config")) {
+    String alarmJson = nvsGetAlarmConfig();
+    if (!isValidAlarmConfigJson(alarmJson)) {
+      reason = "invalid alrm_config JSON";
+      return false;
+    }
+  } else if (nvsKeyExists(RADIO_CONFIG_NVS_KEY)) {
+    String radioJson = nvsGetRadioConfig();
+    if (!isValidRadioConfigJson(radioJson)) {
+      reason = "invalid radio_config JSON";
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * @brief Validate NVS on boot and restore defaults if configuration is missing
+ *        or corrupted.
+ */
+void checkAndInitConfig() {
+  String reason;
+
+  if (!nvsKeyExists("wifi_00")) {
+    dbgprint("BOOT: No NVS configuration found (first start or reset)");
+    restoreDefaultConfig();
+    dbgprint("BOOT: Default configuration written, restarting...");
+    delay(1000);
+    ESP.restart();
+    return;
+  }
+
+  if (!validateNvsConfig(reason)) {
+    dbgprint("BOOT: Invalid NVS configuration detected: %s", reason.c_str());
+    restoreDefaultConfig();
+    dbgprint("BOOT: Default configuration restored, restarting...");
+    delay(1000);
+    ESP.restart();
+    return;
+  }
+
+  dbgprint("BOOT: NVS configuration validation passed");
 }
 
 //**************************************************************************************************
@@ -556,6 +679,12 @@ void setup() {
 
   Serial.begin(115200); // For debug
   Serial.println();
+  dbgprint("========================================");
+  dbgprint("BOOT: ESP32 Webradio starting");
+  dbgprint("BOOT: Firmware %s", FIRMWARE);
+  dbgprint("BOOT: CPU core %d at %d MHz", xPortGetCoreID(), ESP.getCpuFreqMHz());
+  dbgprint("BOOT: Free heap %d bytes", ESP.getFreeHeap());
+  dbgprint("========================================");
 
   // ATTENTION NVS config problems (joruf)
   // Uncomment saveDefaultConfig() on access problems to re-write configuration props to NVS
@@ -597,8 +726,10 @@ void setup() {
   }
   namespace_ID = FindNamespaceId(NAME); // Find ID of our namespace in NVS
   fillkeylist();                        // Fill keynames with all keys
+  dbgprint("BOOT: NVS namespace '%s' ready, %d key(s) found", NAME, countNvsKeys());
 
   checkAndInitConfig();
+  migrateToRadioConfig();
 
   memset(&ini_block, 0, sizeof(ini_block)); // Init ini_block
   ini_block.clk_server = "pool.ntp.org";    // Default server for NTP
@@ -606,8 +737,7 @@ void setup() {
   ini_block.clk_dst = 1;                    // DST is +1 hour
   ini_block.bat0 = 0;                       // Battery ADC levels not yet defined
   ini_block.bat100 = 0;
-  ini_block.alrm_start = "";
-  ini_block.alrm_stop = "";
+  ini_block.alrm_config = "";
 
   readIOprefs(); // Read pins used for SPI, TFT, VS1053, IR,
   // Rotary encoder
@@ -681,14 +811,17 @@ void setup() {
   }
   */
 
-  mk_lsan();              // Make a list of acceptable networks
-                          // in preferences.
-  WiFi.mode(WIFI_STA);    // This ESP is a station
-  WiFi.persistent(false); // Do not save SSID and password
-  WiFi.disconnect();      // After restart router could still
-  delay(100);             // keep old connection
-  listNetworks();         // Find WiFi networks
-  readprefs(false);       // Read preferences
+  mk_lsan(); // Make a list of acceptable networks
+             // in preferences.
+  dbgprint("BOOT: %d WiFi credential(s) loaded from NVS", wifilist.size());
+  WiFi.mode(WIFI_STA);      // This ESP is a station
+  WiFi.persistent(false);   // Do not save SSID and password
+  WiFi.disconnect();        // After restart router could still
+  delay(100);               // keep old connection
+  listNetworks();           // Find WiFi networks
+  readprefs(false);         // Read preferences
+  loadAlarmConfigFromNvs(); // Load or migrate alarm JSON configuration
+  dbgprint("BOOT: Preferences loaded, active preset %d, volume %d", ini_block.newpreset, ini_block.reqvol);
   // tcpip_adapter_set_hostname(TCPIP_ADAPTER_IF_STA, NAME);
   WiFi.setHostname(NAME);
 
@@ -705,25 +838,27 @@ void setup() {
   }
 
   delay(10);
-  p = dbgprint("Connect to WiFi"); // Show progress
-  tftlog(p);                       // On TFT too
-  NetworkFound = connectwifi();    // Connect to WiFi network
-  dbgprint("Start server for commands");
+  p = dbgprint("BOOT: Connecting to WiFi"); // Show progress
+  tftlog(p);                                // On TFT too
+  NetworkFound = connectwifi();             // Connect to WiFi network
+  logNetworkBootStatus();
+  dbgprint("BOOT: Starting HTTP command server");
   delay(500);
   cmdserver.begin(); // Start http server
   if (NetworkFound)  // OTA only if Wifi network found
   {
-    dbgprint("Network found. Starting OTA");
+    dbgprint("BOOT: Internet access available, starting OTA and mDNS");
     ArduinoOTA.setHostname(NAME); // Set the hostname
     ArduinoOTA.onStart(otastart);
     ArduinoOTA.begin(); // Allow update over the air
 
     if (MDNS.begin(NAME)) { // Start MDNS transponder
-      dbgprint("MDNS responder started");
+      dbgprint("BOOT: mDNS responder started as %s.local", NAME);
     } else {
-      dbgprint("Error setting up MDNS responder!");
+      dbgprint("BOOT: ERROR - mDNS responder setup failed");
     }
   } else {
+    dbgprint("BOOT: Station mode unavailable, configuration AP or offline mode active");
     currentpreset = ini_block.newpreset; // No network: newpreset is -1, so means do not start radio
   }
 

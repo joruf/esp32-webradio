@@ -45,6 +45,9 @@ void handleNextDataByteFromServer(uint8_t b) {
   static uint16_t playlistcnt; // Counter to find right entry in playlist
   static int LFcount;          // Detection of end of header
   static bool ctseen = false;  // First line of header seen or not
+  static bool playlist_html_response = false;
+  static bool playlist_redirect_pending = false;
+  static bool playlist_https_redirect = false;
 
   // Test if DATA handling
   if (chunked && (datamode & (DATA | METADATA | PLAYLISTDATA))) {
@@ -119,6 +122,9 @@ void handleNextDataByteFromServer(uint8_t b) {
         if (lcml.startsWith("location: http://")) { // On redirection get the new URL
           host = metaline.substring(17);            // get new URL
           hostreq = true;                           // And request this one
+        } else if (lcml.startsWith("location: https://")) {
+          host = metaline.substring(18);
+          hostreq = true;
         }
 
         if (lcml.indexOf("content-type") >= 0) { // Line with "Content-Type: xxxx/yyy"
@@ -214,6 +220,9 @@ void handleNextDataByteFromServer(uint8_t b) {
     playlistcnt = 1;           // Reset for compare
     totalcount = 0;            // Reset totalcount
     clength = 0xFFFFFFFF;      // Content-length unknown
+    playlist_html_response = false;
+    playlist_redirect_pending = false;
+    playlist_https_redirect = false;
     dbgprint("Read from playlist");
   }
 
@@ -224,12 +233,71 @@ void handleNextDataByteFromServer(uint8_t b) {
     {
       return;                                     // Quick return
     } else if (b == '\n') {                       // If Linefeed
+      String metaline;
+      String lcml;
+
       LFcount++;                                  // Count linefeeds
       metalinebf[metalinebfx] = '\0';             // Take care of delimeter
       dbgprint("Playlistheader: %s", metalinebf); // Show playlistheader
       scan_content_length(metalinebf);            // Check if it is a content-length line
+
+      metaline = String(metalinebf);
+      lcml = metaline;
+      lcml.toLowerCase();
+
+      if (lcml.startsWith("http/1.") &&
+          ((lcml.indexOf(" 301 ") >= 0) || (lcml.indexOf(" 302 ") >= 0) || (lcml.indexOf(" 303 ") >= 0))) {
+        playlist_redirect_pending = true;
+      }
+
+      if ((lcml.indexOf("content-type") >= 0) && (lcml.indexOf("text/html") >= 0)) {
+        playlist_html_response = true;
+      }
+
+      if (lcml.startsWith("location:")) {
+        String location = metaline.substring(9);
+        location.trim();
+        if (location.startsWith("https://")) {
+          playlist_https_redirect = true;
+        } else if (applyHttpLocationHeader(location)) {
+          playlist_redirect_pending = true;
+        }
+      }
+
+      if (lcml.startsWith("transfer-encoding:") && (lcml.indexOf("chunked") >= 0)) {
+        chunked = true;
+        chunkcount = 0;
+      }
+
       metalinebfx = 0;                            // Ready for next line
       if (LFcount == 2) {
+        if (playlist_https_redirect) {
+          dbgprint("Playlist HTTPS redirect not supported, aborting");
+          playlist_https_redirect = false;
+          playlist_redirect_pending = false;
+          playlist_html_response = false;
+          playlist_num = 0;
+          datamode = STOPPED;
+          return;
+        }
+
+        if (playlist_redirect_pending) {
+          dbgprint("Playlist redirect to %s", host.c_str());
+          playlist_redirect_pending = false;
+          playlist_html_response = false;
+          datamode = STOPPED;
+          hostreq = true;
+          return;
+        }
+
+        if (playlist_html_response) {
+          dbgprint("Playlist response is HTML, aborting");
+          playlist_num = 0;
+          playlist_html_response = false;
+          datamode = STOPPED;
+          return;
+        }
+
         dbgprint("Switch to PLAYLISTDATA, search for entry %d", playlist_num);
         datamode = PLAYLISTDATA; // Expecting data now
         return;
@@ -289,16 +357,29 @@ void handleNextDataByteFromServer(uint8_t b) {
         return;                       // Ignore commentlines
       }
 
+      if (!isValidPlaylistEntry(metalinebf)) {
+        dbgprint("Skipping invalid playlist line: %s", metalinebf);
+        metalinebfx = 0;
+        metalinebf[0] = '\0';
+        return;
+      }
+
       // Now we have an URL for a .mp3 file or stream.  Is it the rigth one?
       dbgprint("Entry %d in playlist found: %s", playlistcnt, metalinebf);
       if (playlist_num == playlistcnt) {
         inx = metaline.indexOf("http://");    // Search for "http://"
         if (inx >= 0) {                       // Does URL contain "http://"?
           host = metaline.substring(inx + 7); // remove it and set host
+        } else if (metaline.startsWith("https://")) {
+          host = metaline.substring(8);
         } else {
           host = metaline; // set new host
         }
-        connectToWebradioServer(); // Connect to it
+        if (!connectToWebradioServer()) {
+          dbgprint("Playlist stream connection failed, aborting");
+          playlist_num = 0;
+          datamode = STOPPED;
+        }
       }
 
       metalinebfx = 0; // Prepare for next line

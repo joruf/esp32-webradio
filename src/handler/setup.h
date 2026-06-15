@@ -157,6 +157,42 @@ void listNetworks() {
 }
 
 /**
+ * @brief Log the current network mode and assigned IP address.
+ */
+void logNetworkBootStatus() {
+  if (WiFi.status() == WL_CONNECTED) {
+    ipaddress = WiFi.localIP().toString();
+    if (ipaddress == "0.0.0.0") {
+      dbgprint("BOOT: ERROR - WiFi connected but IP assignment failed");
+      return;
+    }
+
+    dbgprint("BOOT: WiFi station connected");
+    dbgprint("BOOT: SSID: %s", WiFi.SSID().c_str());
+    dbgprint("BOOT: IP address: %s", ipaddress.c_str());
+    dbgprint("BOOT: Gateway: %s", WiFi.gatewayIP().toString().c_str());
+    dbgprint("BOOT: Signal: %d dBm", WiFi.RSSI());
+    return;
+  }
+
+  wifi_mode_t mode = WiFi.getMode();
+  if (mode == WIFI_AP || mode == WIFI_AP_STA) {
+    ipaddress = WiFi.softAPIP().toString();
+    if (ipaddress == "0.0.0.0") {
+      dbgprint("BOOT: ERROR - AP mode active but IP assignment failed");
+      return;
+    }
+
+    dbgprint("BOOT: WiFi AP mode active");
+    dbgprint("BOOT: AP SSID: %s", NAME);
+    dbgprint("BOOT: IP address: %s", ipaddress.c_str());
+    return;
+  }
+
+  dbgprint("BOOT: ERROR - IP assignment not possible (WiFi not connected)");
+}
+
+/**
  * @brief Setup Access Point mode when WiFi connection fails.
  *
  * @return true Always returns true for AP mode
@@ -167,7 +203,7 @@ static bool setupAccessPoint() {
   IPAddress gateway(192, 168, 4, 1);
   IPAddress subnet(255, 255, 255, 0);
 
-  dbgprint("WiFi Failed! Setup AP: %s", NAME);
+  dbgprint("BOOT: WiFi connection failed, starting access point: %s", NAME);
 
   WiFi.mode(WIFI_AP);
   WiFi.softAPConfig(local_IP, gateway, subnet);
@@ -175,6 +211,11 @@ static bool setupAccessPoint() {
   delay(1000);
 
   ipaddress = WiFi.softAPIP().toString();
+  if (ipaddress == "0.0.0.0") {
+    dbgprint("BOOT: ERROR - AP started but no IP address assigned");
+  } else {
+    dbgprint("BOOT: AP IP address: %s", ipaddress.c_str());
+  }
   pfs = dbgprint("IP = %s", ipaddress.c_str());
   NetworkFound = true;
   tftlog(pfs);
@@ -202,21 +243,25 @@ bool connectwifi() {
     if (wifilist.size() == 1) {
       winfo = wifilist[0];
       WiFi.begin(winfo.ssid, winfo.passphrase);
-      dbgprint("Try WiFi %s", winfo.ssid);
+      dbgprint("BOOT: Connecting to WiFi network '%s'", winfo.ssid);
     } else {
+      dbgprint("BOOT: Connecting to one of %d configured WiFi networks", wifilist.size());
       wifiMulti.run();
     }
 
     // Wait max 15 seconds for connection
     if (WiFi.waitForConnectResult() != WL_CONNECTED) {
+      dbgprint("BOOT: WiFi connection timed out after 15 seconds");
       localAP = true;
     }
   } else {
+    dbgprint("BOOT: No WiFi credentials found in configuration");
     localAP = true;
   }
 
   if (localAP) {
-    return setupAccessPoint();
+    setupAccessPoint();
+    return false;
   }
 
   ipaddress = WiFi.localIP().toString();
@@ -408,7 +453,11 @@ String readprefs(bool output) {
   uint16_t last2char = 0;
 
   while (*(key = nvskeys[i])) {
-    val = nvsGetValue(key);
+    if (strcmp(key, ALRM_CONFIG_NVS_KEY) == 0) {
+      val = nvsGetAlarmConfig();
+    } else {
+      val = nvsGetValue(key);
+    }
     cmd = formatPrefLine(key, val, output);
 
     if (output) {

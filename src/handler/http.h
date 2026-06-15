@@ -1,5 +1,32 @@
 
 /**
+ * @brief Restore factory default configuration in NVS.
+ */
+void restoreDefaultConfig();
+
+/**
+ * @brief Write factory default configuration to NVS without clearing it first.
+ */
+void saveDefaultConfig();
+
+/**
+ * @brief Send an HTTP/1.1 response with a JSON body and close the connection.
+ *
+ * @param body JSON response body
+ */
+static void sendHttpJsonResponse(const String &body) {
+  cmdclient.print("HTTP/1.1 200 OK\r\n");
+  cmdclient.print("Content-Type: application/json; charset=utf-8\r\n");
+  cmdclient.print("Content-Length: ");
+  cmdclient.print(body.length());
+  cmdclient.print("\r\n");
+  cmdclient.print("Connection: close\r\n");
+  cmdclient.print("Cache-Control: no-cache\r\n\r\n");
+  cmdclient.print(body);
+  cmdclient.flush();
+}
+
+/**
  * @brief Fill the list of all relevant keys in NVS.
  *
  * Reads all pages of the NVS partition, extracts active entries with the
@@ -211,12 +238,10 @@ void writeprefs() {
 
           // Save this values directly in the ini_block to make it available
           // without restart!
-          if (key.indexOf("alrm_start") >= 0) {
-            ini_block.alrm_start = dstr.c_str();
-            dbgprint("Start Alarm at %s", dstr.c_str());
-          } else if (key.indexOf("alrm_stop") >= 0) {
-            ini_block.alrm_stop = dstr.c_str();
-            dbgprint("Stop Alarm %s", dstr.c_str());
+          if (key == "alrm_config") {
+            ini_block.alrm_config = contents;
+            applyAlarmConfig(contents);
+            dbgprint("Alarm configuration saved from preferences");
           }
         }
       }
@@ -236,6 +261,94 @@ void writeprefs() {
   timerStart(timer); // Enable the timer
 
   fillkeylist(); // Update list with keys
+}
+
+/**
+ * @brief Read alarm configuration JSON from the HTTP POST body and save it.
+ */
+void writeAlarmConfig() {
+  String body = "";
+  char c;
+  uint8_t empty_retries = 0;
+
+  timerStop(timer);
+
+  while (empty_retries < 30) {
+    c = rinbyt(false);
+    if (c == '\n') {
+      if (body.length() > 0) {
+        break;
+      }
+      empty_retries++;
+      continue;
+    }
+
+    if (c != '\r') {
+      body += c;
+      empty_retries = 0;
+      if (body.length() >= ALRM_CONFIG_MAX_LEN - 1) {
+        break;
+      }
+    }
+  }
+
+  timerStart(timer);
+
+  body.trim();
+  if (body.length() > 0) {
+    applyAlarmConfig(body);
+    dbgprint("Alarm configuration saved (%d bytes)", body.length());
+  } else {
+    dbgprint("Alarm configuration save ignored (empty body)");
+  }
+
+  fillkeylist();
+}
+
+/**
+ * @brief Read unified radio configuration JSON from the HTTP POST body and save it.
+ */
+void writeRadioConfig() {
+  String body = "";
+  char c;
+  uint8_t empty_retries = 0;
+
+  timerStop(timer);
+
+  while (empty_retries < 50) {
+    c = rinbyt(false);
+    if (c == '\n') {
+      if (body.length() > 0) {
+        break;
+      }
+      empty_retries++;
+      continue;
+    }
+
+    if (c != '\r') {
+      body += c;
+      empty_retries = 0;
+      if (body.length() >= RADIO_CONFIG_MAX_LEN - 1) {
+        break;
+      }
+    }
+  }
+
+  timerStart(timer);
+
+  body.trim();
+  if (body.length() > 0) {
+    if (applyRadioConfig(body, true)) {
+      readprogbuttons();
+      dbgprint("Radio configuration saved (%d bytes)", body.length());
+    } else {
+      dbgprint("Radio configuration save rejected (invalid JSON)");
+    }
+  } else {
+    dbgprint("Radio configuration save ignored (empty body)");
+  }
+
+  fillkeylist();
 }
 
 /**
@@ -297,7 +410,11 @@ void handlehttpreply() {
           handleWebpage(String("config.html")); // Or the configuration page if in AP mode
         }
       } else {
-        if (http_getcmd.length()) // Command to analyze?
+        if (http_rqfile.length()) // Static file has priority over query parameters
+        {
+          dbgprint("Start file reply for %s", http_rqfile.c_str());
+          handleWebpage(http_rqfile);
+        } else if (http_getcmd.length()) // Command to analyze?
         {
           dbgprint("Send reply for %s", http_getcmd.c_str());
           sndstr = httpheader(String("text/html")); // Set header
@@ -313,6 +430,54 @@ void handlehttpreply() {
           } else if (http_getcmd.startsWith("getdefs")) // Is it a "Get default preferences"?
           {
             sndstr += String(defprefs_txt + 1);           // read initial values
+          } else if (http_getcmd.startsWith("getconfig")) // Get unified JSON config
+          {
+            String json = buildRadioConfigJsonFromNvs(true);
+            if (json.length() == 0 || !isValidRadioConfigJson(json)) {
+              dbgprint("getconfig: rebuilt JSON invalid, using defaults");
+              json = getDefaultRadioConfigJson();
+            }
+            sendHttpJsonResponse(json);
+            return;
+          } else if (http_getcmd.startsWith("saveconfig")) // Save unified JSON config
+          {
+            writeRadioConfig();
+            sndstr += String("Configuration saved");
+          } else if (http_getcmd.startsWith("restoreconfig")) // Restore factory defaults
+          {
+            restoreDefaultConfig();
+            migrateToRadioConfig();
+            readprogbuttons();
+            sndstr += String("Default configuration restored");
+          } else if (http_getcmd.startsWith("eraseeeprom")) // Erase all NVS data
+          {
+            timerStop(timer);
+            if (nvsEraseAllCommitted() == ESP_OK) {
+              saveDefaultConfig();
+              fillkeylist();
+              dbgprint("NVS storage erased via web interface");
+              resetreq = true;
+              sndstr += String("NVS erased. Defaults restored. ESP32 is restarting...");
+            } else {
+              dbgprint("NVS erase failed!");
+              sndstr += String("NVS erase failed");
+            }
+            timerStart(timer);
+          } else if (http_getcmd.startsWith("getalarms")) // Get alarm JSON config
+          {
+            String json = nvsGetAlarmConfig();
+            if (json.length() == 0 || !isValidAlarmConfigJson(json)) {
+              json = ini_block.alrm_config.length() > 0 ? ini_block.alrm_config : serializeAlarmConfig();
+            } else {
+              ini_block.alrm_config = json;
+              parseAlarmConfig(json);
+            }
+            sendHttpJsonResponse(json);
+            return;
+          } else if (http_getcmd.startsWith("savealarms")) // Save alarm JSON config
+          {
+            writeAlarmConfig();
+            sndstr += String("Alarm configuration saved");
           } else if (http_getcmd.startsWith("saveprefs")) // Is is a "Save preferences"
           {
             writeprefs();                               // handle it
@@ -340,10 +505,6 @@ void handlehttpreply() {
           }
           sndstr += String("\n"); // The HTTP response ends with a blank line
           cmdclient.print(sndstr);
-        } else if (http_rqfile.length()) // File requested?
-        {
-          dbgprint("Start file reply for %s", http_rqfile.c_str());
-          handleWebpage(http_rqfile); // send it
         } else {
           httpheader(String("text/html")); // Send header
           // the content of the HTTP response follows the header:

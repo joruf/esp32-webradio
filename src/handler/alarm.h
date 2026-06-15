@@ -121,35 +121,28 @@ static void updateAlarmDisplayFeedback(void) {
 /**
  * @brief Main function for handling the radio alarm.
  *
- * Enables or disables the radio alarm based on the configured
- * start and stop times (ini_block.alrm_start / ini_block.alrm_stop).
+ * Evaluates all enabled alarm schedules from alarm_schedule and starts or
+ * stops playback when the current weekday and time match a configured entry.
  *
- * This function checks:
- * - Whether an alarm is configured (string != "none", length >= 4)
- * - Whether the current system time matches start or stop time
- * - Then executes the corresponding action (playStream / stopStream)
- *
- * @note Expects globally available 'timeinfo' (tm struct with
- * hour/minute/second)
- * @note Uses ini_block.alrm_start and ini_block.alrm_stop as configuration
- * sources
+ * @note Expects globally available timeinfo (tm struct with hour/minute/second)
  * @note Updates radioAlarmStatusChanged for follow-up actions
  */
 void handleRadioAlarm(void) {
-  // Update display one minute after alarm start/stop
   updateAlarmDisplayFeedback();
 
-  // --- RADIO ALARM START ---
-  if (ini_block.alrm_start != "none" && ini_block.alrm_start.length() >= 4) {
-    int8_t alrm_tm_start_hour = getValue(ini_block.alrm_start.c_str(), ':', 0).toInt();
-    int8_t alrm_tm_start_min = getValue(ini_block.alrm_start.c_str(), ':', 1).toInt();
-    tryStartRadioAlarm(alrm_tm_start_hour, alrm_tm_start_min);
-  }
+  const int8_t weekday = timeinfo.tm_wday;
 
-  // --- RADIO ALARM STOP ---
-  if (ini_block.alrm_stop.c_str() != "none" && ini_block.alrm_stop.length() >= 4) {
-    int8_t alrm_tm_stop_hour = getValue(ini_block.alrm_stop.c_str(), ':', 0).toInt();
-    int8_t alrm_tm_stop_min = getValue(ini_block.alrm_stop.c_str(), ':', 1).toInt();
-    tryStopRadioAlarm(alrm_tm_stop_hour, alrm_tm_stop_min);
+  for (uint8_t i = 0; i < alarm_schedule.count; i++) {
+    const AlarmEntry &entry = alarm_schedule.entries[i];
+
+    if (!entry.enabled) {
+      continue;
+    }
+    if (!(entry.days_mask & (1 << weekday))) {
+      continue;
+    }
+
+    tryStartRadioAlarm(entry.start_hour, entry.start_min);
+    tryStopRadioAlarm(entry.stop_hour, entry.stop_min);
   }
 }

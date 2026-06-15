@@ -4,8 +4,7 @@
 // Required when pressing the "Load default Values" button on
 // webpage/config.html
 const char defprefs_txt[] PROGMEM = R"=====(
-alrm_start = "6:30"           # Format: hh:min 12:30
-alrm_stop = "7:30"            # Format: hh:min 13:00
+alrm_config = {"version":1,"alarms":[{"id":1,"enabled":true,"start":"6:30","stop":"7:30","days":["mon","tue","wed","thu","fri"]}]}
 
 # Clock offset and daylight saving time
 clk_server = pool.ntp.org     # Time server to be used
@@ -19,7 +18,7 @@ preset_02 = listen.technobase.fm/tunein-mp3                 # 2 - Technobase.FM 
 preset_03 = stream.slam.nl/slam_mp3                         # 3 - SLAM Live
 preset_04 = ic.radiomonster.fm/dance.ultra                  # 4 - RadioMonster Dance
 preset_05 = ice1.somafm.com/groovesalad-128-mp3             # 5 - SomaFM
-preset_06 = dancefm.net/listen.m3u                          # 6 - Dance FM (Global/US-Style)
+preset_06 = s2-webradio.antenne.de/dance-xxl                # 6 - Antenne Bayern Dance XXL
 preset_07 = stream.antenne1.de/a1stg/livestream2.mp3        # 7 - Antenne 1
 preset_08 = topradio-de-hz-fal-stream03-cluster01.radiohost.de/kissfm_128     # 8 - Kiss FM
 preset_09 = streamhq.top100station.com/top100station-high.mp3                 # 9 - TOP 100 Station

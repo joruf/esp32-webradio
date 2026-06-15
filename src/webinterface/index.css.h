@@ -14,4 +14,33 @@ const char index_css[] PROGMEM = R"=====(
 	.btn_border {padding: 10px; margin-bottom: 10px;}
 	button {width: 100%;}
 	.navbarDistance {padding-top: 10px;}
+	.alarm-help { margin-bottom: 15px; }
+	.config-help { margin-bottom: 15px; }
+	.config-item-list { margin-bottom: 15px; }
+	.config-empty { color: #777; font-style: italic; margin: 0 0 10px 0; }
+	.config-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; margin-bottom: 10px; }
+	.config-row-body { flex: 1; min-width: 0; }
+	.config-row-body strong { display: block; }
+	.config-row-meta { display: block; color: #777; font-size: 12px; word-break: break-all; }
+	.config-row-actions { display: flex; gap: 8px; margin-left: 15px; flex-shrink: 0; }
+	.config-range-value { margin-top: 5px; }
+	.config-dialog { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; }
+	.config-dialog.hidden { display: none !important; }
+	.config-dialog.is-open { display: flex !important; }
+	.config-dialog-backdrop { position: absolute; top: 0; right: 0; bottom: 0; left: 0; background: rgba(0, 0, 0, 0.45); }
+	.config-dialog-card { position: relative; width: 92%; max-width: 520px; margin: 0; z-index: 1; max-height: 90vh; overflow-y: auto; }
+	.config-dialog-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; }
+	.config-dialog-buttons .btn { width: auto; }
+	.config-row-actions .btn { width: auto; }
+	#add-wifi, #add-preset, #add-gpio { width: auto; }
+	#save-config, #restore-config { width: 100%; }
+	#erase-eeprom { width: auto; }
+	.panel-danger-zone { margin-bottom: 30px; }
+	.panel-danger-zone .panel-heading { color: #a94442; }
+	.config-danger-text { color: #a94442; }
+	.alarm-card { margin-bottom: 15px; }
+	.alarm-card-heading { display: flex; justify-content: space-between; align-items: center; }
+	.alarm-enabled-toggle { margin: 0; font-weight: normal; }
+	.alarm-days { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
+	.alarm-day { margin-right: 10px; font-weight: normal; }
 )=====" ;
