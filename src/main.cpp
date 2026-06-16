@@ -48,16 +48,17 @@ Firmware Changes:
                   Sleep-Time implemented to stop mp3 stream after a defined time.
                   Const VERSION renamed to FIRMWARE.
 2.04  2026-01-16  Update ESP32 Espressif-Systems v2.0.17 to 3.3.0.
-2.05  2026-01-16  Rotary encoder click and doubleclick logic implemented click=radio on/off, doubleclick=select radio
-station. 2.06  2026-01-17  Bugfix alarm start/stop not working after ESP32 Espressif-Systems update to 3.3.0. 2.07
-2026-01-21  MQTT removed, mute button removed from index.html, html button size changed. Hardcoded GPIO pins for the
-rotary encoder, IR receiver, SD card, TFT, and VS1053 fixed within the code. Webinterface layout adapted. 2.08
-2026-01-22  writeDefaultConfig.h implemented to write the default props into the NVS on problems. SD-Card disabled.
-Display NetworkList listNetworks() into the display. 2.09  2026-01-22  IR remote control recognition removed.
-                  defaultprefs.h structured
-2.10  2026-06-06  Code switch from Arduino IDE to VSCode PlatformIO
-                  Bugfixes vs1053 semaphores
-                  Time format expanded with date
+2.05  2026-01-16  Rotary encoder click and doubleclick logic implemented click=radio on/off, doubleclick=select
+                  radio station.
+2.06  2026-01-17  Bugfix alarm start/stop not working after ESP32 Espressif-Systems update to 3.3.0.
+2.07  2026-01-21  MQTT removed, mute button removed from index.html, html button size changed. Hardcoded GPIO pins for
+                  the rotary encoder, IR receiver, SD card, TFT, and VS1053 fixed within the code. Webinterface layout
+                  adapted.
+2.08 2026-01-22   writeDefaultConfig.h implemented to write the default props into the NVS on problems. SD-Card
+                  disabled. Display NetworkList listNetworks() into the display.
+2.09  2026-01-22  IR remote control recognition removed. defaultprefs.h structured
+2.10  2026-06-06  Code switch from Arduino IDE to
+                  VSCode PlatformIO Bugfixes vs1053 semaphores Time format expanded with date
 2.11  2026-06-15  Web config as JSON/NVS with form UI. Scheduler page (sleep timer, alarms). Preset reorder.
                   Bugfixes playlist redirect, EEPROM/config load, alarm save.
 2.12  2026-06-15  Configuration auto-saves immediately on field change (select change sends setting at once).
