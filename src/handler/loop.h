@@ -89,20 +89,16 @@ void IRAM_ATTR timer10sec() {
  * - Counts up to 10 seconds and calls timer10sec()
  * - Every second: Updates timeinfo (sec, min, hour) and sets time_req
  * - Backlight: Turns off display after BACKLIGHT_TIME seconds
- * - Encoder inactivity counter increments (reset by interrupts)
- * - Click detection: After 4 stable cycles, sets singleclick,
- *   doubleclick or tripleclick
+ * - Encoder inactivity counter increments (reset by rotation interrupt)
  *
  * @note Runs in interrupt context (IRAM_ATTR)
  * @note No long or blocking operations allowed!
  * @see timer10sec()
  * @see enableBacklight()
- * @see singleclick, doubleclick, tripleclick (global)
+ * @see singleclick, doubleclick (global)
  */
 void IRAM_ATTR timer100() {
-  sv int16_t count10sec = 0;    // Counter for activatie 10 seconds process
-  sv int16_t eqcount = 0;       // Counter for equal number of clicks
-  sv int16_t oldclickcount = 0; // To detect difference
+  sv int16_t count10sec = 0; // Counter for activatie 10 seconds process
 
   if (++count10sec == 100) // 10 seconds passed?
   {
@@ -139,30 +135,6 @@ void IRAM_ATTR timer100() {
   if (++enc_inactivity == 36000) // Count inactivity time
   {
     enc_inactivity = 1000; // Prevent wrap
-  }
-  // Now detection of single/double click of rotary encoder switch
-  if (clickcount) // Any click?
-  {
-    if (oldclickcount == clickcount) // stable situation?
-    {
-      if (++eqcount == 4) // Long time stable?
-      {
-        eqcount = 0;
-        if (clickcount > 2) // Triple click?
-        {
-          tripleclick = true;       // set result
-        } else if (clickcount == 2) // Double click?
-        {
-          doubleclick = true; // set result
-        } else {
-          singleclick = true; // Just one click seen
-        }
-        clickcount = 0; // Reset number of clicks
-      }
-    } else {
-      oldclickcount = clickcount; // To detect change
-      eqcount = 0;                // Not stable, reset count
-    }
   }
 }
 

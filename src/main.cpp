@@ -363,12 +363,10 @@ char nvskeys[MAXKEYS][16];       // Space for NVS keys
 std::vector<keyname_t> keynames; // Keynames in NVS
 // Rotary encoder stuff
 #define sv DRAM_ATTR static volatile
-sv uint16_t clickcount = 0;                // Incremented per encoder click
 sv int16_t rotationcount = 0;              // Current position of rotary switch
 sv uint16_t enc_inactivity = 0;            // Time inactive
 sv bool singleclick = false;               // True if single click detected
 sv bool doubleclick = false;               // True if double click detected
-sv bool tripleclick = false;               // True if triple click detected
 sv bool longclick = false;                 // True if longclick detected
 enum enc_menu_t { VOLUME, PRESET, TRACK }; // State for rotary encoder menu
 enc_menu_t enc_menu_mode = VOLUME;         // Default is VOLUME mode
@@ -517,6 +515,7 @@ VS1053 *vs1053player;
 #include "handler/time.h"
 #include "handler/http.h"
 #include "handler/rotary_encoder.h"
+#include "handler/encoder_switch.h"
 #include "handler/interface.h"
 #include "handler/display.h"
 #include "handler/stream.h"
@@ -890,7 +889,7 @@ void setup() {
   if ((ini_block.enc_clk_pin + ini_block.enc_dt_pin + ini_block.enc_sw_pin) > 2) {
     attachInterrupt(ini_block.enc_clk_pin, isr_enc_turn, CHANGE);
     attachInterrupt(ini_block.enc_dt_pin, isr_enc_turn, CHANGE);
-    attachInterrupt(ini_block.enc_sw_pin, isr_enc_switch, CHANGE);
+    initEncoderSwitch(ini_block.enc_sw_pin);
     dbgprint("Rotary encoder is enabled");
   } else {
     dbgprint("Rotary encoder is disabled (%d/%d/%d)", ini_block.enc_clk_pin, ini_block.enc_dt_pin,
@@ -998,5 +997,6 @@ void loop() {
   }
 
   nvsAutoSave();        // See if time to save settings
+  updateEncoderSwitch(); // Poll encoder push button (debounced)
   checkRotaryEncoder(); // Check rotary encoder functions
 }

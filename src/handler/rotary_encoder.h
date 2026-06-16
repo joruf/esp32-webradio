@@ -32,6 +32,16 @@ void checkRotaryEncoder() {
     return;
   }
 
+  // --- Double click: enter preset selection mode ---
+  if (doubleclick) {
+    dbgprint("Double click detected - Enter preset selection mode");
+    doubleclick = false;
+    enc_menu_mode = PRESET;
+    showTextOnTFT(3, msgTurnToSelectStation);
+    enc_preset = ini_block.newpreset;
+    return;
+  }
+
   // --- Long click: enter preset selection mode (process FIRST) ---
   if (longclick) {
     dbgprint("Long click detected - Enter preset selection mode");

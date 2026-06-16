@@ -56,56 +56,6 @@ void IRAM_ATTR isr_IR() {
 }
 
 /**
- * @brief IRAM interrupt service routine for the rotary encoder switch.
- *
- * This function is called on every edge of the switch signal.
- * It detects short clicks (button pressed and released) and
- * long clicks (pressed and held > 1 second).
- *
- * @details
- * - Debouncing via time comparison (same millisecond is ignored)
- * - On button release, it distinguishes:
- *   - Pressed longer than 1 second → 'longclick' is set to true
- *   - Pressed shorter than 1 second → 'clickcount' is incremented
- * - 'enc_inactivity' is reset to 0 on every activation
- *
- * @note This function runs in interrupt context (IRAM_ATTR)
- * @note Uses 'sv' (static volatile) for variables that persist across calls
- * @see longclick (global) - Flag for long button press
- * @see clickcount (global) - Counter for short clicks
- * @see enc_inactivity (global) - Inactivity counter (reset here)
- */
-void IRAM_ATTR isr_enc_switch() {
-  sv uint32_t oldtime = 0; // Time in millis previous interrupt
-  sv bool sw_state;        // True is pushed (LOW)
-  bool newstate;           // Current state of input signal
-  uint32_t newtime;        // Current timestamp
-
-  // Read current state of SW pin
-  newstate = (digitalRead(ini_block.enc_sw_pin) == LOW);
-  newtime = millis();
-  if (newtime == oldtime) // Debounce
-  {
-    return;
-  }
-  if (newstate != sw_state) // State changed?
-  {
-    sw_state = newstate; // set current (new) state
-    if (!sw_state)       // SW released?
-    {
-      if ((newtime - oldtime) > 1000) // More than 1 second?
-      {
-        longclick = true; // register longclick
-      } else {
-        clickcount++; // click detected
-      }
-      enc_inactivity = 0; // Not inactive anymore
-    }
-  }
-  oldtime = newtime; // For next compare
-}
-
-/**
  * @brief IRAM interrupt service routine for rotary encoder rotation.
  *
  * This function is called on every edge of the encoder's CLK signal.
