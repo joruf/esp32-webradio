@@ -45,94 +45,35 @@ const char sound_html[] PROGMEM = R"=====(
 		<div id="body" class="container">
 			<h1>Sound Settings</h1>
 
-			<div class="panel panel-default">
-				<div class="panel-heading">Webradio Control<br /><small>Click to adapt the sound output</small></div>
+			<div id="sound-settings" class="row panel panel-default">
+				<div class="panel-heading">Audio</div>
 				<div class="panel-body">
-
+					<p class="config-help">Select boxes and the volume slider send their value to the device immediately on change.</p>
 					<div class="row">
-						<div class="col-xs-12 col-sm-6 col-md-3">
-							<label for="HA">Treble Gain</label><br />
-							<select id="toneha" size="16">
-								<option value="8">-12 dB</option>
-								<option value="9">-10.5 dB</option>
-								<option value="10">-9 dB</option>
-								<option value="11">-7.5 dB</option>
-								<option value="12">-6 dB</option>
-								<option value="13">-4.5 dB</option>
-								<option value="14">-3 dB</option>
-								<option value="15">-1.5 dB</option>
-								<option value="0" selected>Off</option>
-								<option value="1">+1.5 dB</option>
-								<option value="2">+3 dB</option>
-								<option value="3">+4.5 dB</option>
-								<option value="4">+6 dB</option>
-								<option value="5">+7.5 dB</option>
-								<option value="6">+9 dB</option>
-								<option value="7">+10.5 dB</option>
-							</select>
-						</div>
-						<div class="col-xs-12 col-sm-6 col-md-3">
-							<label for="HF">Treble Freq</label><br />
-							<select id="tonehf" size="16">
-								<option value="1">1 kHz</option>
-								<option value="2">2 kHz</option>
-								<option value="3">3 kHz</option>
-								<option value="4">4 kHz</option>
-								<option value="5">5 kHz</option>
-								<option value="6">6 kHz</option>
-								<option value="7">7 kHz</option>
-								<option value="8">8 kHz</option>
-								<option value="9">9 kHz</option>
-								<option value="10">10 kHz</option>
-								<option value="11">11 kHz</option>
-								<option value="12">12 kHz</option>
-								<option value="13">13 kHz</option>
-								<option value="14">14 kHz</option>
-								<option value="15">15 kHz</option>
-							</select>
-						</div>
-						<div class="col-xs-12 col-sm-6 col-md-3">
-							<label for="LA">Bass Gain</label><br />
-							<select id="tonela" size="16">
-								<option value="0" selected>Off</option>
-								<option value="1">+1 dB</option>
-								<option value="2">+2 dB</option>
-								<option value="3">+3 dB</option>
-								<option value="4">+4 dB</option>
-								<option value="5">+5 dB</option>
-								<option value="6">+6 dB</option>
-								<option value="7">+7 dB</option>
-								<option value="8">+8 dB</option>
-								<option value="9">+9 dB</option>
-								<option value="10">+10 dB</option>
-								<option value="11">+11 dB</option>
-								<option value="12">+12 dB</option>
-								<option value="13">+13 dB</option>
-								<option value="14">+14 dB</option>
-								<option value="15">+15 dB</option>
-							</select>
-						</div>
-						<div class="col-xs-12 col-sm-6 col-md-3">
-							<label for="LF">Bass Freq</label><br />
-							<select id="tonelf" size="16">
-								<option value="2">10 Hz</option>
-								<option value="3">20 Hz</option>
-								<option value="4">30 Hz</option>
-								<option value="5">40 Hz</option>
-								<option value="6">50 Hz</option>
-								<option value="7">60 Hz</option>
-								<option value="8">70 Hz</option>
-								<option value="9">80 Hz</option>
-								<option value="10">90 Hz</option>
-								<option value="11">100 Hz</option>
-								<option value="12">110 Hz</option>
-								<option value="13">120 Hz</option>
-								<option value="14">130 Hz</option>
-								<option value="15">140 Hz</option>
-							</select>
+						<div class="form-group col-xs-12 col-sm-4">
+							<label for="cfg-volume">Default volume</label>
+							<input type="range" class="form-control" id="cfg-volume" min="0" max="100" step="1">
+							<div class="config-range-value"><span id="cfg-volume-value">0</span>%</div>
 						</div>
 					</div>
-
+					<div class="row">
+						<div class="form-group col-xs-6 col-sm-3">
+							<label for="tone-ha">Treble amplitude</label>
+							<select class="form-control" id="tone-ha"></select>
+						</div>
+						<div class="form-group col-xs-6 col-sm-3">
+							<label for="tone-hf">Treble frequency</label>
+							<select class="form-control" id="tone-hf"></select>
+						</div>
+						<div class="form-group col-xs-6 col-sm-3">
+							<label for="tone-la">Bass amplitude</label>
+							<select class="form-control" id="tone-la"></select>
+						</div>
+						<div class="form-group col-xs-6 col-sm-3">
+							<label for="tone-lf">Bass frequency</label>
+							<select class="form-control" id="tone-lf"></select>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>	

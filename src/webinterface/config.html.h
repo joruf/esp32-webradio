@@ -66,49 +66,27 @@ const char config_html[] PROGMEM = R"=====(
 							<input type="text" class="form-control" id="clk-server" placeholder="pool.ntp.org">
 						</div>
 						<div class="form-group col-xs-6 col-sm-3">
-							<label for="clk-offset">UTC offset (hours)</label>
-							<input type="number" class="form-control" id="clk-offset" min="-12" max="14" step="1">
+							<label for="clk-offset">UTC offset</label>
+							<select class="form-control" id="clk-offset"></select>
 						</div>
 						<div class="form-group col-xs-6 col-sm-3">
-							<label for="clk-dst">DST offset (hours)</label>
-							<input type="number" class="form-control" id="clk-dst" min="0" max="2" step="1">
+							<label for="clk-dst">DST offset</label>
+							<select class="form-control" id="clk-dst"></select>
 						</div>
 					</div>
 				</div>
 			</div>
 
 			<div class="row panel panel-default">
-				<div class="panel-heading">Audio</div>
+				<div class="panel-heading">Startup</div>
 				<div class="panel-body">
 					<div class="row">
 						<div class="form-group col-xs-12 col-sm-4">
-							<label for="cfg-volume">Default volume</label>
-							<input type="range" class="form-control" id="cfg-volume" min="0" max="100" step="1">
-							<div class="config-range-value"><span id="cfg-volume-value">0</span>%</div>
-						</div>
-						<div class="form-group col-xs-12 col-sm-4">
 							<label for="cfg-preset">Active preset on boot</label>
-							<input type="number" class="form-control" id="cfg-preset" min="0" max="199" step="1">
+							<select class="form-control" id="cfg-preset"></select>
 						</div>
 					</div>
-					<div class="row">
-						<div class="form-group col-xs-6 col-sm-3">
-							<label for="tone-ha">Treble amplitude</label>
-							<input type="number" class="form-control" id="tone-ha" min="0" max="15" step="1">
-						</div>
-						<div class="form-group col-xs-6 col-sm-3">
-							<label for="tone-hf">Treble frequency</label>
-							<input type="number" class="form-control" id="tone-hf" min="0" max="15" step="1">
-						</div>
-						<div class="form-group col-xs-6 col-sm-3">
-							<label for="tone-la">Bass amplitude</label>
-							<input type="number" class="form-control" id="tone-la" min="0" max="15" step="1">
-						</div>
-						<div class="form-group col-xs-6 col-sm-3">
-							<label for="tone-lf">Bass frequency</label>
-							<input type="number" class="form-control" id="tone-lf" min="0" max="15" step="1">
-						</div>
-					</div>
+					<p class="config-help">Volume and equalizer settings are on the <a href="sound.html">Sound Settings</a> page.</p>
 				</div>
 			</div>
 
@@ -133,7 +111,7 @@ const char config_html[] PROGMEM = R"=====(
 			<div class="row panel panel-default">
 				<div class="panel-heading">Save Settings</div>
 				<div class="panel-body">
-					<p class="config-help">Changes stay in the browser until you click Save Configuration. They are written to the device storage (NVS) only after saving.</p>
+					<p class="config-help">Select boxes and other fields send their value to the device immediately on change. Use Save Configuration to force a full save.</p>
 					<div class="row">
 						<div class="btn_border col-xs-12 col-sm-6 col-md-4">
 							<button type="button" id="save-config" class="btn btn-lg btn-success">Save Configuration</button>

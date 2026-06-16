@@ -175,6 +175,192 @@ const char interface_js[] PROGMEM = R"=====(
         index: -1
     };
 
+    var configFormLoading = false;
+
+    var toneHaOptions = [
+        [8, "-12 dB"], [9, "-10.5 dB"], [10, "-9 dB"], [11, "-7.5 dB"], [12, "-6 dB"],
+        [13, "-4.5 dB"], [14, "-3 dB"], [15, "-1.5 dB"], [0, "Off"],
+        [1, "+1.5 dB"], [2, "+3 dB"], [3, "+4.5 dB"], [4, "+6 dB"],
+        [5, "+7.5 dB"], [6, "+9 dB"], [7, "+10.5 dB"]
+    ];
+    var toneHfOptions = [
+        [1, "1 kHz"], [2, "2 kHz"], [3, "3 kHz"], [4, "4 kHz"], [5, "5 kHz"],
+        [6, "6 kHz"], [7, "7 kHz"], [8, "8 kHz"], [9, "9 kHz"], [10, "10 kHz"],
+        [11, "11 kHz"], [12, "12 kHz"], [13, "13 kHz"], [14, "14 kHz"], [15, "15 kHz"]
+    ];
+    var toneLaOptions = [
+        [0, "Off"], [1, "+1 dB"], [2, "+2 dB"], [3, "+3 dB"], [4, "+4 dB"],
+        [5, "+5 dB"], [6, "+6 dB"], [7, "+7 dB"], [8, "+8 dB"], [9, "+9 dB"],
+        [10, "+10 dB"], [11, "+11 dB"], [12, "+12 dB"], [13, "+13 dB"],
+        [14, "+14 dB"], [15, "+15 dB"]
+    ];
+    var toneLfOptions = [
+        [2, "10 Hz"], [3, "20 Hz"], [4, "30 Hz"], [5, "40 Hz"], [6, "50 Hz"],
+        [7, "60 Hz"], [8, "70 Hz"], [9, "80 Hz"], [10, "90 Hz"], [11, "100 Hz"],
+        [12, "110 Hz"], [13, "120 Hz"], [14, "130 Hz"], [15, "140 Hz"]
+    ];
+
+    function normalizeBinaryClockValue(value) {
+        return (parseInt(value, 10) === 1) ? 1 : 0;
+    }
+
+    function buildLabeledSelectOptions(options, selected) {
+        var html = "";
+        var i;
+        var selectedValue = parseInt(selected, 10);
+        for (i = 0; i < options.length; i++) {
+            html += '<option value="' + options[i][0] + '"' +
+                (selectedValue === options[i][0] ? ' selected' : '') + '>' +
+                options[i][1] + '</option>';
+        }
+        return html;
+    }
+
+    function buildNumericSelectOptions(min, max, selected, labelFn) {
+        var html = "";
+        var i;
+        var selectedValue = parseInt(selected, 10);
+        for (i = min; i <= max; i++) {
+            html += '<option value="' + i + '"' +
+                (selectedValue === i ? ' selected' : '') + '>' +
+                labelFn(i) + '</option>';
+        }
+        return html;
+    }
+
+    function fillSelectIfEmpty(selector, html) {
+        var $select = $(selector);
+        if ($select.length && $select.children().length === 0) {
+            $select.html(html);
+        }
+    }
+
+    function initConfigSelectOptions() {
+        if (!$("#clk-offset").length) {
+            return;
+        }
+
+        fillSelectIfEmpty("#clk-offset",
+            '<option value="0">0</option><option value="1">1</option>');
+        fillSelectIfEmpty("#clk-dst",
+            '<option value="0">0</option><option value="1">1</option>');
+        fillSelectIfEmpty("#cfg-preset",
+            buildNumericSelectOptions(0, 199, 0, function(value) {
+                return "Preset " + value;
+            }));
+    }
+
+    function initSoundSelectOptions() {
+        if (!$("#sound-settings").length) {
+            return;
+        }
+
+        fillSelectIfEmpty("#tone-ha", buildLabeledSelectOptions(toneHaOptions, 0));
+        fillSelectIfEmpty("#tone-hf", buildLabeledSelectOptions(toneHfOptions, 1));
+        fillSelectIfEmpty("#tone-la", buildLabeledSelectOptions(toneLaOptions, 0));
+        fillSelectIfEmpty("#tone-lf", buildLabeledSelectOptions(toneLfOptions, 2));
+    }
+
+    function canPersistRadioConfig() {
+        return !configFormLoading && ($("#save-config").length || $("#sound-settings").length);
+    }
+
+    function persistRadioConfig() {
+        if (!canPersistRadioConfig()) {
+            return;
+        }
+        saveRadioConfig({ applyAudio: false });
+    }
+
+    function applySoundSelectChange(fieldId, value) {
+        if (configFormLoading) {
+            return;
+        }
+
+        switch (fieldId) {
+            case "tone-ha":
+                handletone("toneha", value);
+                break;
+            case "tone-hf":
+                handletone("tonehf", value);
+                break;
+            case "tone-la":
+                handletone("tonela", value);
+                break;
+            case "tone-lf":
+                handletone("tonelf", value);
+                break;
+        }
+
+        persistRadioConfig();
+    }
+
+    function applyConfigSelectChange(fieldId, value) {
+        if (configFormLoading) {
+            return;
+        }
+
+        switch (fieldId) {
+            case "clk-offset":
+                httpGet("clk_offset=" + normalizeBinaryClockValue(value));
+                break;
+            case "clk-dst":
+                httpGet("clk_dst=" + normalizeBinaryClockValue(value));
+                break;
+            case "cfg-preset":
+                break;
+        }
+
+        persistRadioConfig();
+    }
+
+    function bindSoundChangeHandlers() {
+        if (!$("#sound-settings").length) {
+            return;
+        }
+
+        $(document)
+            .off("change.soundField", "#tone-ha, #tone-hf, #tone-la, #tone-lf")
+            .on("change.soundField", "#tone-ha, #tone-hf, #tone-la, #tone-lf", function() {
+                applySoundSelectChange(this.id, $(this).val());
+            });
+
+        $("#cfg-volume")
+            .off("input.soundField change.soundField")
+            .on("input.soundField", function() {
+                if (configFormLoading) {
+                    return;
+                }
+                $("#cfg-volume-value").text($(this).val());
+                httpGet("volume=" + $(this).val());
+            })
+            .on("change.soundField", function() {
+                persistRadioConfig();
+            });
+    }
+
+    function bindConfigChangeHandlers() {
+        if (!$("#save-config").length) {
+            return;
+        }
+
+        $(document)
+            .off("change.configField", "#clk-offset, #clk-dst, #cfg-preset")
+            .on("change.configField", "#clk-offset, #clk-dst, #cfg-preset", function() {
+                applyConfigSelectChange(this.id, $(this).val());
+            });
+
+        $("#clk-server")
+            .off("change.configField blur.configField")
+            .on("change.configField blur.configField", function() {
+                if (configFormLoading) {
+                    return;
+                }
+                httpGet("clk_server=" + encodeURIComponent($(this).val()));
+                persistRadioConfig();
+            });
+    }
+
     function escapeHtml(value) {
         return String(value || "")
             .replace(/&/g, "&amp;")
@@ -234,6 +420,7 @@ const char interface_js[] PROGMEM = R"=====(
         target.slot = tmpSlot;
         sortPresetsBySlot();
         renderPresetList();
+        persistRadioConfig();
     }
 
     function renderPresetList() {
@@ -281,17 +468,22 @@ const char interface_js[] PROGMEM = R"=====(
         renderConfigRows("#gpio-list", html);
     }
 
-    function applyClockAndAudioFields(cfg) {
+    function applyClockFields(cfg) {
+        var offset = normalizeBinaryClockValue(cfg.clock ? cfg.clock.offset : 0);
+        var dst = normalizeBinaryClockValue(cfg.clock ? cfg.clock.dst : 0);
+
         $("#clk-server").val((cfg.clock && cfg.clock.server) ? cfg.clock.server : "pool.ntp.org");
-        $("#clk-offset").val((cfg.clock && cfg.clock.offset !== undefined) ? cfg.clock.offset : 1);
-        $("#clk-dst").val((cfg.clock && cfg.clock.dst !== undefined) ? cfg.clock.dst : 1);
+        $("#clk-offset").val(String(offset));
+        $("#clk-dst").val(String(dst));
+    }
+
+    function applySoundFields(cfg) {
         $("#cfg-volume").val(cfg.volume !== undefined ? cfg.volume : 72);
         $("#cfg-volume-value").text(cfg.volume !== undefined ? cfg.volume : 72);
-        $("#cfg-preset").val(cfg.preset !== undefined ? cfg.preset : 0);
-        $("#tone-ha").val((cfg.tone && cfg.tone.ha !== undefined) ? cfg.tone.ha : 0);
-        $("#tone-hf").val((cfg.tone && cfg.tone.hf !== undefined) ? cfg.tone.hf : 0);
-        $("#tone-la").val((cfg.tone && cfg.tone.la !== undefined) ? cfg.tone.la : 0);
-        $("#tone-lf").val((cfg.tone && cfg.tone.lf !== undefined) ? cfg.tone.lf : 0);
+        $("#tone-ha").val(String((cfg.tone && cfg.tone.ha !== undefined) ? cfg.tone.ha : 0));
+        $("#tone-hf").val(String((cfg.tone && cfg.tone.hf !== undefined) ? cfg.tone.hf : 1));
+        $("#tone-la").val(String((cfg.tone && cfg.tone.la !== undefined) ? cfg.tone.la : 0));
+        $("#tone-lf").val(String((cfg.tone && cfg.tone.lf !== undefined) ? cfg.tone.lf : 2));
     }
 
     function applyAlarmsToForms(cfg) {
@@ -346,19 +538,16 @@ const char interface_js[] PROGMEM = R"=====(
             data: json,
             success: function(response) {
                 alarmState.alarms = config.alarms;
-                if ($("#command_log").length) {
-                    $("#command_log").val(response);
-                }
+                showCommandLog(response);
             },
             error: function() {
-                if ($("#command_log").length) {
-                    $("#command_log").val("Failed to save alarm configuration");
-                }
+                showCommandLog("Failed to save alarm configuration");
             }
         });
     }
 
     function applyRadioConfigToForms(cfg) {
+        configFormLoading = true;
         loadedRadioConfig = mergeWithDefaultConfig(cfg);
         radioConfigState.version = loadedRadioConfig.version || 2;
         radioConfigState.wifi = loadedRadioConfig.wifi || [];
@@ -369,7 +558,11 @@ const char interface_js[] PROGMEM = R"=====(
         alarmState.alarms = loadedRadioConfig.alarms || [];
 
         if ($("#clk-server").length) {
-            applyClockAndAudioFields(loadedRadioConfig);
+            applyClockFields(loadedRadioConfig);
+            $("#cfg-preset").val(String(loadedRadioConfig.preset !== undefined ? loadedRadioConfig.preset : 0));
+        }
+        if ($("#sound-settings").length) {
+            applySoundFields(loadedRadioConfig);
         }
         if ($("#wifi-list").length) {
             renderWifiList();
@@ -380,6 +573,7 @@ const char interface_js[] PROGMEM = R"=====(
         if ($("#gpio-list").length) {
             renderGpioList();
         }
+        configFormLoading = false;
     }
 
     function collectRadioConfig() {
@@ -391,11 +585,13 @@ const char interface_js[] PROGMEM = R"=====(
         if ($("#clk-server").length) {
             config.clock = {
                 server: $("#clk-server").val(),
-                offset: parseInt($("#clk-offset").val(), 10) || 0,
-                dst: parseInt($("#clk-dst").val(), 10) || 0
+                offset: normalizeBinaryClockValue($("#clk-offset").val()),
+                dst: normalizeBinaryClockValue($("#clk-dst").val())
             };
-            config.volume = parseInt($("#cfg-volume").val(), 10) || 0;
             config.preset = parseInt($("#cfg-preset").val(), 10) || 0;
+        }
+        if ($("#sound-settings").length) {
+            config.volume = parseInt($("#cfg-volume").val(), 10) || 0;
             config.tone = {
                 ha: parseInt($("#tone-ha").val(), 10) || 0,
                 hf: parseInt($("#tone-hf").val(), 10) || 0,
@@ -408,7 +604,32 @@ const char interface_js[] PROGMEM = R"=====(
         config.wifi = radioConfigState.wifi.slice(0);
         config.presets = radioConfigState.presets.slice(0);
         config.gpio = radioConfigState.gpio.slice(0);
+        if (!$("#alarm-list").length && alarmState.alarms && alarmState.alarms.length) {
+            config.alarms = alarmState.alarms.slice(0);
+        }
         return config;
+    }
+
+    function applyAudioSettingsFromConfig(config) {
+        if (!config) {
+            return;
+        }
+
+        if (config.volume !== undefined) {
+            httpGet("volume=" + config.volume);
+        }
+        if (config.tone) {
+            httpGet("toneha=" + (config.tone.ha !== undefined ? config.tone.ha : 0));
+            httpGet("tonehf=" + (config.tone.hf !== undefined ? config.tone.hf : 0));
+            httpGet("tonela=" + (config.tone.la !== undefined ? config.tone.la : 0));
+            httpGet("tonelf=" + (config.tone.lf !== undefined ? config.tone.lf : 0));
+        }
+    }
+
+    function showCommandLog(message) {
+        if ($("#command_log").length) {
+            $("#command_log").val(message);
+        }
     }
 
     function openConfigDialog(type, index) {
@@ -432,7 +653,11 @@ const char interface_js[] PROGMEM = R"=====(
             title = configDialogState.index >= 0 ? "Edit Preset" : "Add Preset";
             bodyHtml = '' +
                 '<div class="form-group"><label for="dialog-preset-slot">Slot</label>' +
-                '<input type="number" class="form-control" id="dialog-preset-slot" min="0" max="199" value="' + entry.slot + '"></div>' +
+                '<select class="form-control" id="dialog-preset-slot">' +
+                buildNumericSelectOptions(0, 199, entry.slot, function(value) {
+                    return "Preset " + value;
+                }) +
+                '</select></div>' +
                 '<div class="form-group"><label for="dialog-preset-url">Stream URL</label>' +
                 '<input type="text" class="form-control" id="dialog-preset-url" value="' + escapeHtml(entry.url) + '"></div>' +
                 '<div class="form-group"><label for="dialog-preset-name">Display name</label>' +
@@ -442,7 +667,11 @@ const char interface_js[] PROGMEM = R"=====(
             title = configDialogState.index >= 0 ? "Edit GPIO Action" : "Add GPIO Action";
             bodyHtml = '' +
                 '<div class="form-group"><label for="dialog-gpio-pin">GPIO pin</label>' +
-                '<input type="number" class="form-control" id="dialog-gpio-pin" min="0" max="39" value="' + entry.pin + '"></div>' +
+                '<select class="form-control" id="dialog-gpio-pin">' +
+                buildNumericSelectOptions(0, 39, entry.pin, function(value) {
+                    return "GPIO " + value;
+                }) +
+                '</select></div>' +
                 '<div class="form-group"><label for="dialog-gpio-command">Command</label>' +
                 '<input type="text" class="form-control" id="dialog-gpio-command" value="' + escapeHtml(entry.command) + '" placeholder="e.g. stop or uppreset = 1"></div>';
         }
@@ -561,6 +790,10 @@ const char interface_js[] PROGMEM = R"=====(
         }
 
         closeConfigDialog();
+
+        if ($("#save-config").length) {
+            saveRadioConfig({ applyAudio: false });
+        }
     }
 
     function getDefaultRadioConfig() {
@@ -660,10 +893,23 @@ const char interface_js[] PROGMEM = R"=====(
         return merged;
     }
 
+    function initSoundPage() {
+        if (!$("#sound-settings").length) {
+            return;
+        }
+
+        initSoundSelectOptions();
+        bindSoundChangeHandlers();
+        loadRadioConfig();
+    }
+
     function initConfigPage() {
         if (!$("#save-config").length) {
             return;
         }
+
+        initConfigSelectOptions();
+        bindConfigChangeHandlers();
 
         $("#erase-eeprom").off("click.webradioErase").on("click.webradioErase", function(e) {
             e.preventDefault();
@@ -700,7 +946,9 @@ const char interface_js[] PROGMEM = R"=====(
         });
     }
 
-    function saveRadioConfig() {
+    function saveRadioConfig(options) {
+        options = options || {};
+        var applyAudio = options.applyAudio !== false;
         var config = collectRadioConfig();
         var json = JSON.stringify(config);
 
@@ -710,11 +958,19 @@ const char interface_js[] PROGMEM = R"=====(
             contentType: "application/json; charset=UTF-8",
             data: json,
             success: function(response) {
-                loadedRadioConfig = config;
-                alarmState.alarms = config.alarms;
-                if ($("#command_log").length) {
-                    $("#command_log").val(response);
+                if (response.indexOf("failed") >= 0) {
+                    showCommandLog(response);
+                    return;
                 }
+                loadedRadioConfig = config;
+                alarmState.alarms = config.alarms || alarmState.alarms;
+                showCommandLog(response);
+                if (applyAudio) {
+                    applyAudioSettingsFromConfig(config);
+                }
+            },
+            error: function() {
+                showCommandLog("Failed to save configuration");
             }
         });
     }
@@ -732,6 +988,7 @@ const char interface_js[] PROGMEM = R"=====(
         alarmState.alarms = collectAlarmsFromDom();
         alarmState.alarms.splice(index, 1);
         renderAlarmList();
+        saveSchedulerAlarms();
     });
 
     $(document).on("click", ".save-alarm", function() {
@@ -768,6 +1025,10 @@ const char interface_js[] PROGMEM = R"=====(
             radioConfigState.gpio.splice(index, 1);
             renderGpioList();
         }
+
+        if ($("#save-config").length) {
+            saveRadioConfig({ applyAudio: false });
+        }
     });
 
     $(document).on("click", "#config-dialog-cancel, .config-dialog-backdrop", function() {
@@ -791,7 +1052,7 @@ const char interface_js[] PROGMEM = R"=====(
     });
 
     $(document).on("click", "#save-config", function() {
-        saveRadioConfig();
+        saveRadioConfig({ applyAudio: true });
     });
 
     $(document).on("click", "#restore-config", function() {
@@ -807,12 +1068,9 @@ const char interface_js[] PROGMEM = R"=====(
         });
     });
 
-    $(document).on("input change", "#cfg-volume", function() {
-        $("#cfg-volume-value").text($(this).val());
-    });
-
     $(function() {
         initConfigPage();
+        initSoundPage();
         initSchedulerPage();
     });
 
@@ -865,27 +1123,6 @@ const char interface_js[] PROGMEM = R"=====(
         setstat();
     });
 
-
-
-    /**
-    * Sound Settings
-    */
-    $("#toneha").on("change", function() {
-        console.log("toneha: "+this.value);
-        handletone("toneha", this.value);
-    });
-    $("#tonehf").on("change", function() {
-        console.log("tonehf: "+this.value);
-        handletone("tonehf", this.value);
-    });
-    $("#tonela").on("change", function() {
-        console.log("tonela: "+this.value);
-        handletone("tonela", this.value);
-    });
-    $("#tonelf").on("change", function() {
-        console.log("tonelf: "+this.value);
-        handletone("tonelf", this.value);
-    });
 
 
     /**

@@ -38,7 +38,7 @@
 
 // Define the version number, also used for webserver as Last-Modified header and to
 // check version for update.  The format must be exactly as specified by the HTTP standard!
-#define FIRMWARE "v2.11 2026-06-15"
+#define FIRMWARE "v2.12 2026-06-16"
 /*
 Firmware Changes:
 2.00  2025-03-06  Reload time changes on problems with the data connection.
@@ -60,6 +60,11 @@ Display NetworkList listNetworks() into the display. 2.09  2026-01-22  IR remote
                   Time format expanded with date
 2.11  2026-06-15  Web config as JSON/NVS with form UI. Scheduler page (sleep timer, alarms). Preset reorder.
                   Bugfixes playlist redirect, EEPROM/config load, alarm save.
+2.12  2026-06-15  Configuration auto-saves immediately on field change (select change sends setting at once).
+                  UTC offset and DST as select boxes (0 or 1 only); other numeric options use select boxes.
+                  Sound settings (volume, equalizer) moved from Configuration to Sound Settings page.
+                  HTTP POST config save fixed (Content-Length, full body read, save error feedback).
+                  Scheduler: removing an alarm now persists to NVS.
 */
 
 // ESP32-Radio can be updated (OTA) to the latest version from a remote server.
@@ -313,46 +318,47 @@ int16_t metalinebfx;               // Index for metalinebf
 String icystreamtitle; // Streamtitle from metadata --> Song title
 String icyname;        // Icecast station name --> SWR3,...
 
-String ipaddress;                    // Own IP-address
-int bitrate;                         // Bitrate in kb/sec
-int mbitrate;                        // Measured bitrate
-int metaint = 0;                     // Number of databytes between metadata
-int16_t currentpreset = -1;          // Preset station playing
-String host;                         // The URL to connect to or file to play
-String playlist;                     // The URL of the specified playlist
-bool hostreq = false;                // Request for new host
-bool reqtone = false;                // New tone setting requested
-bool muteflag = false;               // Mute output
-bool resetreq = false;               // Request to reset the ESP32
-bool updatereq = false;              // Request to update software from remote host
-bool NetworkFound = false;           // True if WiFi network connected
-String networks;                     // Found networks in the surrounding
-int16_t playlist_num = 0;            // Nonzero for selection from playlist
-File mp3file;                        // File containing mp3 on SD card
-uint32_t mp3filelength;              // File length
-bool localfile = false;              // Play from local mp3-file or not
-bool chunked = false;                // Station provides chunked transfer
-int chunkcount = 0;                  // Counter for chunked transfer
-String http_getcmd;                  // Contents of last GET command
-String http_rqfile;                  // Requested file
-bool http_response_flag = false;     // Response required
-uint16_t ir_value = 0;               // IR code
-uint32_t ir_0 = 550;                 // Average duration of an IR short pulse
-uint32_t ir_1 = 1650;                // Average duration of an IR long pulse
-struct tm timeinfo;                  // Will be filled by NTP server
-bool time_req = false;               // Set time requested
-bool SD_okay = false;                // True if SD card in place and readable
-String SD_nodelist;                  // Nodes of mp3-files on SD
-int SD_nodecount = 0;                // Number of nodes in SD_nodelist
-String SD_currentnode = "";          // Node ID of song playing ("0" if random)
-uint16_t adcval;                     // ADC value (battery voltage)
-uint32_t clength;                    // Content length found in http header
-uint32_t max_mp3loop_time = 0;       // To check max handling time in mp3loop (msec)
-int16_t scanios;                     // TEST*TEST*TEST
-int16_t scaniocount;                 // TEST*TEST*TEST
-uint16_t bltimer = 0;                // Backlight time-out counter
-display_t displaytype = T_UNDEFINED; // Display type
-std::vector<WifiInfo_t> wifilist;    // List with wifi_xx info
+String ipaddress;                      // Own IP-address
+int bitrate;                           // Bitrate in kb/sec
+int mbitrate;                          // Measured bitrate
+int metaint = 0;                       // Number of databytes between metadata
+int16_t currentpreset = -1;            // Preset station playing
+String host;                           // The URL to connect to or file to play
+String playlist;                       // The URL of the specified playlist
+bool hostreq = false;                  // Request for new host
+bool reqtone = false;                  // New tone setting requested
+bool muteflag = false;                 // Mute output
+bool resetreq = false;                 // Request to reset the ESP32
+bool updatereq = false;                // Request to update software from remote host
+bool NetworkFound = false;             // True if WiFi network connected
+String networks;                       // Found networks in the surrounding
+int16_t playlist_num = 0;              // Nonzero for selection from playlist
+File mp3file;                          // File containing mp3 on SD card
+uint32_t mp3filelength;                // File length
+bool localfile = false;                // Play from local mp3-file or not
+bool chunked = false;                  // Station provides chunked transfer
+int chunkcount = 0;                    // Counter for chunked transfer
+String http_getcmd;                    // Contents of last GET command
+String http_rqfile;                    // Requested file
+bool http_response_flag = false;       // Response required
+uint32_t http_post_content_length = 0; // POST body size from Content-Length header
+uint16_t ir_value = 0;                 // IR code
+uint32_t ir_0 = 550;                   // Average duration of an IR short pulse
+uint32_t ir_1 = 1650;                  // Average duration of an IR long pulse
+struct tm timeinfo;                    // Will be filled by NTP server
+bool time_req = false;                 // Set time requested
+bool SD_okay = false;                  // True if SD card in place and readable
+String SD_nodelist;                    // Nodes of mp3-files on SD
+int SD_nodecount = 0;                  // Number of nodes in SD_nodelist
+String SD_currentnode = "";            // Node ID of song playing ("0" if random)
+uint16_t adcval;                       // ADC value (battery voltage)
+uint32_t clength;                      // Content length found in http header
+uint32_t max_mp3loop_time = 0;         // To check max handling time in mp3loop (msec)
+int16_t scanios;                       // TEST*TEST*TEST
+int16_t scaniocount;                   // TEST*TEST*TEST
+uint16_t bltimer = 0;                  // Backlight time-out counter
+display_t displaytype = T_UNDEFINED;   // Display type
+std::vector<WifiInfo_t> wifilist;      // List with wifi_xx info
 // nvs stuff
 nvs_page nvsbuf;                 // Space for 1 page of NVS info
 const esp_partition_t *nvs;      // Pointer to partition struct
@@ -996,7 +1002,7 @@ void loop() {
     handlehttp();
   }
 
-  nvsAutoSave();        // See if time to save settings
+  nvsAutoSave();         // See if time to save settings
   updateEncoderSwitch(); // Poll encoder push button (debounced)
-  checkRotaryEncoder(); // Check rotary encoder functions
+  checkRotaryEncoder();  // Check rotary encoder functions
 }

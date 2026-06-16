@@ -142,9 +142,10 @@ String getradiostatus() {
  *
  * @param forcestart If true, force a buffer refill regardless of current
  * position
+ * @param maxIdleRetries Max idle polls before returning an error
  * @return uint8_t The next byte read, or '\n' on error
  */
-uint8_t rinbyt(bool forcestart) {
+uint8_t rinbyt(bool forcestart, uint16_t maxIdleRetries = 3) {
   static uint8_t buf[1024]; // Inputbuffer
   static uint16_t i;        // Pointer in inputbuffer
   static uint16_t len;      // Number of bytes in buf
@@ -159,7 +160,7 @@ uint8_t rinbyt(bool forcestart) {
       len = tlen;                   // Try to read whole input
       if (len == 0)                 // Any input available?
       {
-        if (++trycount > 3) // Not for a long time?
+        if (++trycount > maxIdleRetries) // Not for a long time?
         {
           dbgprint("HTTP input shorter than expected");
           return '\n'; // Error! No input
@@ -177,6 +178,60 @@ uint8_t rinbyt(bool forcestart) {
     }
   }
   return buf[i++];
+}
+
+/**
+ * @brief Read the HTTP POST request body.
+ *
+ * Uses Content-Length when available, otherwise reads until an idle timeout.
+ *
+ * @param maxLen Maximum accepted body size
+ * @return String Request body
+ */
+static String readHttpPostBody(size_t maxLen) {
+  String body = "";
+  uint32_t targetLen = http_post_content_length;
+  uint16_t idleRetries = 200;
+
+  timerStop(timer);
+  http_post_content_length = 0;
+
+  if (targetLen > 0 && targetLen < maxLen) {
+    body.reserve(targetLen + 1);
+    while (body.length() < targetLen && cmdclient.connected()) {
+      uint8_t c = rinbyt(false, idleRetries);
+      if (c == '\n' && body.length() < targetLen && cmdclient.available() == 0) {
+        break;
+      }
+      body += (char)c;
+    }
+    if (body.length() > targetLen) {
+      body = body.substring(0, targetLen);
+    }
+  } else {
+    uint8_t empty_retries = 0;
+    while (empty_retries < 50) {
+      uint8_t c = rinbyt(false, idleRetries);
+      if (c == '\n') {
+        if (body.length() > 0) {
+          break;
+        }
+        empty_retries++;
+        continue;
+      }
+      if (c != '\r') {
+        body += (char)c;
+        empty_retries = 0;
+        if (body.length() >= maxLen - 1) {
+          break;
+        }
+      }
+    }
+  }
+
+  timerStart(timer);
+  body.trim();
+  return body;
 }
 
 /**
@@ -266,89 +321,42 @@ void writeprefs() {
 /**
  * @brief Read alarm configuration JSON from the HTTP POST body and save it.
  */
-void writeAlarmConfig() {
-  String body = "";
-  char c;
-  uint8_t empty_retries = 0;
+bool writeAlarmConfig() {
+  String body = readHttpPostBody(ALRM_CONFIG_MAX_LEN);
 
-  timerStop(timer);
-
-  while (empty_retries < 30) {
-    c = rinbyt(false);
-    if (c == '\n') {
-      if (body.length() > 0) {
-        break;
-      }
-      empty_retries++;
-      continue;
-    }
-
-    if (c != '\r') {
-      body += c;
-      empty_retries = 0;
-      if (body.length() >= ALRM_CONFIG_MAX_LEN - 1) {
-        break;
-      }
-    }
-  }
-
-  timerStart(timer);
-
-  body.trim();
   if (body.length() > 0) {
-    applyAlarmConfig(body);
-    dbgprint("Alarm configuration saved (%d bytes)", body.length());
-  } else {
-    dbgprint("Alarm configuration save ignored (empty body)");
+    if (applyAlarmConfig(body)) {
+      dbgprint("Alarm configuration saved (%d bytes)", body.length());
+      fillkeylist();
+      return true;
+    }
+    dbgprint("Alarm configuration save rejected");
+    return false;
   }
 
-  fillkeylist();
+  dbgprint("Alarm configuration save ignored (empty body)");
+  return false;
 }
 
 /**
  * @brief Read unified radio configuration JSON from the HTTP POST body and save it.
  */
-void writeRadioConfig() {
-  String body = "";
-  char c;
-  uint8_t empty_retries = 0;
+bool writeRadioConfig() {
+  String body = readHttpPostBody(RADIO_CONFIG_MAX_LEN);
 
-  timerStop(timer);
-
-  while (empty_retries < 50) {
-    c = rinbyt(false);
-    if (c == '\n') {
-      if (body.length() > 0) {
-        break;
-      }
-      empty_retries++;
-      continue;
-    }
-
-    if (c != '\r') {
-      body += c;
-      empty_retries = 0;
-      if (body.length() >= RADIO_CONFIG_MAX_LEN - 1) {
-        break;
-      }
-    }
-  }
-
-  timerStart(timer);
-
-  body.trim();
   if (body.length() > 0) {
     if (applyRadioConfig(body, true)) {
       readprogbuttons();
       dbgprint("Radio configuration saved (%d bytes)", body.length());
-    } else {
-      dbgprint("Radio configuration save rejected (invalid JSON)");
+      fillkeylist();
+      return true;
     }
-  } else {
-    dbgprint("Radio configuration save ignored (empty body)");
+    dbgprint("Radio configuration save rejected (invalid JSON)");
+    return false;
   }
 
-  fillkeylist();
+  dbgprint("Radio configuration save ignored (empty body)");
+  return false;
 }
 
 /**
@@ -441,8 +449,11 @@ void handlehttpreply() {
             return;
           } else if (http_getcmd.startsWith("saveconfig")) // Save unified JSON config
           {
-            writeRadioConfig();
-            sndstr += String("Configuration saved");
+            if (writeRadioConfig()) {
+              sndstr += String("Configuration saved");
+            } else {
+              sndstr += String("Configuration save failed");
+            }
           } else if (http_getcmd.startsWith("restoreconfig")) // Restore factory defaults
           {
             restoreDefaultConfig();
@@ -476,8 +487,11 @@ void handlehttpreply() {
             return;
           } else if (http_getcmd.startsWith("savealarms")) // Save alarm JSON config
           {
-            writeAlarmConfig();
-            sndstr += String("Alarm configuration saved");
+            if (writeAlarmConfig()) {
+              sndstr += String("Alarm configuration saved");
+            } else {
+              sndstr += String("Alarm configuration save failed");
+            }
           } else if (http_getcmd.startsWith("saveprefs")) // Is is a "Save preferences"
           {
             writeprefs();                               // handle it
@@ -535,6 +549,8 @@ void handlehttp() {
   String currentLine = ""; // Build up to complete line
   bool reqseen = false;    // No GET seen yet
 
+  http_post_content_length = 0;
+
   if (!cmdclient.connected()) // Action if client is connected
   {
     return; // No client active
@@ -560,6 +576,9 @@ void handlehttp() {
           inx0 = 6;
         } else {
           inx0 = 0; // Not GET nor POST
+        }
+        if (currentLine.startsWith("Content-Length:") || currentLine.startsWith("content-length:")) {
+          http_post_content_length = (uint32_t)currentLine.substring(15).toInt();
         }
         if (inx0) // GET or POST request?
         {

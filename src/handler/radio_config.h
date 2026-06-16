@@ -487,6 +487,7 @@ bool applyRadioConfig(const String &json, bool maskWifiPasswords) {
   ini_block.rtone[1] = tone["hf"] | 0;
   ini_block.rtone[2] = tone["la"] | 0;
   ini_block.rtone[3] = tone["lf"] | 0;
+  reqtone = true;
 
   for (i = 0; i < MAXPRESETS; i++) {
     sprintf(key, "preset_%02d", i);
