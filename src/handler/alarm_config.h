@@ -335,6 +335,14 @@ bool applyAlarmConfig(const String &json) {
     return false;
   }
 
+  for (uint8_t i = 0; i < alarm_schedule.count; i++) {
+    const AlarmEntry &entry = alarm_schedule.entries[i];
+    if (entry.enabled && entry.days_mask == 0) {
+      dbgprint("Alarm %d enabled without weekdays", entry.id);
+      return false;
+    }
+  }
+
   ini_block.alrm_config = json;
   return (nvsSetAlarmConfig(json) == ESP_OK);
 }

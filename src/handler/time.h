@@ -5,6 +5,8 @@
 // called every second. *
 //**************************************************************************************************
 
+#include <esp_sntp.h>
+
 /**
  * @brief Format timeinfo into timetxt string.
  *
@@ -54,23 +56,49 @@ void getCurrentTime() {
   static int16_t retrycount = 100;
   static const char *days[] = {"Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"};
 
-  if (!tft) {
-    return;
-  }
-
-  // Format current time if valid
-  if (timeinfo.tm_year) {
+  if (tft && timeinfo.tm_year) {
     formatTimeString(days);
   }
 
-  // Sync every few hours
   if (--delaycount <= 0) {
     delaycount = 7200; // Reset counter (7200 * 1 second = 2 hours)
+
+    if (!NetworkFound) {
+      delaycount = 300; // Retry NTP sync in 5 minutes when offline
+      return;
+    }
 
     if (timeinfo.tm_year) {
       dbgprint("Sync TOD, old value is %s", timetxt);
     }
 
     syncTimeWithNtp(retrycount, delaycount, days);
+  }
+}
+
+/**
+ * @brief Apply clock settings from ini_block and refresh the system time.
+ *
+ * Reconfigures timezone/NTP from ini_block. Offset and DST changes take effect
+ * immediately via getLocalTime(). When restartNtp is true, SNTP is restarted
+ * (e.g. after changing the NTP server).
+ *
+ * @param restartNtp Restart SNTP and force an immediate resync
+ */
+void applyClockConfiguration(bool restartNtp) {
+  static const char *days[] = {"Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"};
+
+  configTime(ini_block.clk_offset * 3600, ini_block.clk_dst * 3600, ini_block.clk_server.c_str());
+
+  if (!NetworkFound) {
+    return;
+  }
+
+  if (restartNtp && sntp_enabled()) {
+    sntp_restart();
+  }
+
+  if (getLocalTime(&timeinfo, 200) && formatTimeString(days)) {
+    time_req = true;
   }
 }

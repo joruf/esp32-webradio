@@ -9,6 +9,43 @@ void restoreDefaultConfig();
  */
 void saveDefaultConfig();
 
+static uint8_t rinbyt_buf[1024]; // HTTP input buffer shared with body reader
+static uint16_t rinbyt_i = 0;    // Read position in rinbyt_buf
+static uint16_t rinbyt_len = 0;  // Number of valid bytes in rinbyt_buf
+
+static void rinbytResetBuffer() {
+  rinbyt_i = 0;
+  rinbyt_len = 0;
+}
+
+static void resetHttpRequestState() {
+  http_getcmd = "";
+  http_rqfile = "";
+  http_post_content_length = 0;
+  http_response_flag = false;
+  rinbytResetBuffer();
+}
+
+/**
+ * @brief Recover HTTP server state after a dropped client connection.
+ */
+void recoverHttpServerState() {
+  if (http_response_flag && !cmdclient.connected()) {
+    resetHttpRequestState();
+  }
+}
+
+/**
+ * @brief Close the active HTTP client connection and clear request state.
+ */
+static void closeHttpClient() {
+  if (cmdclient.connected()) {
+    cmdclient.flush();
+    cmdclient.stop();
+  }
+  resetHttpRequestState();
+}
+
 /**
  * @brief Send an HTTP/1.1 response with a JSON body and close the connection.
  *
@@ -24,6 +61,7 @@ static void sendHttpJsonResponse(const String &body) {
   cmdclient.print("Cache-Control: no-cache\r\n\r\n");
   cmdclient.print(body);
   cmdclient.flush();
+  closeHttpClient();
 }
 
 /**
@@ -145,15 +183,35 @@ String getradiostatus() {
  * @param maxIdleRetries Max idle polls before returning an error
  * @return uint8_t The next byte read, or '\n' on error
  */
+static bool rinbytTakeBuffered(uint8_t *out) {
+  if (rinbyt_i < rinbyt_len) {
+    *out = rinbyt_buf[rinbyt_i++];
+    return true;
+  }
+  return false;
+}
+
 uint8_t rinbyt(bool forcestart, uint16_t maxIdleRetries = 3) {
-  static uint8_t buf[1024]; // Inputbuffer
-  static uint16_t i;        // Pointer in inputbuffer
-  static uint16_t len;      // Number of bytes in buf
+  uint8_t *buf = rinbyt_buf;
+  uint16_t &i = rinbyt_i;
+  uint16_t &len = rinbyt_len;
   uint16_t tlen;            // Number of available bytes
   uint16_t trycount = 0;    // Limit max. time to read
 
+  if (!cmdclient.connected()) {
+    i = 0;
+    len = 0;
+    return '\n';
+  }
+
+  if (forcestart) {
+    i = 0;
+    len = 0;
+  }
+
   if (forcestart || (i == len)) // Time to read new buffer
   {
+    trycount = 0;
     while (cmdclient.connected()) // Loop while the client's connected
     {
       tlen = cmdclient.available(); // Number of bytes to read from the client
@@ -163,10 +221,12 @@ uint8_t rinbyt(bool forcestart, uint16_t maxIdleRetries = 3) {
         if (++trycount > maxIdleRetries) // Not for a long time?
         {
           dbgprint("HTTP input shorter than expected");
+          i = 0;
+          len = 0;
           return '\n'; // Error! No input
         }
-        delay(10); // Give communication some time
-        continue;  // Next loop of no input yet
+        delay(1); // Give communication some time
+        continue; // Next loop of no input yet
       }
       if (len > sizeof(buf)) // Limit number of bytes
       {
@@ -176,6 +236,16 @@ uint8_t rinbyt(bool forcestart, uint16_t maxIdleRetries = 3) {
       i = 0;                          // Pointer to begin of buffer
       break;
     }
+    if (!cmdclient.connected() || len == 0) {
+      i = 0;
+      len = 0;
+      return '\n';
+    }
+  }
+  if (i >= len) {
+    i = 0;
+    len = 0;
+    return '\n';
   }
   return buf[i++];
 }
@@ -188,49 +258,53 @@ uint8_t rinbyt(bool forcestart, uint16_t maxIdleRetries = 3) {
  * @param maxLen Maximum accepted body size
  * @return String Request body
  */
+static int httpReadByte(uint32_t deadline) {
+  uint8_t b;
+
+  if (rinbytTakeBuffered(&b)) {
+    return (int)b;
+  }
+  while (cmdclient.connected() && millis() < deadline) {
+    if (cmdclient.available() > 0) {
+      return cmdclient.read();
+    }
+    delay(1);
+  }
+  return -1;
+}
+
 static String readHttpPostBody(size_t maxLen) {
   String body = "";
   uint32_t targetLen = http_post_content_length;
-  uint16_t idleRetries = 200;
+  uint32_t deadline = millis() + 5000;
 
   timerStop(timer);
   http_post_content_length = 0;
 
-  if (targetLen > 0 && targetLen < maxLen) {
+  if (targetLen > 0 && targetLen <= maxLen) {
     body.reserve(targetLen + 1);
-    while (body.length() < targetLen && cmdclient.connected()) {
-      uint8_t c = rinbyt(false, idleRetries);
-      if (c == '\n' && body.length() < targetLen && cmdclient.available() == 0) {
+    while (body.length() < targetLen) {
+      int b = httpReadByte(deadline);
+      if (b < 0) {
         break;
       }
-      body += (char)c;
+      body += (char)b;
     }
-    if (body.length() > targetLen) {
-      body = body.substring(0, targetLen);
-    }
+  } else if (targetLen == 0) {
   } else {
-    uint8_t empty_retries = 0;
-    while (empty_retries < 50) {
-      uint8_t c = rinbyt(false, idleRetries);
-      if (c == '\n') {
-        if (body.length() > 0) {
-          break;
-        }
-        empty_retries++;
-        continue;
+    while (body.length() < maxLen - 1) {
+      int b = httpReadByte(deadline);
+      if (b < 0) {
+        break;
       }
-      if (c != '\r') {
-        body += (char)c;
-        empty_retries = 0;
-        if (body.length() >= maxLen - 1) {
-          break;
-        }
+      if (b != '\r') {
+        body += (char)b;
       }
     }
+    body.trim();
   }
 
   timerStart(timer);
-  body.trim();
   return body;
 }
 
@@ -408,9 +482,12 @@ void handlehttpreply() {
 
   if (http_response_flag) {
     http_response_flag = false;
-    if (cmdclient.connected()) {
-      if (http_rqfile.length() == 0 && // An empty "GET"?
-          http_getcmd.length() == 0) {
+    if (!cmdclient.connected()) {
+      resetHttpRequestState();
+      return;
+    }
+    if (http_rqfile.length() == 0 && // An empty "GET"?
+        http_getcmd.length() == 0) {
         if (NetworkFound) // check network
         {
           handleWebpage(String("index.html")); // Okay, send the startpage
@@ -506,12 +583,14 @@ void handlehttpreply() {
             cmdclient.print(sndstr); // send header
             n = listsdtracks("/");   // Handle it
             dbgprint("%d tracks found on SD card", n);
+            closeHttpClient();
             return;                                      // Do not send empty line
           } else if (http_getcmd.startsWith("settings")) // Is is a "Get settings" (like presets
                                                          // and tone)?
           {
             cmdclient.print(sndstr); // send header
             getsettings();           // Handle settings request
+            closeHttpClient();
             return;                  // Do not send empty line
           } else {
             p = analyzeCmd(http_getcmd.c_str()); // do so
@@ -525,8 +604,8 @@ void handlehttpreply() {
           cmdclient.println("Dummy response\n"); // Text ending with double newline
           dbgprint("Dummy response sent");
         }
-      }
     }
+    closeHttpClient();
   }
 }
 
@@ -548,18 +627,24 @@ void handlehttp() {
   int inx0, inx;           // Pos. of search string in currenLine
   String currentLine = ""; // Build up to complete line
   bool reqseen = false;    // No GET seen yet
+  uint32_t deadline = millis() + 5000;
 
   http_post_content_length = 0;
+  http_getcmd = "";
+  http_rqfile = "";
 
   if (!cmdclient.connected()) // Action if client is connected
   {
     return; // No client active
   }
   // dbgprint ( "handlehttp started" ) ;
-  while (true) // Loop till command/file seen
+  while (millis() < deadline) // Loop till command/file seen
   {
     c = rinbyt(first); // Get a byte
     first = false;     // No more first call
+    if (!cmdclient.connected()) {
+      break;
+    }
     if (c == '\n') {
       // If the current line is blank, you got two newline characters in a row.
       // that's the end of the client HTTP request, so send a response:
@@ -642,11 +727,13 @@ void handlehttp() {
     cmdclient.print(jsonResponse);
 
     cmdclient.flush();
-    cmdclient.stop();
+    closeHttpClient();
+    return;
+  }
 
-    http_getcmd = "";
-    http_rqfile = "";
-    http_response_flag = false;
+  if (!reqseen) {
+    dbgprint("HTTP request incomplete or timed out");
+    closeHttpClient();
     return;
   }
 
@@ -659,17 +746,30 @@ void handlehttp() {
 // Set http headers to a string. *
 //**************************************************************************************************
 
+#ifndef WEBUI_CACHE_MAX_AGE
+#define WEBUI_CACHE_MAX_AGE 0
+#endif
+
 /**
  * @brief Generate HTTP response header string.
+ *
+ * Uses WEBUI_CACHE_MAX_AGE: values >= 1 send max-age caching; 0 disables caching.
  *
  * @param contentstype The Content-Type header value (e.g., "text/html")
  * @return String Complete HTTP header
  */
 String httpheader(String contentstype) {
-  return String("HTTP/1.1 200 OK\nContent-type:") + contentstype +
-         String("\n"
-                "Server: " NAME "\n"
-                "Cache-Control: "
-                "max-age=3600\n"
-                "Last-Modified: " FIRMWARE "\n\n");
+  String header = String("HTTP/1.1 200 OK\nContent-type:") + contentstype +
+                  String("\n"
+                         "Server: " NAME "\n"
+                         "Connection: close\n"
+                         "Cache-Control: ");
+#if WEBUI_CACHE_MAX_AGE >= 1
+  header += String("max-age=") + String(WEBUI_CACHE_MAX_AGE) + "\n";
+  header += String("Last-Modified: " FIRMWARE "\n\n");
+#else
+  header += String("no-cache, no-store, must-revalidate\n"
+                   "Pragma: no-cache\n\n");
+#endif
+  return header;
 }

@@ -355,23 +355,22 @@ static void handleTftUpdate() {
  * @brief Handle time and alarm display updates.
  */
 static void handleTimeAndAlarmUpdate() {
-  if (time_req && NetworkFound) {
-    getCurrentTime();
-    handleRadioAlarm();
+  if (!time_req) {
+    return;
   }
+
+  getCurrentTime();
+  handleRadioAlarm();
 }
 
 /**
  * @brief Handle VS1053 volume and tone settings.
  */
 static void handleVs1053VolumeAndTone() {
-  claimSPI("hspec");
+  updateVolumeFade();
 
-  if (isSoundPlaying() == false) {
-    vs1053player->setVolume(0);
-  } else {
-    vs1053player->setVolume(ini_block.reqvol);
-  }
+  claimSPI("hspec");
+  vs1053player->setVolume(getOutputVolume());
 
   if (reqtone) {
     reqtone = false;

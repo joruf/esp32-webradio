@@ -24,24 +24,6 @@ const char interface_js[] PROGMEM = R"=====(
         return (value < 10 ? "0" : "") + value;
     }
 
-    function buildHourOptions(selected) {
-        var html = "";
-        var i;
-        for (i = 0; i < 24; i++) {
-            html += '<option value="' + i + '"' + (parseInt(selected, 10) === i ? ' selected' : '') + '>' + i + '</option>';
-        }
-        return html;
-    }
-
-    function buildMinuteOptions(selected) {
-        var html = "";
-        var i;
-        for (i = 0; i < 60; i++) {
-            html += '<option value="' + pad2(i) + '"' + (pad2(selected) === pad2(i) ? ' selected' : '') + '>' + pad2(i) + '</option>';
-        }
-        return html;
-    }
-
     function parseAlarmTime(timeValue) {
         var parts = (timeValue || "0:00").split(":");
         return {
@@ -52,6 +34,237 @@ const char interface_js[] PROGMEM = R"=====(
 
     function formatAlarmTime(hour, minute) {
         return parseInt(hour, 10) + ":" + pad2(parseInt(minute, 10) || 0);
+    }
+
+    function formatAlarmTimeDisplay(timeValue) {
+        var parsed = parseAlarmTime(timeValue);
+        return pad2(parsed.hour) + ":" + parsed.minute;
+    }
+
+    function isValidAlarmTime(value) {
+        var parts;
+        var hour;
+        var minute;
+
+        if (!/^(\d{2}):(\d{2})$/.test(value)) {
+            return false;
+        }
+
+        parts = value.split(":");
+        hour = parseInt(parts[0], 10);
+        minute = parseInt(parts[1], 10);
+        return hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59;
+    }
+
+    function readAlarmTimeParts(value) {
+        var match = (value || "00:00").match(/^(\d{2}):(\d{2})$/);
+        if (!match) {
+            return { hour: "00", minute: "00" };
+        }
+        return { hour: match[1], minute: match[2] };
+    }
+
+    function writeAlarmTimeValue(input, hour, minute) {
+        input.value = pad2(Math.min(23, parseInt(hour, 10) || 0)) + ":" +
+            pad2(Math.min(59, parseInt(minute, 10) || 0));
+    }
+
+    function clampAlarmSegment(segment, value) {
+        var max = segment === "hour" ? 23 : 59;
+        var num = parseInt(value, 10) || 0;
+        if (num > max) {
+            num = max;
+        }
+        return pad2(num);
+    }
+
+    function selectAlarmTimeSegment(input, segment) {
+        if (segment === "hour") {
+            input.setSelectionRange(0, 2);
+        } else {
+            input.setSelectionRange(3, 5);
+        }
+    }
+
+    function getAlarmTimeSegmentFromPos(pos) {
+        return pos <= 2 ? "hour" : "minute";
+    }
+
+    function markAlarmTimeValidity($input) {
+        if (isValidAlarmTime($input.val())) {
+            $input.removeClass("alarm-time-invalid");
+        } else {
+            $input.addClass("alarm-time-invalid");
+        }
+    }
+
+    function normalizeAlarmTimeInput($input) {
+        var parts = readAlarmTimeParts($.trim($input.val()));
+        writeAlarmTimeValue($input.get(0), parts.hour, parts.minute);
+        markAlarmTimeValidity($input);
+        return isValidAlarmTime($input.val());
+    }
+
+    function normalizeAllAlarmTimeInputs() {
+        $("#alarm-list .alarm-time-input").each(function() {
+            normalizeAlarmTimeInput($(this));
+        });
+    }
+
+    function validateSchedulerAlarmsBeforeSave() {
+        normalizeAllAlarmTimeInputs();
+        var config = collectAlarmConfig();
+        var i;
+
+        for (i = 0; i < config.alarms.length; i++) {
+            if (!isValidAlarmTime(formatAlarmTimeDisplay(config.alarms[i].start))) {
+                return {
+                    ok: false,
+                    message: "Alarm #" + config.alarms[i].id + ": invalid start time (use hh:mm)"
+                };
+            }
+            if (!isValidAlarmTime(formatAlarmTimeDisplay(config.alarms[i].stop))) {
+                return {
+                    ok: false,
+                    message: "Alarm #" + config.alarms[i].id + ": invalid shut-off time (use hh:mm)"
+                };
+            }
+            if (config.alarms[i].enabled && (!config.alarms[i].days || config.alarms[i].days.length === 0)) {
+                return {
+                    ok: false,
+                    message: "Alarm #" + config.alarms[i].id + ": select at least one weekday"
+                };
+            }
+        }
+
+        return { ok: true, config: config };
+    }
+
+    function handleAlarmTimeSegmentSelect(input) {
+        var pos = input.selectionStart || 0;
+        selectAlarmTimeSegment(input, getAlarmTimeSegmentFromPos(pos));
+    }
+
+    function handleAlarmTimeKeydown(e) {
+        var input = e.target;
+        var key = e.key;
+        var pos = input.selectionStart;
+        var end = input.selectionEnd;
+        var segment = getAlarmTimeSegmentFromPos(pos);
+        var parts = readAlarmTimeParts(input.value);
+        var digit;
+        var hourSelected;
+        var minuteSelected;
+        var firstDigit;
+        var newHour;
+        var newMinute;
+
+        if (key === "Tab" || e.ctrlKey || e.metaKey || e.altKey) {
+            return;
+        }
+
+        if (key === "ArrowLeft") {
+            if (segment === "minute") {
+                e.preventDefault();
+                selectAlarmTimeSegment(input, "hour");
+            }
+            return;
+        }
+
+        if (key === "ArrowRight") {
+            if (segment === "hour") {
+                e.preventDefault();
+                selectAlarmTimeSegment(input, "minute");
+            }
+            return;
+        }
+
+        if (key === "Backspace" || key === "Delete") {
+            e.preventDefault();
+            if (segment === "hour") {
+                writeAlarmTimeValue(input, 0, parts.minute);
+                selectAlarmTimeSegment(input, "hour");
+            } else {
+                writeAlarmTimeValue(input, parts.hour, 0);
+                selectAlarmTimeSegment(input, "minute");
+            }
+            markAlarmTimeValidity($(input));
+            return;
+        }
+
+        if (key === ":") {
+            e.preventDefault();
+            selectAlarmTimeSegment(input, "minute");
+            return;
+        }
+
+        if (!/^\d$/.test(key)) {
+            e.preventDefault();
+            return;
+        }
+
+        e.preventDefault();
+        digit = parseInt(key, 10);
+
+        if (segment === "hour") {
+            hourSelected = (pos <= 0 && end >= 2) || (end - pos) >= 2;
+
+            if (hourSelected || pos === 0) {
+                if (digit > 2) {
+                    writeAlarmTimeValue(input, digit, parts.minute);
+                    selectAlarmTimeSegment(input, "minute");
+                } else {
+                    writeAlarmTimeValue(input, digit, parts.minute);
+                    input.setSelectionRange(1, 2);
+                }
+            } else {
+                firstDigit = parseInt(parts.hour.charAt(1), 10);
+                newHour = firstDigit * 10 + digit;
+                if (newHour > 23) {
+                    newHour = 23;
+                }
+                writeAlarmTimeValue(input, newHour, parts.minute);
+                selectAlarmTimeSegment(input, "minute");
+            }
+        } else {
+            minuteSelected = (pos <= 3 && end >= 5) || (end - pos) >= 2;
+
+            if (minuteSelected || pos === 3) {
+                writeAlarmTimeValue(input, parts.hour, digit);
+                input.setSelectionRange(4, 5);
+            } else {
+                firstDigit = parseInt(parts.minute.charAt(1), 10);
+                newMinute = firstDigit * 10 + digit;
+                if (newMinute > 59) {
+                    newMinute = 59;
+                }
+                writeAlarmTimeValue(input, parts.hour, newMinute);
+                input.setSelectionRange(5, 5);
+            }
+        }
+
+        markAlarmTimeValidity($(input));
+    }
+
+    function handleAlarmTimePaste(e) {
+        var input = e.target;
+        var text = "";
+        var match;
+
+        e.preventDefault();
+
+        if (e.originalEvent && e.originalEvent.clipboardData) {
+            text = e.originalEvent.clipboardData.getData("text");
+        } else if (window.clipboardData) {
+            text = window.clipboardData.getData("Text");
+        }
+
+        match = $.trim(text).match(/^(\d{1,2}):(\d{1,2})$/);
+        if (match) {
+            writeAlarmTimeValue(input, match[1], match[2]);
+            markAlarmTimeValidity($(input));
+            selectAlarmTimeSegment(input, "minute");
+        }
     }
 
     function getNextAlarmId() {
@@ -76,8 +289,6 @@ const char interface_js[] PROGMEM = R"=====(
     }
 
     function renderAlarmCard(alarm, index) {
-        var start = parseAlarmTime(alarm.start);
-        var stop = parseAlarmTime(alarm.stop);
         var dayHtml = "";
         var i;
 
@@ -94,23 +305,22 @@ const char interface_js[] PROGMEM = R"=====(
                     '<label class="alarm-enabled-toggle"><input type="checkbox" class="alarm-enabled"' + (alarm.enabled ? ' checked' : '') + '> Enabled</label>' +
                 '</div>' +
                 '<div class="panel-body">' +
-                    '<div class="row">' +
-                        '<div class="form-group col-xs-12 col-sm-6 col-md-3 col-lg-3">' +
-                            '<label>Start (hour)</label>' +
-                            '<select class="form-control alarm-start-hour">' + buildHourOptions(start.hour) + '</select>' +
+                    '<div class="row alarm-time-row">' +
+                        '<div class="form-group alarm-time-field">' +
+                            '<label for="alarm-start-' + alarm.id + '">Start</label>' +
+                            '<input type="text" id="alarm-start-' + alarm.id + '" class="form-control alarm-time-input alarm-start-time" ' +
+                                'value="' + formatAlarmTimeDisplay(alarm.start) + '" ' +
+                                'placeholder="hh:mm" maxlength="5" inputmode="numeric" ' +
+                                'pattern="([01][0-9]|2[0-3]):[0-5][0-9]" title="24-hour time as hh:mm">' +
                         '</div>' +
-                        '<div class="form-group col-xs-12 col-sm-6 col-md-3 col-lg-3">' +
-                            '<label>Start (minute)</label>' +
-                            '<select class="form-control alarm-start-minute">' + buildMinuteOptions(start.minute) + '</select>' +
+                        '<div class="form-group alarm-time-field">' +
+                            '<label for="alarm-stop-' + alarm.id + '">Shut-off</label>' +
+                            '<input type="text" id="alarm-stop-' + alarm.id + '" class="form-control alarm-time-input alarm-stop-time" ' +
+                                'value="' + formatAlarmTimeDisplay(alarm.stop) + '" ' +
+                                'placeholder="hh:mm" maxlength="5" inputmode="numeric" ' +
+                                'pattern="([01][0-9]|2[0-3]):[0-5][0-9]" title="24-hour time as hh:mm">' +
                         '</div>' +
-                        '<div class="form-group col-xs-12 col-sm-6 col-md-3 col-lg-3">' +
-                            '<label>Shut-off (hour)</label>' +
-                            '<select class="form-control alarm-stop-hour">' + buildHourOptions(stop.hour) + '</select>' +
-                        '</div>' +
-                        '<div class="form-group col-xs-12 col-sm-6 col-md-3 col-lg-3">' +
-                            '<label>Shut-off (minute)</label>' +
-                            '<select class="form-control alarm-stop-minute">' + buildMinuteOptions(stop.minute) + '</select>' +
-                        '</div>' +
+                        '<div class="clearfix"></div>' +
                     '</div>' +
                     '<div class="row">' +
                         '<div class="col-xs-12 alarm-days">' + dayHtml + '</div>' +
@@ -146,15 +356,21 @@ const char interface_js[] PROGMEM = R"=====(
         $("#alarm-list .alarm-card").each(function() {
             var $card = $(this);
             var days = [];
+            var startParsed;
+            var stopParsed;
+
             $card.find(".alarm-day-checkbox:checked").each(function() {
                 days.push($(this).data("day"));
             });
 
+            startParsed = parseAlarmTime($.trim($card.find(".alarm-start-time").val()));
+            stopParsed = parseAlarmTime($.trim($card.find(".alarm-stop-time").val()));
+
             alarms.push({
                 id: parseInt($card.find(".alarm-card-heading span").text().replace("Alarm #", ""), 10),
                 enabled: $card.find(".alarm-enabled").is(":checked"),
-                start: formatAlarmTime($card.find(".alarm-start-hour").val(), $card.find(".alarm-start-minute").val()),
-                stop: formatAlarmTime($card.find(".alarm-stop-hour").val(), $card.find(".alarm-stop-minute").val()),
+                start: formatAlarmTime(startParsed.hour, startParsed.minute),
+                stop: formatAlarmTime(stopParsed.hour, stopParsed.minute),
                 days: days
             });
         });
@@ -200,6 +416,38 @@ const char interface_js[] PROGMEM = R"=====(
         [12, "110 Hz"], [13, "120 Hz"], [14, "130 Hz"], [15, "140 Hz"]
     ];
 
+    var CLK_OFFSET_MIN = -11;
+    var CLK_OFFSET_MAX = 14;
+
+    var clkDstOptions = [
+        [0, "Off (no summer time)"],
+        [1, "On (+1 hour summer time)"]
+    ];
+
+    function formatUtcOffsetLabel(hours) {
+        if (hours === 0) {
+            return "UTC+0 (no offset)";
+        }
+        if (hours > 0) {
+            return "UTC+" + hours;
+        }
+        return "UTC" + hours;
+    }
+
+    function normalizeClockOffsetValue(value) {
+        var parsed = parseInt(value, 10);
+        if (isNaN(parsed)) {
+            return 1;
+        }
+        if (parsed < CLK_OFFSET_MIN) {
+            return CLK_OFFSET_MIN;
+        }
+        if (parsed > CLK_OFFSET_MAX) {
+            return CLK_OFFSET_MAX;
+        }
+        return parsed;
+    }
+
     function normalizeBinaryClockValue(value) {
         return (parseInt(value, 10) === 1) ? 1 : 0;
     }
@@ -241,13 +489,54 @@ const char interface_js[] PROGMEM = R"=====(
         }
 
         fillSelectIfEmpty("#clk-offset",
-            '<option value="0">0</option><option value="1">1</option>');
+            buildNumericSelectOptions(CLK_OFFSET_MIN, CLK_OFFSET_MAX, 1, formatUtcOffsetLabel));
         fillSelectIfEmpty("#clk-dst",
-            '<option value="0">0</option><option value="1">1</option>');
-        fillSelectIfEmpty("#cfg-preset",
-            buildNumericSelectOptions(0, 199, 0, function(value) {
-                return "Preset " + value;
-            }));
+            buildLabeledSelectOptions(clkDstOptions, 1));
+    }
+
+    function renderBootPresetSelect(selectedPreset) {
+        var $select = $("#cfg-preset");
+        if (!$select.length) {
+            return;
+        }
+
+        sortPresetsBySlot();
+        var presets = radioConfigState.presets.filter(function(preset) {
+            return preset && String(preset.url || "").trim().length > 0;
+        });
+
+        var selectedValue;
+        if (selectedPreset !== undefined && selectedPreset !== null && selectedPreset !== "") {
+            selectedValue = parseInt(selectedPreset, 10);
+        } else if (loadedRadioConfig && loadedRadioConfig.preset !== undefined) {
+            selectedValue = parseInt(loadedRadioConfig.preset, 10);
+        } else {
+            selectedValue = parseInt($select.val(), 10);
+        }
+
+        var hasSelected = presets.some(function(preset) {
+            return preset.slot === selectedValue;
+        });
+        if (!hasSelected && presets.length > 0) {
+            selectedValue = presets[0].slot;
+        }
+
+        if (presets.length === 0) {
+            $select.html('<option value="" disabled selected>No presets configured</option>');
+            return;
+        }
+
+        var html = "";
+        var i;
+        for (i = 0; i < presets.length; i++) {
+            var preset = presets[i];
+            var label = preset.name ? preset.name : preset.url;
+            html += '<option value="' + preset.slot + '"' +
+                (preset.slot === selectedValue ? ' selected' : '') + '>' +
+                escapeHtml(String(preset.slot) + " - " + label) +
+                '</option>';
+        }
+        $select.html(html);
     }
 
     function initSoundSelectOptions() {
@@ -265,11 +554,11 @@ const char interface_js[] PROGMEM = R"=====(
         return !configFormLoading && ($("#save-config").length || $("#sound-settings").length);
     }
 
-    function persistRadioConfig() {
+    function persistRadioConfig(options) {
         if (!canPersistRadioConfig()) {
             return;
         }
-        saveRadioConfig({ applyAudio: false });
+        saveRadioConfig($.extend({ applyAudio: false }, options || {}));
     }
 
     function applySoundSelectChange(fieldId, value) {
@@ -302,11 +591,13 @@ const char interface_js[] PROGMEM = R"=====(
 
         switch (fieldId) {
             case "clk-offset":
-                httpGet("clk_offset=" + normalizeBinaryClockValue(value));
-                break;
+                httpGet("clk_offset=" + normalizeClockOffsetValue(value));
+                persistRadioConfig({ silentLog: true });
+                return;
             case "clk-dst":
                 httpGet("clk_dst=" + normalizeBinaryClockValue(value));
-                break;
+                persistRadioConfig({ silentLog: true });
+                return;
             case "cfg-preset":
                 break;
         }
@@ -357,7 +648,7 @@ const char interface_js[] PROGMEM = R"=====(
                     return;
                 }
                 httpGet("clk_server=" + encodeURIComponent($(this).val()));
-                persistRadioConfig();
+                persistRadioConfig({ silentLog: true });
             });
     }
 
@@ -447,6 +738,7 @@ const char interface_js[] PROGMEM = R"=====(
                 '</div>';
         }
         renderConfigRows("#preset-list", html);
+        renderBootPresetSelect();
     }
 
     function renderGpioList() {
@@ -469,7 +761,7 @@ const char interface_js[] PROGMEM = R"=====(
     }
 
     function applyClockFields(cfg) {
-        var offset = normalizeBinaryClockValue(cfg.clock ? cfg.clock.offset : 0);
+        var offset = normalizeClockOffsetValue(cfg.clock ? cfg.clock.offset : 1);
         var dst = normalizeBinaryClockValue(cfg.clock ? cfg.clock.dst : 0);
 
         $("#clk-server").val((cfg.clock && cfg.clock.server) ? cfg.clock.server : "pool.ntp.org");
@@ -527,9 +819,21 @@ const char interface_js[] PROGMEM = R"=====(
         });
     }
 
-    function saveSchedulerAlarms() {
-        var config = collectAlarmConfig();
-        var json = JSON.stringify(config);
+    function saveSchedulerAlarms(options) {
+        options = options || {};
+        var validation = validateSchedulerAlarmsBeforeSave();
+        var config;
+        var json;
+        var successPrefix = options.removed ? "Alarm removed successfully: " : "Alarm configuration saved: ";
+        var errorPrefix = options.removed ? "Alarm remove failed: " : "Alarm save failed: ";
+
+        if (!validation.ok) {
+            showCommandLog(validation.message);
+            return false;
+        }
+
+        config = validation.config;
+        json = JSON.stringify(config);
 
         $.ajax({
             url: "/?savealarms&_t=" + Date.now(),
@@ -537,13 +841,29 @@ const char interface_js[] PROGMEM = R"=====(
             contentType: "application/json; charset=UTF-8",
             data: json,
             success: function(response) {
+                var responseText = $.trim(response || "");
+
                 alarmState.alarms = config.alarms;
-                showCommandLog(response);
+                if (responseText.length === 0) {
+                    showCommandLog(errorPrefix + "empty response from device");
+                    return;
+                }
+                if (responseText.toLowerCase().indexOf("failed") >= 0) {
+                    showCommandLog(errorPrefix + responseText);
+                    return;
+                }
+                showCommandLog(successPrefix + responseText);
             },
-            error: function() {
-                showCommandLog("Failed to save alarm configuration");
+            error: function(xhr) {
+                var message = errorPrefix + "request failed";
+                if (xhr && xhr.responseText) {
+                    message = errorPrefix + $.trim(xhr.responseText);
+                }
+                showCommandLog(message);
             }
         });
+
+        return true;
     }
 
     function applyRadioConfigToForms(cfg) {
@@ -559,7 +879,6 @@ const char interface_js[] PROGMEM = R"=====(
 
         if ($("#clk-server").length) {
             applyClockFields(loadedRadioConfig);
-            $("#cfg-preset").val(String(loadedRadioConfig.preset !== undefined ? loadedRadioConfig.preset : 0));
         }
         if ($("#sound-settings").length) {
             applySoundFields(loadedRadioConfig);
@@ -569,6 +888,8 @@ const char interface_js[] PROGMEM = R"=====(
         }
         if ($("#preset-list").length) {
             renderPresetList();
+        } else if ($("#cfg-preset").length) {
+            renderBootPresetSelect(loadedRadioConfig.preset);
         }
         if ($("#gpio-list").length) {
             renderGpioList();
@@ -585,7 +906,7 @@ const char interface_js[] PROGMEM = R"=====(
         if ($("#clk-server").length) {
             config.clock = {
                 server: $("#clk-server").val(),
-                offset: normalizeBinaryClockValue($("#clk-offset").val()),
+                offset: normalizeClockOffsetValue($("#clk-offset").val()),
                 dst: normalizeBinaryClockValue($("#clk-dst").val())
             };
             config.preset = parseInt($("#cfg-preset").val(), 10) || 0;
@@ -964,7 +1285,9 @@ const char interface_js[] PROGMEM = R"=====(
                 }
                 loadedRadioConfig = config;
                 alarmState.alarms = config.alarms || alarmState.alarms;
-                showCommandLog(response);
+                if (!options.silentLog) {
+                    showCommandLog(response);
+                }
                 if (applyAudio) {
                     applyAudioSettingsFromConfig(config);
                 }
@@ -988,11 +1311,34 @@ const char interface_js[] PROGMEM = R"=====(
         alarmState.alarms = collectAlarmsFromDom();
         alarmState.alarms.splice(index, 1);
         renderAlarmList();
-        saveSchedulerAlarms();
+        saveSchedulerAlarms({ removed: true });
     });
 
     $(document).on("click", ".save-alarm", function() {
+        var $card = $(this).closest(".alarm-card");
+        $card.find(".alarm-time-input").each(function() {
+            normalizeAlarmTimeInput($(this));
+        });
         saveSchedulerAlarms();
+    });
+
+    $(document).on("focus", ".alarm-time-input", function() {
+        handleAlarmTimeSegmentSelect(this);
+    });
+
+    $(document).on("click", ".alarm-time-input", function() {
+        var input = this;
+        setTimeout(function() {
+            handleAlarmTimeSegmentSelect(input);
+        }, 0);
+    });
+
+    $(document).on("keydown", ".alarm-time-input", handleAlarmTimeKeydown);
+
+    $(document).on("paste", ".alarm-time-input", handleAlarmTimePaste);
+
+    $(document).on("blur", ".alarm-time-input", function() {
+        normalizeAlarmTimeInput($(this));
     });
 
     $(document).on("click", "#add-wifi", function() {
@@ -1156,7 +1502,10 @@ const char interface_js[] PROGMEM = R"=====(
         var xhr = new XMLHttpRequest();
         xhr.onreadystatechange = function() {
             if (xhr.readyState == XMLHttpRequest.DONE) {
-                command_log.value = xhr.responseText;
+                var log = document.getElementById("command_log");
+                if (log) {
+                    log.value = xhr.responseText;
+                }
             }
         }
         xhr.open("GET", theUrl);
@@ -1173,27 +1522,32 @@ const char interface_js[] PROGMEM = R"=====(
 
 
     function handletone(id, toneVal) {
-        var theUrl = "/?" + id + "=" + toneVal + "&_t=" + Date.now();
+        var value = (toneVal && typeof toneVal === "object" && toneVal.value !== undefined) ? toneVal.value : toneVal;
+        var theUrl = "/?" + id + "=" + value + "&_t=" + Date.now();
         var xhr = new XMLHttpRequest();
         xhr.onreadystatechange = function() {
-            if (xhr.readyState == XMLHttpRequest.DONE) {
-                command_log.value = xhr.responseText;
+            if (xhr.readyState == XMLHttpRequest.DONE && document.getElementById("command_log")) {
+                document.getElementById("command_log").value = xhr.responseText;
             }
         }
-        xhr.open("GET", theUrl, false);
+        xhr.open("GET", theUrl, true);
         xhr.send();
     }
 
     
     function setstat() {
-        var theUrl = "/?station=" + station.value + "&_t=" + Date.now();
+        var stationEl = document.getElementById("station");
+        if (!stationEl) {
+            return;
+        }
+        var theUrl = "/?station=" + stationEl.value + "&_t=" + Date.now();
         var xhr = new XMLHttpRequest();
         xhr.onreadystatechange = function() {
-            if (xhr.readyState == XMLHttpRequest.DONE) {
-                command_log.value = xhr.responseText;
+            if (xhr.readyState == XMLHttpRequest.DONE && document.getElementById("command_log")) {
+                document.getElementById("command_log").value = xhr.responseText;
             }
         }
-        xhr.open("GET", theUrl, false);
+        xhr.open("GET", theUrl, true);
         xhr.send();
     }
 
@@ -1212,18 +1566,18 @@ const char interface_js[] PROGMEM = R"=====(
     }
 
 
-    // Fill preset list initially
+    // Fill preset list initially (index page only)
     function fillPresetList () {
         var i, sel, opt, lines, parts;
+        sel = document.getElementById("preset");
+        if (!sel) {
+            return;
+        }
         var theUrl = "/?settings&_t=" + Date.now();
         var xhr = new XMLHttpRequest();
         xhr.onreadystatechange = function() {
             if (xhr.readyState == XMLHttpRequest.DONE) {
                 lines = xhr.responseText.split("\n");
-                sel = document.getElementById("preset");
-                if (typeof sel === 'undefined' || sel === null) {
-                    return;
-                }
 
                 for (i = 0; i < (lines.length - 1); i++) {
                     parts = lines[i].split("=");
@@ -1240,7 +1594,7 @@ const char interface_js[] PROGMEM = R"=====(
                 }
             }
         }
-        xhr.open("GET", theUrl, false);
+        xhr.open("GET", theUrl, true);
         xhr.send();
     }
     fillPresetList();
@@ -1275,7 +1629,7 @@ const char interface_js[] PROGMEM = R"=====(
                 }
             }
         }
-        xhr.open("GET", theUrl, false);
+        xhr.open("GET", theUrl, true);
         xhr.send();     
     }
     configInitially();
@@ -1315,7 +1669,7 @@ const char interface_js[] PROGMEM = R"=====(
                 }
             }
         }
-        xhr.open("GET", theUrl, false);
+        xhr.open("GET", theUrl, true);
         xhr.send();
     }
     fillMP3List();

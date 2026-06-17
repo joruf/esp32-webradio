@@ -66,12 +66,12 @@ const char config_html[] PROGMEM = R"=====(
 							<input type="text" class="form-control" id="clk-server" placeholder="pool.ntp.org">
 						</div>
 						<div class="form-group col-xs-6 col-sm-3">
-							<label for="clk-offset">UTC offset</label>
-							<select class="form-control" id="clk-offset"></select>
+							<label for="clk-offset" title="Hours added to UTC for your local standard (winter) time. Range UTC-11 to UTC+14. Example: UTC+1 for Central Europe.">UTC offset</label>
+							<select class="form-control" id="clk-offset" title="Hours added to UTC for your local standard (winter) time. Range UTC-11 to UTC+14. Example: UTC+1 for Central Europe."></select>
 						</div>
 						<div class="form-group col-xs-6 col-sm-3">
-							<label for="clk-dst">DST offset</label>
-							<select class="form-control" id="clk-dst"></select>
+							<label for="clk-dst" title="Extra hours added during daylight saving time (summer). Enable +1 hour if your region uses summer time.">Summer time (DST)</label>
+							<select class="form-control" id="clk-dst" title="Extra hours added during daylight saving time (summer). Enable +1 hour if your region uses summer time."></select>
 						</div>
 					</div>
 				</div>

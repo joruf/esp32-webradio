@@ -9,6 +9,8 @@
 #include <ArduinoJson.h>
 #include "alarm_config.h"
 
+void applyClockConfiguration(bool restartNtp);
+
 #define RADIO_CONFIG_MAX_LEN 8192
 #define RADIO_CONFIG_NVS_KEY "radio_config"
 #define RADIO_CONFIG_VERSION 2
@@ -410,7 +412,12 @@ bool applyRadioConfig(const String &json, bool maskWifiPasswords) {
 
   nvsOpen();
 
-  String savedWifi[100];
+  String *savedWifi = new String[100];
+  if (savedWifi == nullptr) {
+    dbgprint("applyRadioConfig: out of memory");
+    return false;
+  }
+
   for (i = 0; i < 100; i++) {
     sprintf(key, "wifi_%02d", i);
     savedWifi[i] = nvsKeyExists(key) ? nvsGetValue(key) : "";
@@ -453,13 +460,17 @@ bool applyRadioConfig(const String &json, bool maskWifiPasswords) {
     i++;
   }
 
+  delete[] savedWifi;
+
   JsonObject clock = doc["clock"];
+  String previousClkServer = ini_block.clk_server;
   nvsAddValue("clk_server", String(clock["server"] | "pool.ntp.org"));
   nvsAddValue("clk_offset", String(clock["offset"] | 1));
   nvsAddValue("clk_dst", String(clock["dst"] | 1));
   ini_block.clk_server = String(clock["server"] | "pool.ntp.org");
   ini_block.clk_offset = clock["offset"] | 1;
   ini_block.clk_dst = clock["dst"] | 1;
+  bool restartNtp = (ini_block.clk_server != previousClkServer);
 
   uint8_t volume = doc["volume"] | 72;
   if (volume > 100) {
@@ -534,6 +545,7 @@ bool applyRadioConfig(const String &json, bool maskWifiPasswords) {
   }
 
   ini_block.alrm_config = alarmsJson.length() > 0 ? alarmsJson : ini_block.alrm_config;
+  applyClockConfiguration(restartNtp);
   return true;
 }
 

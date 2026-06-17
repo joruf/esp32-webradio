@@ -38,7 +38,11 @@
 
 // Define the version number, also used for webserver as Last-Modified header and to
 // check version for update.  The format must be exactly as specified by the HTTP standard!
-#define FIRMWARE "v2.12 2026-06-16"
+#define FIRMWARE "v2.13 2026-06-17"
+
+// Web UI cache duration in seconds for static files (HTML, CSS, JS).
+// 0 = caching disabled. Values >= 1 enable Cache-Control: max-age=<seconds>.
+#define WEBUI_CACHE_MAX_AGE 60
 /*
 Firmware Changes:
 2.00  2025-03-06  Reload time changes on problems with the data connection.
@@ -61,11 +65,18 @@ Firmware Changes:
                   VSCode PlatformIO Bugfixes vs1053 semaphores Time format expanded with date
 2.11  2026-06-15  Web config as JSON/NVS with form UI. Scheduler page (sleep timer, alarms). Preset reorder.
                   Bugfixes playlist redirect, EEPROM/config load, alarm save.
-2.12  2026-06-15  Configuration auto-saves immediately on field change (select change sends setting at once).
+2.12  2026-06-16  Configuration auto-saves immediately on field change (select change sends setting at once).
                   UTC offset and DST as select boxes (0 or 1 only); other numeric options use select boxes.
                   Sound settings (volume, equalizer) moved from Configuration to Sound Settings page.
                   HTTP POST config save fixed (Content-Length, full body read, save error feedback).
                   Scheduler: removing an alarm now persists to NVS.
+2.13  2026-06-17  Alarm scheduler fixed: weekday check, reliable start/stop, per-second task handling.
+                  Boot preset select lists only configured presets. Scheduler alarm times as hh:mm masked inputs
+                  (two-digit entry, e.g. 20:00 and 23:59). Save/remove alarm feedback in command log.
+                  Clock/NTP: descriptive labels and tooltips; UTC offset UTC-11..UTC+14, DST Off/On.
+                  Clock settings apply immediately (applyClockConfiguration); command log shows updated time.
+                  WEBUI_CACHE_MAX_AGE for static UI caching (60s). HTTP server stability improvements.
+                  Soft volume fade in/out on radio play start and stop (2s).
 */
 
 // ESP32-Radio can be updated (OTA) to the latest version from a remote server.
@@ -142,12 +153,14 @@ const char *analyzeCmd(const char *str);
 const char *analyzeCmd(const char *par, const char *val);
 void chomp(String &str);
 String httpheader(String contentstype);
+void recoverHttpServerState();
 bool nvsKeyExists(const char *key);
 void mp3loop();
 void tftlog(const char *str);
 void playStreamFromQueue(void *parameter); // Task to play the stream
 void spftask(void *parameter);             // Task for special functions
 void getCurrentTime();
+void applyClockConfiguration(bool restartNtp);
 void reservepin(int8_t rpinnr);
 
 bool isSoundPlaying();
@@ -972,8 +985,10 @@ void loop() {
       NetworkFound = connectwifi();
       if (NetworkFound) {
         // Bei erfolgreicher Verbindung notwendige Services neu starten
+        cmdserver.begin();
         ArduinoOTA.begin();
         MDNS.begin(NAME);
+        dbgprint("HTTP server restarted after WiFi reconnect");
       }
     }
     wasConnected = false;
@@ -981,6 +996,7 @@ void loop() {
     // Bei wiederhergestellter Verbindung
     wasConnected = true;
     ipaddress = WiFi.localIP().toString();
+    cmdserver.begin();
     dbgprint("Reconnected to WiFi. IP: %s", ipaddress.c_str());
   }
 
@@ -995,11 +1011,14 @@ void loop() {
   // scanIR();                                        // See if IR input
   ArduinoOTA.handle(); // Check for OTA
   mp3loop();           // Do more mp3 related actions
+  if (http_response_flag && !cmdclient.connected()) {
+    recoverHttpServerState();
+  }
   handlehttpreply();
-  cmdclient = cmdserver.available(); // Check Input from client?
-  if (cmdclient)                     // Client connected?
-  {
-    // dbgprint("Command client available");
+  if (!cmdclient.connected() && !http_response_flag) {
+    cmdclient = cmdserver.available(); // Accept a new client only when idle
+  }
+  if (cmdclient.connected() && !http_response_flag) {
     handlehttp();
   }
 

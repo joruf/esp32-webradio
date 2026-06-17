@@ -9,9 +9,7 @@
  * @see handleRadioAlarm()
  */
 void IRAM_ATTR timer60sec() {
-  // dbgprint ("60 seconds over, last minute %d ", timeinfo.tm_min);
-  //  Enable/Disable radio alarm at specified time
-  handleRadioAlarm();
+  // Alarm handling runs once per second in handleTimeAndAlarmUpdate() (task context).
 }
 
 /**
@@ -116,6 +114,7 @@ void IRAM_ATTR timer100() {
         timeinfo.tm_min = 0; // Wrap after 60 minutes
         if (++timeinfo.tm_hour >= 24) {
           timeinfo.tm_hour = 0; // Wrap after 24 hours
+          timeinfo.tm_wday = (timeinfo.tm_wday + 1) % 7;
         }
       }
     }

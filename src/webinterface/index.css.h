@@ -43,4 +43,12 @@ const char index_css[] PROGMEM = R"=====(
 	.alarm-enabled-toggle { margin: 0; font-weight: normal; }
 	.alarm-days { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
 	.alarm-day { margin-right: 10px; font-weight: normal; }
+	.alarm-time-row { margin-bottom: 10px; }
+	.alarm-time-field { position: relative; min-height: 1px; padding-left: 15px; padding-right: 15px; float: left; width: 50%; }
+	.alarm-time-field label { white-space: nowrap; }
+	.alarm-time-input { max-width: 8em; font-family: monospace; letter-spacing: 0.05em; text-align: center; }
+	.alarm-time-input.alarm-time-invalid { border-color: #a94442; }
+	@media (min-width: 768px) {
+		.alarm-time-field { width: 25%; }
+	}
 )=====" ;

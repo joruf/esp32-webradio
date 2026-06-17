@@ -4,6 +4,23 @@
  */
 int32_t sleeptimer_ms = -1; // -1 means timer is disabled
 
+static int8_t alarm_last_check_hour = -1;
+static int8_t alarm_last_check_min = -1;
+static uint16_t alarm_started_mask = 0;
+static uint16_t alarm_stopped_mask = 0;
+
+/**
+ * @brief Reset per-minute alarm trigger tracking when the clock minute changes.
+ */
+static void resetAlarmMinuteTracking(void) {
+  if (timeinfo.tm_hour != alarm_last_check_hour || timeinfo.tm_min != alarm_last_check_min) {
+    alarm_last_check_hour = timeinfo.tm_hour;
+    alarm_last_check_min = timeinfo.tm_min;
+    alarm_started_mask = 0;
+    alarm_stopped_mask = 0;
+  }
+}
+
 /**
  * @brief Handles the sleep timer for automatically turning off the radio.
  *
@@ -54,7 +71,7 @@ void handleSleepTimer() {
  * @return true  if alarm was started, otherwise false
  */
 static bool tryStartRadioAlarm(int8_t alrm_start_hour, int8_t alrm_start_min) {
-  if (timeinfo.tm_hour == alrm_start_hour && timeinfo.tm_min == alrm_start_min && timeinfo.tm_sec == 0) {
+  if (timeinfo.tm_hour == alrm_start_hour && timeinfo.tm_min == alrm_start_min && timeinfo.tm_sec <= 2) {
 
     // 1. Use the configured alarm station (ini_block.newpreset)
     runStream(true, ini_block.newpreset);
@@ -70,6 +87,7 @@ static bool tryStartRadioAlarm(int8_t alrm_start_hour, int8_t alrm_start_min) {
     enableBacklight(true);
     showTextOnTFT(1, msgRadioAlarmOn);
     radioAlarmStatusChanged = ALRM_START;
+    dbgprint("Radio alarm started at %02d:%02d", alrm_start_hour, alrm_start_min);
     return true;
   }
   return false;
@@ -94,27 +112,21 @@ static bool tryStopRadioAlarm(int8_t alrm_stop_hour, int8_t alrm_stop_min) {
     showTextOnTFT(1, msgRadioAlarmOff);
     radioAlarmStatusChanged = ALRM_STOP;
     showTextOnTFT(3, msgPlayerStopped);
-    enableBacklight(false);
+    dbgprint("Radio alarm stopped at %02d:%02d", alrm_stop_hour, alrm_stop_min);
     return true;
   }
   return false;
 }
 
 /**
- * @brief Updates the display one minute after an alarm start/stop event.
- *
- * Shows the current Icy name when the alarm was started,
- * or clears the display when stopped.
+ * @brief Updates the display after an alarm start/stop event.
  */
 static void updateAlarmDisplayFeedback(void) {
-  if (radioAlarmStatusChanged == ALRM_START || radioAlarmStatusChanged == ALRM_STOP) {
+  if (radioAlarmStatusChanged == ALRM_START) {
     radioAlarmStatusChanged = ALRM_NONE;
-
-    if (radioAlarmStatusChanged == ALRM_START) {
-      showTextOnTFT(3, icyname); // Set screen segment bottom part
-    } else {
-      // showTextOnTFT(3, "");
-    }
+    showTextOnTFT(3, icyname);
+  } else if (radioAlarmStatusChanged == ALRM_STOP) {
+    radioAlarmStatusChanged = ALRM_NONE;
   }
 }
 
@@ -128,21 +140,39 @@ static void updateAlarmDisplayFeedback(void) {
  * @note Updates radioAlarmStatusChanged for follow-up actions
  */
 void handleRadioAlarm(void) {
+  if (!timeinfo.tm_year) {
+    return;
+  }
+
   updateAlarmDisplayFeedback();
+  resetAlarmMinuteTracking();
 
   const int8_t weekday = timeinfo.tm_wday;
 
   for (uint8_t i = 0; i < alarm_schedule.count; i++) {
     const AlarmEntry &entry = alarm_schedule.entries[i];
+    const uint16_t alarm_bit = (uint16_t)(1U << i);
 
     if (!entry.enabled) {
+      continue;
+    }
+    if (entry.days_mask == 0) {
       continue;
     }
     if (!(entry.days_mask & (1 << weekday))) {
       continue;
     }
 
-    tryStartRadioAlarm(entry.start_hour, entry.start_min);
-    tryStopRadioAlarm(entry.stop_hour, entry.stop_min);
+    if (!(alarm_started_mask & alarm_bit)) {
+      if (tryStartRadioAlarm(entry.start_hour, entry.start_min)) {
+        alarm_started_mask |= alarm_bit;
+      }
+    }
+
+    if (!(alarm_stopped_mask & alarm_bit)) {
+      if (tryStopRadioAlarm(entry.stop_hour, entry.stop_min)) {
+        alarm_stopped_mask |= alarm_bit;
+      }
+    }
   }
 }

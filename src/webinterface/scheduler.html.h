@@ -58,7 +58,7 @@ const char scheduler_html[] PROGMEM = R"=====(
 			<div class="row panel panel-default">
 				<div class="panel-heading">Alarm Schedules</div>
 				<div class="panel-body">
-					<p class="alarm-help">Configure alarm schedules below. Each alarm has its own <strong>Save Alarm</strong> button to store it on the device. The sleep timer above is applied immediately and does not require saving.</p>
+					<p class="alarm-help">Configure alarm schedules below. Each alarm needs at least one weekday. Enter start and shut-off as <strong>hh:mm</strong> (click hours or minutes to edit each pair). Use <strong>Save Alarm</strong> or <strong>Remove Alarm</strong> to store changes; the result appears in the command log above.</p>
 					<div id="alarm-list"></div>
 					<button type="button" id="add-alarm" class="btn btn-primary">Add Alarm</button>
 				</div>

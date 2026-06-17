@@ -108,14 +108,19 @@ void handleWebpage(const String &pagename) {
       l--;
     }
 
-    dbgprint("Length of page is %d", strlen(p));
+    dbgprint("Length of page is %d", l);
     cmdclient.print(httpheader(ct)); // Send header
 
     if (l < 10) { // The content of the HTTP response follows the header
       cmdclient.println("Testline<br>");
     } else {
+      uint16_t chunkCount = 0;
       while (l) // Loop through the output page
       {
+        if (!cmdclient.connected()) {
+          dbgprint("HTTP client disconnected while sending %s", pagename.c_str());
+          break;
+        }
         if (l <= TCPCHUNKSIZE) // Near the end?
         {
           cmdclient.write(p, l); // send last part
@@ -125,8 +130,13 @@ void handleWebpage(const String &pagename) {
           p += TCPCHUNKSIZE;                // Update startpoint and rest of bytes
           l -= TCPCHUNKSIZE;
         }
+        if ((++chunkCount & 0x03) == 0) {
+          cmdclient.flush();
+          yield();
+        }
       }
     }
+    cmdclient.flush();
     // The HTTP response ends with another blank line:
     cmdclient.println();
     dbgprint("Response send");
@@ -419,9 +429,11 @@ const char *analyzeCmd(const char *par, const char *val) {
     sprintf(reply, networks.c_str());     // Reply is SSIDs
   } else if (argument.startsWith("clk_")) // TOD parameter?
   {
+    bool restartNtp = false;
     if (argument.indexOf("server") > 0) // NTP server spec?
     {
       ini_block.clk_server = value; // set server
+      restartNtp = true;
     }
     if (argument.indexOf("offset") > 0) // Offset with respect to UTC spec?
     {
@@ -430,6 +442,14 @@ const char *analyzeCmd(const char *par, const char *val) {
     if (argument.indexOf("dst") > 0) // Offset during DST spec?
     {
       ini_block.clk_dst = value.toInt(); // set DST offset
+    }
+    applyClockConfiguration(restartNtp);
+    if (timeinfo.tm_year) {
+      sprintf(reply, "Clock updated: %s", timetxt);
+    } else if (!NetworkFound) {
+      strcpy(reply, "Clock settings saved (offline, time not available)");
+    } else {
+      strcpy(reply, "Clock settings saved, waiting for NTP sync");
     }
   } else if (argument.startsWith("bat")) // Battery ADC value?
   {

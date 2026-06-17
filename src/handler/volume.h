@@ -1,3 +1,32 @@
+/** Duration in ms for soft volume fade on play start/stop. */
+static const uint32_t VOLUME_FADE_MS = 1000;
+
+static bool volumeFadeActive = false;
+static bool volumeFadeIn = true;
+static uint32_t volumeFadeStartMs = 0;
+static uint8_t volumeFadeStartLevel = 0;
+static uint8_t volumeFadeCurrent = 0;
+static bool volumeFadeStopPending = false;
+
+/**
+ * @brief Returns the volume level to apply to the VS1053 right now.
+ *
+ * Uses fade level while a soft fade is active, otherwise reqvol (or 0 when muted).
+ *
+ * @return uint8_t Output volume 0-100
+ */
+uint8_t getOutputVolume(void) {
+  if (muteflag) {
+    return 0;
+  }
+
+  if (volumeFadeActive) {
+    return volumeFadeCurrent;
+  }
+
+  return ini_block.reqvol;
+}
+
 /**
  * @brief Checks if sound is currently enabled (not muted).
  *
@@ -27,6 +56,97 @@ void playSound(bool _enable) {
     muteflag = true;          // Mute/unmute: boolean{mute=true, play=false}
     showTextOnTFT(3, "Mute"); // Set screen segment bottom part
   }
+}
+
+/**
+ * @brief Completes stream stop after a fade-out (mute, stop playback, backlight off).
+ */
+static void finishStreamStop(void) {
+  playSound(false);
+  datamode = STOPREQD;
+  enableBacklight(false);
+}
+
+/**
+ * @brief Advances an in-progress volume fade based on elapsed time.
+ *
+ * Called periodically from spftask (about every 100 ms).
+ */
+static void updateVolumeFade(void) {
+  if (!volumeFadeActive) {
+    return;
+  }
+
+  uint32_t elapsed = millis() - volumeFadeStartMs;
+
+  if (volumeFadeIn) {
+    const uint8_t target = ini_block.reqvol;
+    const uint8_t start = volumeFadeStartLevel;
+
+    if (elapsed >= VOLUME_FADE_MS || target <= start) {
+      volumeFadeCurrent = target;
+      volumeFadeActive = false;
+    } else {
+      volumeFadeCurrent = start + (uint8_t)((uint32_t)(target - start) * elapsed / VOLUME_FADE_MS);
+    }
+    return;
+  }
+
+  const uint8_t start = volumeFadeStartLevel;
+
+  if (elapsed >= VOLUME_FADE_MS || start == 0) {
+    volumeFadeCurrent = 0;
+    volumeFadeActive = false;
+    if (volumeFadeStopPending) {
+      volumeFadeStopPending = false;
+      finishStreamStop();
+    }
+  } else {
+    volumeFadeCurrent = start - (uint8_t)((uint32_t)start * elapsed / VOLUME_FADE_MS);
+  }
+}
+
+/**
+ * @brief Starts a soft fade from the current level (or 0) to reqvol.
+ */
+static void startVolumeFadeIn(void) {
+  uint8_t fromLevel = 0;
+
+  if (volumeFadeActive && !volumeFadeIn) {
+    fromLevel = volumeFadeCurrent;
+  }
+
+  volumeFadeIn = true;
+  volumeFadeStopPending = false;
+  volumeFadeStartMs = millis();
+  volumeFadeStartLevel = fromLevel;
+  volumeFadeCurrent = fromLevel;
+  volumeFadeActive = (ini_block.reqvol > fromLevel);
+}
+
+/**
+ * @brief Starts a soft fade from the current level down to 0.
+ *
+ * @param stopAfter If true, stop the stream when the fade reaches zero.
+ */
+static void startVolumeFadeOut(bool stopAfter) {
+  const uint8_t startLevel = getOutputVolume();
+
+  volumeFadeIn = false;
+  volumeFadeStopPending = stopAfter;
+  volumeFadeStartMs = millis();
+  volumeFadeStartLevel = startLevel;
+  volumeFadeCurrent = startLevel;
+
+  if (startLevel == 0) {
+    volumeFadeActive = false;
+    if (stopAfter) {
+      finishStreamStop();
+    }
+    return;
+  }
+
+  volumeFadeActive = true;
 }
 
 /**
@@ -134,19 +254,20 @@ bool runStream(bool _runStream, int16_t _preset = 0) {
     showTextOnTFT(3, "Radio on");
 
     playSound(true);
+    startVolumeFadeIn();
 
     return true;
   } else {
-    dbgprint("Stopping stream");
+    dbgprint("Stopping stream (soft fade)");
 
-    playSound(false);
-    datamode = STOPREQD;
-
-    // Display info
     showTextOnTFT(1, "Stream stopped");
     showTextOnTFT(3, "Radio off");
 
-    enableBacklight(false);
+    if (datamode != STOPPED || volumeFadeActive) {
+      startVolumeFadeOut(true);
+    } else {
+      finishStreamStop();
+    }
 
     return true;
   }
