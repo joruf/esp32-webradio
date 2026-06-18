@@ -69,6 +69,9 @@ void handleWebpage(const String &pagename) {
     } else if (pagename.indexOf("scheduler.html") >= 0) {
       p = scheduler_html;
       l = sizeof(scheduler_html) - 1;
+    } else if (pagename.indexOf("maintenance.html") >= 0) {
+      p = maintenance_html;
+      l = sizeof(maintenance_html) - 1;
     } else if (pagename.indexOf("config.html") >= 0) {
       p = config_html;
       l = sizeof(config_html) - 1;
@@ -311,14 +314,21 @@ const char *analyzeCmd(const char *par, const char *val) {
       sprintf(reply, "Preset is now %d", // Reply new preset
               ini_block.newpreset);
     }
-  } else if (argument == "stop") // (un)Stop requested?
+  } else if (argument == "resume" || argument == "play") // Start playback
   {
-    if (datamode & (HEADER | DATA | METADATA | PLAYLISTINIT | PLAYLISTHEADER | PLAYLISTDATA)) {
-      runStream(false);
-      // datamode = STOPREQD; // Request STOP
-    } else {
+    if (datamode == STOPPED) {
       runStream(true, currentpreset);
-      // hostreq = true; // Request UNSTOP
+      strcpy(reply, "Player started");
+    } else {
+      strcpy(reply, "Player already running");
+    }
+  } else if (argument == "stop") // Stop playback
+  {
+    if (datamode != STOPPED) {
+      runStream(false);
+      strcpy(reply, "Player stopped");
+    } else {
+      strcpy(reply, "Player already stopped");
     }
   } else if ((value.length() > 0) && ((argument == "mp3track") || // Select a track from SD card?
                                       (argument == "station")))   // Station in the form address:port

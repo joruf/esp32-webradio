@@ -710,6 +710,7 @@ void handlehttp() {
     jsonResponse += "\"station\":\"" + icyname + "\",";
     jsonResponse += "\"title\":\"" + icystreamtitle + "\",";
     jsonResponse += "\"firmware\":\"" + String(FIRMWARE) + "\",";
+    jsonResponse += "\"volume\":" + String(ini_block.reqvol) + ",";
     jsonResponse += "\"time\":\"" + String(timetxt) + "\",";
     jsonResponse += "\"date\":\"" + String(timetxt) + "\"";
     jsonResponse += "}";

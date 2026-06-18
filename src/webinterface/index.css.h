@@ -9,20 +9,54 @@ const char index_css[] PROGMEM = R"=====(
 	body {margin-bottom: 30px;}
 	footer {min-height: 30px!important;}
 	.select_tone {min-width: 120px;}
-	.icon {height: 20px;}
-	.btn {min-height: 35px;}
+	.icon { height: 16px; width: auto; max-height: 16px; }
+	.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 35px; padding: 6px 12px; font-size: 14px; line-height: 1.42857143; width: auto; min-width: 88px; }
+	.btn-icon { display: inline-block; flex-shrink: 0; line-height: 1; font-size: 1em; }
+	.btn-lg, .btn-xl, .btn-sm { padding: 6px 12px; font-size: 14px; line-height: 1.42857143; border-radius: 4px; min-height: 35px; }
 	.btn_border {padding: 10px; margin-bottom: 10px;}
-	button {width: 100%;}
-	.navbarDistance {padding-top: 10px;}
+	button { width: auto; min-width: 88px; min-height: 35px; }
+	.navbarDistance { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-top: 10px; }
+	.navbarDistance > a { display: inline-block; text-decoration: none; }
+	.navbarDistance .nav-btn { display: inline-flex; align-items: center; gap: 6px; width: auto; min-width: auto; white-space: nowrap; padding: 6px 12px; }
+	.navbarDistance .nav-btn .nav-icon {
+		display: inline-block;
+		flex-shrink: 0;
+		width: 1.1em;
+		min-width: 16px;
+		text-align: center;
+		font-size: 16px;
+		line-height: 1;
+		color: #fff;
+		opacity: 0.65;
+	}
+	.navbarDistance a.nav-active > .nav-btn {
+		background-color: #286090;
+		border-color: #204d74;
+		box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.18);
+	}
+	.navbarDistance a.nav-active > .nav-btn .nav-icon { opacity: 1; }
+	.navbarDistance a.nav-active > .nav-btn .nav-label { font-weight: bold; }
+	.input-group-btn .btn, .input-group-btn button { width: auto; min-width: 88px; }
 	.alarm-help { margin-bottom: 15px; }
 	.config-help { margin-bottom: 15px; }
 	.config-item-list { margin-bottom: 15px; }
 	.config-empty { color: #777; font-style: italic; margin: 0 0 10px 0; }
 	.config-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; margin-bottom: 10px; }
-	.config-row-body { flex: 1; min-width: 0; }
+	.config-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 	.config-row-body strong { display: block; }
 	.config-row-meta { display: block; color: #777; font-size: 12px; word-break: break-all; }
+	.config-row-body-inline strong { flex: 0 0 auto; }
 	.config-row-actions { display: flex; gap: 8px; margin-left: 15px; flex-shrink: 0; }
+	.config-row-draggable { cursor: default; }
+	.config-row-drag-handle { color: #999; margin-right: 10px; cursor: grab; user-select: none; flex-shrink: 0; font-size: 16px; line-height: 1; padding: 2px 4px; }
+	.config-row-dragging { opacity: 0.55; }
+	.config-row-drag-over { border-color: #337ab7; box-shadow: inset 0 0 0 2px #337ab7; }
+	.config-collapse-heading { cursor: pointer; user-select: none; }
+	.config-collapse-heading .config-collapse-icon { float: right; color: #777; font-size: 12px; }
+	.config-collapse-panel.hidden { display: none !important; }
+	.config-raw-json { font-family: monospace; font-size: 12px; margin-bottom: 10px; resize: vertical; min-height: 160px; }
+	.config-raw-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+	.config-raw-actions .btn { width: auto; }
 	.config-range-value { margin-top: 5px; }
 	.config-dialog { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; }
 	.config-dialog.hidden { display: none !important; }
@@ -33,7 +67,7 @@ const char index_css[] PROGMEM = R"=====(
 	.config-dialog-buttons .btn { width: auto; }
 	.config-row-actions .btn { width: auto; }
 	#add-wifi, #add-preset, #add-gpio { width: auto; }
-	#save-config, #restore-config { width: 100%; }
+	#save-config, #restore-config { width: auto; }
 	#erase-eeprom { width: auto; }
 	.panel-danger-zone { margin-bottom: 30px; }
 	.panel-danger-zone .panel-heading { color: #a94442; }
@@ -41,14 +75,42 @@ const char index_css[] PROGMEM = R"=====(
 	.alarm-card { margin-bottom: 15px; }
 	.alarm-card-heading { display: flex; justify-content: space-between; align-items: center; }
 	.alarm-enabled-toggle { margin: 0; font-weight: normal; }
-	.alarm-days { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
-	.alarm-day { margin-right: 10px; font-weight: normal; }
-	.alarm-time-row { margin-bottom: 10px; }
-	.alarm-time-field { position: relative; min-height: 1px; padding-left: 15px; padding-right: 15px; float: left; width: 50%; }
-	.alarm-time-field label { white-space: nowrap; }
-	.alarm-time-input { max-width: 8em; font-family: monospace; letter-spacing: 0.05em; text-align: center; }
+	.alarm-days { display: flex; flex-wrap: wrap; gap: 8px 10px; margin-bottom: 0; align-items: center; min-width: 0; }
+	.alarm-schedule-layout { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 10px; }
+	.alarm-times { display: flex; flex-wrap: nowrap; gap: 8px 10px; align-items: flex-end; flex: 0 0 auto; }
+	.alarm-actions { display: flex; flex-wrap: nowrap; gap: 8px; align-items: flex-end; flex: 0 0 auto; }
+	.alarm-actions .btn { min-width: 88px; width: auto; }
+	.alarm-day { margin-right: 0; font-weight: normal; white-space: nowrap; }
+	.alarm-day-short { display: none; }
+	.alarm-time-field { flex: 0 0 auto; margin: 0; padding: 0; min-width: 0; }
+	.alarm-time-field label { display: block; margin: 0 0 4px 0; white-space: nowrap; font-weight: normal; }
+	.alarm-time-input { width: 5.5em; max-width: none; font-family: monospace; letter-spacing: 0.05em; text-align: center; }
 	.alarm-time-input.alarm-time-invalid { border-color: #a94442; }
+	.webradio-control-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
+	.webradio-control-label { margin: 0; font-weight: bold; flex: 0 0 auto; }
+	.webradio-volume-value { flex: 0 0 auto; min-width: 2.8em; font-weight: bold; white-space: nowrap; }
+	.webradio-control-slider { flex: 1 1 140px; min-width: 100px; max-width: 320px; width: auto; margin: 0; }
+	.webradio-playback-actions { display: flex; flex-wrap: nowrap; gap: 8px; align-items: center; flex: 0 0 auto; }
+	.webradio-control-toolbar .btn { width: auto; min-width: 88px; flex: 0 0 auto; }
+	.webradio-display-body { display: flex; flex-wrap: wrap; gap: 8px; }
+	.maintenance-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+	@media (max-width: 767px) {
+		.navbarDistance .nav-label { display: none; }
+		.navbarDistance .nav-btn {
+			padding: 6px 10px;
+			min-width: 42px;
+			justify-content: center;
+		}
+		.alarm-schedule-layout { flex-direction: column; align-items: flex-start; }
+		.alarm-days { width: 100%; }
+		.alarm-day-full { display: none; }
+		.alarm-day-short { display: inline; }
+	}
 	@media (min-width: 768px) {
-		.alarm-time-field { width: 25%; }
+		.alarm-schedule-layout { flex-direction: row; flex-wrap: nowrap; align-items: flex-end; gap: 10px 12px; }
+		.alarm-days { flex: 1 1 auto; min-width: 0; }
+		.config-row-body-inline { flex-direction: row; align-items: baseline; gap: 12px; }
+		.config-row-body-inline strong { display: inline; white-space: nowrap; }
+		.config-row-body-inline .config-row-meta { display: inline; flex: 1 1 auto; min-width: 0; }
 	}
 )=====" ;

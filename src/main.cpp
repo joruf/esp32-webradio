@@ -38,7 +38,7 @@
 
 // Define the version number, also used for webserver as Last-Modified header and to
 // check version for update.  The format must be exactly as specified by the HTTP standard!
-#define FIRMWARE "v2.13 2026-06-17"
+#define FIRMWARE "v2.14 2026-06-18"
 
 // Web UI cache duration in seconds for static files (HTML, CSS, JS).
 // 0 = caching disabled. Values >= 1 enable Cache-Control: max-age=<seconds>.
@@ -77,6 +77,10 @@ Firmware Changes:
                   Clock settings apply immediately (applyClockConfiguration); command log shows updated time.
                   WEBUI_CACHE_MAX_AGE for static UI caching (60s). HTTP server stability improvements.
                   Soft volume fade in/out on radio play start and stop (2s).
+2.14  2026-06-18  Web UI overhaul: responsive nav (Unicode icons, icon-only on narrow screens),
+                  Unicode symbols on all buttons, Scheduler alarm row layout, Maintenance page
+                  Config: preset drag-and-drop reorder, collapsible raw JSON editor, responsive preset/GPIO rows.
+                  Index: volume slider, separate play/stop, display on/off panel; firmware info removed from index.
 */
 
 // ESP32-Radio can be updated (OTA) to the latest version from a remote server.
@@ -478,6 +482,7 @@ touchpin_struct touchpin[] = // Touch pins and programmed function
 #include "webinterface/sound.html.h"
 #include "webinterface/config.html.h"
 #include "webinterface/scheduler.html.h"
+#include "webinterface/maintenance.html.h"
 #include "webinterface/firmware.html.h"
 #include "webinterface/about.html.h"
 #include "webinterface/index.css.h"
