@@ -87,7 +87,7 @@ const char config_html[] PROGMEM = R"=====(
 							<select class="form-control" id="cfg-preset"></select>
 						</div>
 					</div>
-					<p class="config-help">Volume and equalizer settings are on the <a href="sound.html">Sound Settings</a> page.</p>
+					<p class="config-help">Equalizer settings are on the <a href="sound.html">Sound Settings</a> page. Volume is on the <a href="index.html">Webradio</a> page.</p>
 				</div>
 			</div>
 
@@ -115,26 +115,12 @@ const char config_html[] PROGMEM = R"=====(
 					<span class="config-collapse-icon" aria-hidden="true">&#9654;</span>
 				</div>
 				<div class="panel-body config-collapse-panel hidden" id="raw-config-panel">
-					<p class="config-help">View, edit, or paste the complete JSON configuration. Use Reload to refresh from the form fields, then Save JSON to apply.</p>
+					<p class="config-help">View, edit, or paste the complete JSON configuration. Use Reload to refresh from the form fields, then Save JSON to apply. Restore Defaults resets the device to factory settings.</p>
 					<textarea id="raw-config-json" class="form-control config-raw-json" rows="12" spellcheck="false"></textarea>
 					<div class="config-raw-actions">
 						<button type="button" id="raw-config-load" class="btn btn-default"><span class="btn-icon" aria-hidden="true">&#8635;</span> Reload</button>
 						<button type="button" id="raw-config-save" class="btn btn-success"><span class="btn-icon" aria-hidden="true">&#128190;</span> Save JSON</button>
-					</div>
-				</div>
-			</div>
-
-			<div class="row panel panel-default">
-				<div class="panel-heading">Save Settings</div>
-				<div class="panel-body">
-					<p class="config-help">Select boxes and other fields send their value to the device immediately on change. Use Save Configuration to force a full save.</p>
-					<div class="row">
-						<div class="btn_border col-xs-12 col-sm-6 col-md-4">
-							<button type="button" id="save-config" class="btn btn-success"><span class="btn-icon" aria-hidden="true">&#128190;</span> Save Configuration</button>
-						</div>
-						<div class="btn_border col-xs-12 col-sm-6 col-md-4">
-							<button type="button" id="restore-config" class="btn btn-warning"><span class="btn-icon" aria-hidden="true">&#8634;</span> Restore Defaults</button>
-						</div>
+						<button type="button" id="restore-config" class="btn btn-warning"><span class="btn-icon" aria-hidden="true">&#8634;</span> Restore Defaults</button>
 					</div>
 				</div>
 			</div>

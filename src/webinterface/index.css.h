@@ -48,7 +48,8 @@ const char index_css[] PROGMEM = R"=====(
 	.config-row-body-inline strong { flex: 0 0 auto; }
 	.config-row-actions { display: flex; gap: 8px; margin-left: 15px; flex-shrink: 0; }
 	.config-row-draggable { cursor: default; }
-	.config-row-drag-handle { color: #999; margin-right: 10px; cursor: grab; user-select: none; flex-shrink: 0; font-size: 16px; line-height: 1; padding: 2px 4px; }
+	.config-row-drag-handle { color: #999; margin-right: 10px; cursor: grab; user-select: none; flex-shrink: 0; font-size: 16px; line-height: 1; padding: 2px 4px; touch-action: none; -webkit-touch-callout: none; }
+	.config-row-drag-handle:active { cursor: grabbing; }
 	.config-row-dragging { opacity: 0.55; }
 	.config-row-drag-over { border-color: #337ab7; box-shadow: inset 0 0 0 2px #337ab7; }
 	.config-collapse-heading { cursor: pointer; user-select: none; }
@@ -67,7 +68,7 @@ const char index_css[] PROGMEM = R"=====(
 	.config-dialog-buttons .btn { width: auto; }
 	.config-row-actions .btn { width: auto; }
 	#add-wifi, #add-preset, #add-gpio { width: auto; }
-	#save-config, #restore-config { width: auto; }
+	#restore-config { width: auto; }
 	#erase-eeprom { width: auto; }
 	.panel-danger-zone { margin-bottom: 30px; }
 	.panel-danger-zone .panel-heading { color: #a94442; }

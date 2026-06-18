@@ -552,7 +552,7 @@ const char interface_js[] PROGMEM = R"=====(
     }
 
     function canPersistRadioConfig() {
-        return !configFormLoading && ($("#save-config").length || $("#sound-settings").length);
+        return !configFormLoading && ($("#preset-list").length || $("#sound-settings").length);
     }
 
     function persistRadioConfig(options) {
@@ -616,23 +616,10 @@ const char interface_js[] PROGMEM = R"=====(
             .on("change.soundField", "#tone-ha, #tone-hf, #tone-la, #tone-lf", function() {
                 applySoundSelectChange(this.id, $(this).val());
             });
-
-        $("#cfg-volume")
-            .off("input.soundField change.soundField")
-            .on("input.soundField", function() {
-                if (configFormLoading) {
-                    return;
-                }
-                $("#cfg-volume-value").text($(this).val());
-                httpGet("volume=" + $(this).val());
-            })
-            .on("change.soundField", function() {
-                persistRadioConfig();
-            });
     }
 
     function bindConfigChangeHandlers() {
-        if (!$("#save-config").length) {
+        if (!$("#preset-list").length) {
             return;
         }
 
@@ -768,12 +755,60 @@ const char interface_js[] PROGMEM = R"=====(
     function initPresetDragDrop() {
         var $list = $("#preset-list");
         var dragIndex = null;
+        var touchDragging = false;
+        var touchMoveHandler = null;
+        var touchEndHandler = null;
 
         if (!$list.length || $list.data("dragBound")) {
             return;
         }
 
         $list.data("dragBound", true);
+
+        function clearDragState() {
+            dragIndex = null;
+            touchDragging = false;
+            $list.find(".config-row-drag-over").removeClass("config-row-drag-over");
+            $list.find(".config-row-dragging").removeClass("config-row-dragging");
+            if (touchMoveHandler) {
+                document.removeEventListener("touchmove", touchMoveHandler);
+                touchMoveHandler = null;
+            }
+            if (touchEndHandler) {
+                document.removeEventListener("touchend", touchEndHandler);
+                document.removeEventListener("touchcancel", touchEndHandler);
+                touchEndHandler = null;
+            }
+        }
+
+        function highlightDropRow($row) {
+            $list.find(".config-row-drag-over").removeClass("config-row-drag-over");
+            if ($row && $row.length) {
+                $row.addClass("config-row-drag-over");
+            }
+        }
+
+        function finishDrop(toIndex) {
+            if (dragIndex !== null && !isNaN(toIndex) && dragIndex !== toIndex) {
+                reorderPresets(dragIndex, toIndex);
+            }
+            clearDragState();
+        }
+
+        function dropIndexFromTouch(touch) {
+            var el;
+            var $target;
+
+            if (!touch) {
+                return NaN;
+            }
+            el = document.elementFromPoint(touch.clientX, touch.clientY);
+            $target = $(el).closest(".config-row-draggable");
+            if (!$target.length) {
+                return NaN;
+            }
+            return parseInt($target.data("index"), 10);
+        }
 
         $list.on("dragstart", ".config-row-drag-handle", function(e) {
             dragIndex = parseInt($(this).closest(".config-row").data("index"), 10);
@@ -785,9 +820,7 @@ const char interface_js[] PROGMEM = R"=====(
         });
 
         $list.on("dragend", ".config-row-drag-handle", function() {
-            dragIndex = null;
-            $list.find(".config-row-drag-over").removeClass("config-row-drag-over");
-            $list.find(".config-row-dragging").removeClass("config-row-dragging");
+            clearDragState();
         });
 
         $list.on("dragover", ".config-row-draggable", function(e) {
@@ -795,8 +828,7 @@ const char interface_js[] PROGMEM = R"=====(
             if (e.originalEvent && e.originalEvent.dataTransfer) {
                 e.originalEvent.dataTransfer.dropEffect = "move";
             }
-            $list.find(".config-row-drag-over").removeClass("config-row-drag-over");
-            $(this).addClass("config-row-drag-over");
+            highlightDropRow($(this));
         });
 
         $list.on("dragleave", ".config-row-draggable", function() {
@@ -805,13 +837,46 @@ const char interface_js[] PROGMEM = R"=====(
 
         $list.on("drop", ".config-row-draggable", function(e) {
             e.preventDefault();
-            var toIndex = parseInt($(this).data("index"), 10);
-            if (dragIndex !== null && !isNaN(toIndex)) {
-                reorderPresets(dragIndex, toIndex);
+            finishDrop(parseInt($(this).data("index"), 10));
+        });
+
+        $list.on("touchstart", ".config-row-drag-handle", function(e) {
+            var touch = e.originalEvent.touches[0];
+
+            if (!touch || e.originalEvent.touches.length !== 1) {
+                return;
             }
-            dragIndex = null;
-            $list.find(".config-row-drag-over").removeClass("config-row-drag-over");
-            $list.find(".config-row-dragging").removeClass("config-row-dragging");
+
+            dragIndex = parseInt($(this).closest(".config-row").data("index"), 10);
+            touchDragging = true;
+            $(this).closest(".config-row").addClass("config-row-dragging");
+
+            touchMoveHandler = function(ev) {
+                var moveTouch;
+
+                if (!touchDragging) {
+                    return;
+                }
+                ev.preventDefault();
+                moveTouch = ev.touches[0];
+                if (!moveTouch) {
+                    return;
+                }
+                highlightDropRow($(document.elementFromPoint(moveTouch.clientX, moveTouch.clientY)).closest(".config-row-draggable"));
+            };
+
+            touchEndHandler = function(ev) {
+                var endTouch = ev.changedTouches[0];
+
+                if (!touchDragging) {
+                    return;
+                }
+                finishDrop(dropIndexFromTouch(endTouch));
+            };
+
+            document.addEventListener("touchmove", touchMoveHandler, { passive: false });
+            document.addEventListener("touchend", touchEndHandler);
+            document.addEventListener("touchcancel", touchEndHandler);
         });
     }
 
@@ -889,8 +954,6 @@ const char interface_js[] PROGMEM = R"=====(
     }
 
     function applySoundFields(cfg) {
-        $("#cfg-volume").val(cfg.volume !== undefined ? cfg.volume : 72);
-        $("#cfg-volume-value").text(cfg.volume !== undefined ? cfg.volume : 72);
         $("#tone-ha").val(String((cfg.tone && cfg.tone.ha !== undefined) ? cfg.tone.ha : 0));
         $("#tone-hf").val(String((cfg.tone && cfg.tone.hf !== undefined) ? cfg.tone.hf : 1));
         $("#tone-la").val(String((cfg.tone && cfg.tone.la !== undefined) ? cfg.tone.la : 0));
@@ -1034,7 +1097,6 @@ const char interface_js[] PROGMEM = R"=====(
             config.preset = parseInt($("#cfg-preset").val(), 10) || 0;
         }
         if ($("#sound-settings").length) {
-            config.volume = parseInt($("#cfg-volume").val(), 10) || 0;
             config.tone = {
                 ha: parseInt($("#tone-ha").val(), 10) || 0,
                 hf: parseInt($("#tone-hf").val(), 10) || 0,
@@ -1234,7 +1296,7 @@ const char interface_js[] PROGMEM = R"=====(
 
         closeConfigDialog();
 
-        if ($("#save-config").length) {
+        if ($("#preset-list").length) {
             saveRadioConfig({ applyAudio: false });
         }
     }
@@ -1347,7 +1409,7 @@ const char interface_js[] PROGMEM = R"=====(
     }
 
     function initConfigPage() {
-        if (!$("#save-config").length) {
+        if (!$("#preset-list").length) {
             return;
         }
 
@@ -1527,7 +1589,7 @@ const char interface_js[] PROGMEM = R"=====(
             renderGpioList();
         }
 
-        if ($("#save-config").length) {
+        if ($("#preset-list").length) {
             saveRadioConfig({ applyAudio: false });
         }
     });
@@ -1542,10 +1604,6 @@ const char interface_js[] PROGMEM = R"=====(
             return;
         }
         saveConfigDialogEntry();
-    });
-
-    $(document).on("click", "#save-config", function() {
-        saveRadioConfig({ applyAudio: true });
     });
 
     $(document).on("click", "#restore-config", function() {

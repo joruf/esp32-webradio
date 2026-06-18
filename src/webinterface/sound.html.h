@@ -49,14 +49,7 @@ const char sound_html[] PROGMEM = R"=====(
 			<div id="sound-settings" class="row panel panel-default">
 				<div class="panel-heading">Audio</div>
 				<div class="panel-body">
-					<p class="config-help">Select boxes and the volume slider send their value to the device immediately on change.</p>
-					<div class="row">
-						<div class="form-group col-xs-12 col-sm-4">
-							<label for="cfg-volume">Default volume</label>
-							<input type="range" class="form-control" id="cfg-volume" min="0" max="100" step="1">
-							<div class="config-range-value"><span id="cfg-volume-value">0</span>%</div>
-						</div>
-					</div>
+					<p class="config-help">Select boxes send their value to the device immediately on change. Volume is adjusted on the <a href="index.html">Webradio</a> page.</p>
 					<div class="row">
 						<div class="form-group col-xs-6 col-sm-3">
 							<label for="tone-ha">Treble amplitude</label>
