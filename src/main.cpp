@@ -38,7 +38,7 @@
 
 // Define the version number, also used for webserver as Last-Modified header and to
 // check version for update.  The format must be exactly as specified by the HTTP standard!
-#define FIRMWARE "v2.14 2026-06-18"
+#define FIRMWARE "v2.18 2026-06-22"
 
 // Web UI cache duration in seconds for static files (HTML, CSS, JS).
 // 0 = caching disabled. Values >= 1 enable Cache-Control: max-age=<seconds>.
@@ -81,6 +81,12 @@ Firmware Changes:
                   Unicode symbols on all buttons, Scheduler alarm row layout, Maintenance page
                   Config: preset drag-and-drop reorder, collapsible raw JSON editor, responsive preset/GPIO rows.
                   Index: volume slider, separate play/stop, display on/off panel; firmware info removed from index.
+2.15  2026-06-19  Song title history: last 10 recognized stream titles with date/time in Web UI JSON.
+2.16  2026-06-19  Stream metadata fixes: keep last title on empty blocks, robust StreamTitle parse,
+                  no permanent metadata disable on large blocks, JSON escaping in getJSON.
+2.17  2026-06-19  Alarm scheduler fix: NTP time via getLocalTime each second, weekday from SNTP,
+                  reliable minute matching, validated alarm times, auto-save on scheduler changes.
+2.18  2026-06-22  Bugfix radio scheduler
 */
 
 // ESP32-Radio can be updated (OTA) to the latest version from a remote server.
@@ -336,6 +342,17 @@ int16_t metalinebfx;               // Index for metalinebf
 String icystreamtitle; // Streamtitle from metadata --> Song title
 String icyname;        // Icecast station name --> SWR3,...
 
+#define TITLE_HISTORY_SLOTS 10
+
+typedef struct {
+  char datetime[40];
+  char title[150];
+} title_history_entry_t;
+
+title_history_entry_t titleHistory[TITLE_HISTORY_SLOTS];
+uint8_t titleHistoryCount = 0;
+String titleHistoryLastTitle;
+
 String ipaddress;                      // Own IP-address
 int bitrate;                           // Bitrate in kb/sec
 int mbitrate;                          // Measured bitrate
@@ -538,6 +555,7 @@ VS1053 *vs1053player;
 #include "handler/setup.h"
 #include "handler/xml.h"
 #include "handler/time.h"
+#include "handler/title_history.h"
 #include "handler/http.h"
 #include "handler/rotary_encoder.h"
 #include "handler/encoder_switch.h"

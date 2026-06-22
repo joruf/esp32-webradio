@@ -1010,7 +1010,9 @@ const char interface_js[] PROGMEM = R"=====(
         var errorPrefix = options.removed ? "Alarm remove failed: " : "Alarm save failed: ";
 
         if (!validation.ok) {
-            showCommandLog(validation.message);
+            if (!options.silent) {
+                showCommandLog(validation.message);
+            }
             return false;
         }
 
@@ -1027,21 +1029,29 @@ const char interface_js[] PROGMEM = R"=====(
 
                 alarmState.alarms = config.alarms;
                 if (responseText.length === 0) {
-                    showCommandLog(errorPrefix + "empty response from device");
+                    if (!options.silent) {
+                        showCommandLog(errorPrefix + "empty response from device");
+                    }
                     return;
                 }
                 if (responseText.toLowerCase().indexOf("failed") >= 0) {
-                    showCommandLog(errorPrefix + responseText);
+                    if (!options.silent) {
+                        showCommandLog(errorPrefix + responseText);
+                    }
                     return;
                 }
-                showCommandLog(successPrefix + responseText);
+                if (!options.silent) {
+                    showCommandLog(successPrefix + responseText);
+                }
             },
             error: function(xhr) {
                 var message = errorPrefix + "request failed";
                 if (xhr && xhr.responseText) {
                     message = errorPrefix + $.trim(xhr.responseText);
                 }
-                showCommandLog(message);
+                if (!options.silent) {
+                    showCommandLog(message);
+                }
             }
         });
 
@@ -1555,7 +1565,13 @@ const char interface_js[] PROGMEM = R"=====(
     $(document).on("paste", ".alarm-time-input", handleAlarmTimePaste);
 
     $(document).on("blur", ".alarm-time-input", function() {
-        normalizeAlarmTimeInput($(this));
+        if (normalizeAlarmTimeInput($(this))) {
+            saveSchedulerAlarms({ silent: true });
+        }
+    });
+
+    $(document).on("change", ".alarm-day-checkbox, .alarm-enabled", function() {
+        saveSchedulerAlarms({ silent: true });
     });
 
     $(document).on("click", "#add-wifi", function() {
@@ -1880,6 +1896,40 @@ const char interface_js[] PROGMEM = R"=====(
 
 
     /** Continuous JSON data */
+    function renderTitleHistory(history) {
+        var table = document.getElementById("title-history");
+        if (!table) {
+            return;
+        }
+
+        table.innerHTML = "";
+
+        if (!history || !history.length) {
+            var emptyItem = document.createElement("div");
+            emptyItem.className = "title-history-empty";
+            emptyItem.textContent = "No songs recognized yet.";
+            table.appendChild(emptyItem);
+            return;
+        }
+
+        history.forEach(function(entry) {
+            var cell = document.createElement("div");
+            cell.className = "title-history-cell";
+
+            var when = document.createElement("div");
+            when.className = "title-history-when";
+            when.textContent = entry.datetime || "";
+
+            var text = document.createElement("div");
+            text.className = "title-history-text";
+            text.textContent = entry.title || "";
+
+            cell.appendChild(when);
+            cell.appendChild(text);
+            table.appendChild(cell);
+        });
+    }
+
     function loadJSONData() {
             fetch('/?getJSON')
                     .then(response => response.json())
@@ -1910,6 +1960,8 @@ const char interface_js[] PROGMEM = R"=====(
                             if(document.getElementById("timelabel")) document.getElementById("timelabel").innerHTML = data.time;
                             if(document.getElementById("datelabel")) document.getElementById("datelabel").innerHTML = data.date;
 
+                            renderTitleHistory(data.history);
+
                             let linkElement = document.getElementById("youtubelink");
                             if(linkElement && data.title) {
                                     linkElement.href = "https://www.youtube.com/results?search_query=" + encodeURIComponent(data.title) + " lyrics";
@@ -1920,7 +1972,7 @@ const char interface_js[] PROGMEM = R"=====(
     window.onload = function() {
             loadJSONData();
     };
-    setInterval(loadJSONData, 5000);
+    setInterval(loadJSONData, 2000);
 
 
 

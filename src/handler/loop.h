@@ -85,7 +85,7 @@ void IRAM_ATTR timer10sec() {
  *
  * @details
  * - Counts up to 10 seconds and calls timer10sec()
- * - Every second: Updates timeinfo (sec, min, hour) and sets time_req
+ * - Every second: Sets time_req for task-side NTP clock refresh
  * - Backlight: Turns off display after BACKLIGHT_TIME seconds
  * - Encoder inactivity counter increments (reset by rotation interrupt)
  *
@@ -107,18 +107,7 @@ void IRAM_ATTR timer100() {
   {
     scaniocount = scanios; // TEST*TEST*TEST
     scanios = 0;
-    if (++timeinfo.tm_sec >= 60) // update number of seconds
-    {
-      timeinfo.tm_sec = 0; // Wrap after 60 seconds
-      if (++timeinfo.tm_min >= 60) {
-        timeinfo.tm_min = 0; // Wrap after 60 minutes
-        if (++timeinfo.tm_hour >= 24) {
-          timeinfo.tm_hour = 0; // Wrap after 24 hours
-          timeinfo.tm_wday = (timeinfo.tm_wday + 1) % 7;
-        }
-      }
-    }
-    time_req = true; // show current time request
+    time_req = true; // Task reads authoritative time from NTP via getLocalTime()
 
     // In loop.h innerhalb von timer100 -> if(( count10sec % 10)== 0)
     if (bltimer < BACKLIGHT_TIME) {      // Nur hochzählen, wenn Limit noch nicht erreicht

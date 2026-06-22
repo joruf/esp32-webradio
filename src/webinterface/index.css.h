@@ -95,6 +95,34 @@ const char index_css[] PROGMEM = R"=====(
 	.webradio-control-toolbar .btn { width: auto; min-width: 88px; flex: 0 0 auto; }
 	.webradio-display-body { display: flex; flex-wrap: wrap; gap: 8px; }
 	.maintenance-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+	.title-history-table {
+		display: grid;
+		grid-template-columns: repeat(10, minmax(0, 1fr));
+		gap: 8px;
+		margin: 12px 0 0 0;
+		padding-top: 8px;
+		border-top: 1px solid #ddd;
+	}
+	.title-history-cell {
+		min-width: 0;
+		padding: 6px 8px;
+		border: 1px solid #eee;
+		border-radius: 3px;
+		background: #fafafa;
+	}
+	.title-history-when { font-size: 0.75em; color: #666; margin-bottom: 4px; line-height: 1.2; word-break: break-word; }
+	.title-history-text { font-size: 0.85em; line-height: 1.3; word-break: break-word; }
+	.title-history-empty {
+		grid-column: 1 / -1;
+		padding: 8px 0 0 0;
+		color: #888;
+		font-style: italic;
+		border: 0;
+		background: transparent;
+	}
+	@media (max-width: 767px) {
+		.title-history-table { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+	}
 	@media (max-width: 767px) {
 		.navbarDistance .nav-label { display: none; }
 		.navbarDistance .nav-btn {

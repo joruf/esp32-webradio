@@ -182,9 +182,8 @@ void handleNextDataByteFromServer(uint8_t b) {
                  metacount - 1); // Most of the time there are zero bytes of metadata
       }
     } else {
-      metalinebf[metalinebfx++] = (char)b; // Normal character, put new char in metaline
-      if (metalinebfx >= METASIZ) {        // Prevent overflow
-        metalinebfx--;
+      if (metalinebfx < (METASIZ - 1)) {
+        metalinebf[metalinebfx++] = (char)b;
       }
     }
 
@@ -200,9 +199,8 @@ void handleNextDataByteFromServer(uint8_t b) {
         showStreamDataOnTFT(metalinebf); // Show artist and title if present in metadata
       }
 
-      if (metalinebfx > (METASIZ - 10)) { // If Unlikely metaline length
-        dbgprint("Metadata block too long! Skipping all Metadata from now on.");
-        metaint = 0; // Probably no metadata
+      if (metalinebfx >= (METASIZ - 1)) {
+        dbgprint("Metadata block truncated to %d bytes", METASIZ - 1);
       }
 
       datacount = metaint; // Reset data count

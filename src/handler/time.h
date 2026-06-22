@@ -25,54 +25,30 @@ static bool formatTimeString(const char *days[]) {
 }
 
 /**
- * @brief Synchronize time with NTP server.
- *
- * @param retrycount Reference to retry counter
- * @param delaycount Reference to delay counter
- * @param days Array of day name abbreviations
+ * @brief Retrieve the local time from the system clock (SNTP) and convert to string.
+ *        Called once per second when time_req is set.
  */
-static void syncTimeWithNtp(int16_t &retrycount, int16_t &delaycount, const char *days[]) {
-  dbgprint("Sync TOD");
+void getCurrentTime() {
+  static int16_t logcount = 0;
+  static const char *days[] = {"Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"};
+
+  if (!NetworkFound) {
+    return;
+  }
 
   if (getLocalTime(&timeinfo)) {
     formatTimeString(days);
   } else {
-    dbgprint("Failed to obtain time!");
     timeinfo.tm_year = 0;
-
-    if (retrycount) {
-      retrycount--;
-      delaycount = 5;
-    }
-  }
-}
-
-/**
- * @brief Retrieve the local time from NTP server and convert to string.
- *        Will be called every second.
- */
-void getCurrentTime() {
-  static int16_t delaycount = 0; // To reduce number of NTP requests
-  static int16_t retrycount = 100;
-  static const char *days[] = {"Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"};
-
-  if (tft && timeinfo.tm_year) {
-    formatTimeString(days);
   }
 
-  if (--delaycount <= 0) {
-    delaycount = 7200; // Reset counter (7200 * 1 second = 2 hours)
-
-    if (!NetworkFound) {
-      delaycount = 300; // Retry NTP sync in 5 minutes when offline
-      return;
-    }
-
+  if (--logcount <= 0) {
+    logcount = 300;
     if (timeinfo.tm_year) {
-      dbgprint("Sync TOD, old value is %s", timetxt);
+      dbgprint("Clock: %s (wday %d)", timetxt, timeinfo.tm_wday);
+    } else {
+      dbgprint("Clock: waiting for NTP sync");
     }
-
-    syncTimeWithNtp(retrycount, delaycount, days);
   }
 }
 

@@ -10,6 +10,16 @@ static uint16_t alarm_started_mask = 0;
 static uint16_t alarm_stopped_mask = 0;
 
 /**
+ * @brief Reset alarm trigger tracking after schedule changes.
+ */
+void resetAlarmScheduleTracking(void) {
+  alarm_last_check_hour = -1;
+  alarm_last_check_min = -1;
+  alarm_started_mask = 0;
+  alarm_stopped_mask = 0;
+}
+
+/**
  * @brief Reset per-minute alarm trigger tracking when the clock minute changes.
  */
 static void resetAlarmMinuteTracking(void) {
@@ -71,7 +81,7 @@ void handleSleepTimer() {
  * @return true  if alarm was started, otherwise false
  */
 static bool tryStartRadioAlarm(int8_t alrm_start_hour, int8_t alrm_start_min) {
-  if (timeinfo.tm_hour == alrm_start_hour && timeinfo.tm_min == alrm_start_min && timeinfo.tm_sec <= 2) {
+  if (timeinfo.tm_hour == alrm_start_hour && timeinfo.tm_min == alrm_start_min) {
 
     // 1. Use the configured alarm station (ini_block.newpreset)
     runStream(true, ini_block.newpreset);
@@ -105,9 +115,7 @@ static bool tryStartRadioAlarm(int8_t alrm_start_hour, int8_t alrm_start_min) {
  * @return true  if alarm was stopped, otherwise false
  */
 static bool tryStopRadioAlarm(int8_t alrm_stop_hour, int8_t alrm_stop_min) {
-  if (timeinfo.tm_hour == alrm_stop_hour && timeinfo.tm_min == alrm_stop_min &&
-      timeinfo.tm_sec <= 2) { // Only within the first 2 seconds of the minute
-
+  if (timeinfo.tm_hour == alrm_stop_hour && timeinfo.tm_min == alrm_stop_min) {
     runStream(false);
     showTextOnTFT(1, msgRadioAlarmOff);
     radioAlarmStatusChanged = ALRM_STOP;

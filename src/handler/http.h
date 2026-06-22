@@ -707,12 +707,13 @@ void handlehttp() {
   // Sends: sender name, song title, time and date as JSON
   if (http_getcmd.startsWith("getJSON")) {
     String jsonResponse = "{";
-    jsonResponse += "\"station\":\"" + icyname + "\",";
-    jsonResponse += "\"title\":\"" + icystreamtitle + "\",";
-    jsonResponse += "\"firmware\":\"" + String(FIRMWARE) + "\",";
+    jsonResponse += "\"station\":\"" + jsonEscapeString(icyname.c_str()) + "\",";
+    jsonResponse += "\"title\":\"" + jsonEscapeString(icystreamtitle.c_str()) + "\",";
+    jsonResponse += "\"firmware\":\"" + jsonEscapeString(FIRMWARE) + "\",";
     jsonResponse += "\"volume\":" + String(ini_block.reqvol) + ",";
-    jsonResponse += "\"time\":\"" + String(timetxt) + "\",";
-    jsonResponse += "\"date\":\"" + String(timetxt) + "\"";
+    jsonResponse += "\"time\":\"" + jsonEscapeString(timetxt) + "\",";
+    jsonResponse += "\"date\":\"" + jsonEscapeString(timetxt) + "\",";
+    jsonResponse += buildTitleHistoryJson();
     jsonResponse += "}";
 
     // Send JSON header

@@ -1,35 +1,95 @@
 /**
+ * @brief Locate the StreamTitle value in an ICY metadata block (case-insensitive).
+ *
+ * @param ml Metadata string
+ * @return Pointer to first character after "StreamTitle=", or nullptr if not found
+ */
+static const char *findStreamTitleTag(const char *ml) {
+  const char tag[] = "streamtitle=";
+  const size_t taglen = sizeof(tag) - 1;
+
+  if (ml == nullptr) {
+    return nullptr;
+  }
+
+  for (const char *p = ml; *p; p++) {
+    if (strncasecmp(p, tag, taglen) == 0) {
+      return p + taglen;
+    }
+  }
+
+  return nullptr;
+}
+
+/**
  * @brief Extract stream title from metadata string.
  *
  * @param ml Metadata string
  * @param streamtitle Output buffer for extracted title
  * @param bufsize Size of the output buffer
- * @return true if stream title was found, false otherwise
+ * @return true if a non-empty stream title was found, false otherwise
  */
 static bool extractStreamTitle(const char *ml, char *streamtitle, size_t bufsize) {
-  char *p1;
-  char *p2;
+  const char *p1;
+  const char *p2;
+  size_t len;
 
-  if (!strstr(ml, "StreamTitle=")) {
+  if (streamtitle == nullptr || bufsize == 0) {
+    return false;
+  }
+
+  streamtitle[0] = '\0';
+  p1 = findStreamTitleTag(ml);
+  if (p1 == nullptr) {
     return false;
   }
 
   dbgprint("Streamtitle found, %d bytes", strlen(ml));
   dbgprint(ml);
 
-  // Search for end of title
-  p1 = (char *)ml + 12; // Begin of artist and title
-  if ((p2 = strstr(ml, ";"))) {
-    if (*p1 == '\'') { // Surrounded by quotes
-      p1++;
-      p2--;
+  if (*p1 == '\'') {
+    p1++;
+    p2 = strchr(p1, '\'');
+    if (p2 == nullptr) {
+      return false;
     }
-    *p2 = '\0'; // Strip the rest of the line
+
+    len = (size_t)(p2 - p1);
+    if (len >= bufsize) {
+      len = bufsize - 1;
+    }
+
+    strncpy(streamtitle, p1, len);
+    streamtitle[len] = '\0';
+    return streamtitle[0] != '\0';
   }
 
-  // Save last part of string as streamtitle. Protect against buffer overflow
-  strncpy(streamtitle, p1, bufsize);
-  streamtitle[bufsize - 1] = '\0';
+  p2 = strchr(p1, ';');
+  if (p2 != nullptr) {
+    len = (size_t)(p2 - p1);
+  } else {
+    len = strlen(p1);
+  }
+
+  while (len > 0 && (*p1 == ' ' || *p1 == '\'')) {
+    p1++;
+    len--;
+  }
+
+  while (len > 0 && (p1[len - 1] == ' ' || p1[len - 1] == '\'')) {
+    len--;
+  }
+
+  if (len == 0) {
+    return false;
+  }
+
+  if (len >= bufsize) {
+    len = bufsize - 1;
+  }
+
+  strncpy(streamtitle, p1, len);
+  streamtitle[len] = '\0';
   return true;
 }
 
@@ -70,20 +130,21 @@ static void formatStreamTitle(char *streamtitle) {
  */
 void showStreamDataOnTFT(const char *ml, bool full) {
   char streamtitle[150];
+  char displaytitle[150];
 
   if (extractStreamTitle(ml, streamtitle, sizeof(streamtitle))) {
-    // Save for status request from browser
     icystreamtitle = streamtitle;
-    formatStreamTitle(streamtitle);
-    showTextOnTFT(1, streamtitle);
-  } else if (full) {
-    // Info probably from playlist
+    addTitleToHistory(streamtitle);
+    strncpy(displaytitle, streamtitle, sizeof(displaytitle) - 1);
+    displaytitle[sizeof(displaytitle) - 1] = '\0';
+    formatStreamTitle(displaytitle);
+    showTextOnTFT(1, displaytitle);
+  } else if (full && ml != nullptr && ml[0] != '\0') {
     strncpy(streamtitle, ml, sizeof(streamtitle));
     streamtitle[sizeof(streamtitle) - 1] = '\0';
     icystreamtitle = streamtitle;
+    addTitleToHistory(streamtitle);
     showTextOnTFT(1, streamtitle);
-  } else {
-    icystreamtitle = "";
   }
 }
 

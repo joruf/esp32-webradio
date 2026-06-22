@@ -37,6 +37,7 @@ struct AlarmSchedule {
 AlarmSchedule alarm_schedule;
 
 void migrateLegacyAlarmKeys();
+void resetAlarmScheduleTracking(void);
 
 /**
  * @brief Read the alarm configuration JSON from NVS.
@@ -123,12 +124,21 @@ static uint8_t dayNameToBit(const char *day) {
  * @return true if parsing succeeded
  */
 static bool parseTimeString(const char *time, uint8_t &hour, uint8_t &minute) {
+  int parsed_hour;
+  int parsed_minute;
+
   if (!time || strcmp(time, "none") == 0 || strlen(time) < 3) {
     return false;
   }
 
-  hour = (uint8_t)getValue(String(time), ':', 0).toInt();
-  minute = (uint8_t)getValue(String(time), ':', 1).toInt();
+  parsed_hour = getValue(String(time), ':', 0).toInt();
+  parsed_minute = getValue(String(time), ':', 1).toInt();
+  if (parsed_hour < 0 || parsed_hour > 23 || parsed_minute < 0 || parsed_minute > 59) {
+    return false;
+  }
+
+  hour = (uint8_t)parsed_hour;
+  minute = (uint8_t)parsed_minute;
   return true;
 }
 
@@ -212,6 +222,11 @@ bool parseAlarmConfig(const String &json) {
   alarm_schedule.count = 0;
 
   JsonArray alarms = doc["alarms"].as<JsonArray>();
+  if (alarms.isNull() || alarms.size() == 0) {
+    setDefaultAlarmSchedule();
+    return false;
+  }
+
   for (JsonObject obj : alarms) {
     if (alarm_schedule.count >= MAX_ALARMS) {
       break;
@@ -224,12 +239,12 @@ bool parseAlarmConfig(const String &json) {
     const char *start = obj["start"] | "none";
     const char *stop = obj["stop"] | "none";
     if (!parseTimeString(start, entry.start_hour, entry.start_min)) {
-      entry.start_hour = 0;
-      entry.start_min = 0;
+      dbgprint("Alarm %d skipped: invalid start time '%s'", entry.id, start);
+      continue;
     }
     if (!parseTimeString(stop, entry.stop_hour, entry.stop_min)) {
-      entry.stop_hour = 0;
-      entry.stop_min = 0;
+      dbgprint("Alarm %d skipped: invalid stop time '%s'", entry.id, stop);
+      continue;
     }
 
     entry.days_mask = 0;
@@ -242,7 +257,9 @@ bool parseAlarmConfig(const String &json) {
   }
 
   if (alarm_schedule.count == 0) {
+    dbgprint("parseAlarmConfig: no valid alarm entries");
     setDefaultAlarmSchedule();
+    return false;
   }
 
   return true;
@@ -344,7 +361,13 @@ bool applyAlarmConfig(const String &json) {
   }
 
   ini_block.alrm_config = json;
-  return (nvsSetAlarmConfig(json) == ESP_OK);
+  if (nvsSetAlarmConfig(json) != ESP_OK) {
+    return false;
+  }
+
+  resetAlarmScheduleTracking();
+  dbgprint("Alarm schedule active: %d entr(y/ies)", alarm_schedule.count);
+  return true;
 }
 
 #endif
