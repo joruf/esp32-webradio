@@ -34,6 +34,7 @@ ESP32_Webradio/
 │  └─ display/                     # Display drivers
 │     ├─ BlueTFT.h, ILI9341.h, ...
 ├─ platformio.ini
+├─ android-app/                  # Optional Android companion app (WebView)
 └─ README.md
 ```
 
@@ -61,6 +62,7 @@ ESP32_Webradio/
 - **Non‑Volatile Storage (NVS)** – All settings (presets, WiFi credentials, tone parameters, alarm times) survive reboots.
 - **OTA Firmware Update** – Upgrade directly from the web interface.
 - **Multiple Display Types** – Supports ST7735, ST7789, ILI9341, SSD1306, LCD1602, NEXTION and a dummy (serial only) display – easily switchable in the code.
+- **Android Companion App** – Optional WebView app in `android-app/` to control the radio from your phone (same web UI, no firmware changes).
 
 ---
 
@@ -120,6 +122,21 @@ git clone https://github.com/joruf/ESP32-Webradio.git
 - Open in VS Code: Ensure the PlatformIO extension is installed.
 - Build & Upload: Open the project folder in VS Code. PlatformIO will automatically fetch the required dependencies (Adafruit GFX/ST7735, PubSubClient, etc.) defined in your platformio.ini.
 - Flash: Upload the firmware to your ESP32 via USB.
+
+### Android companion app (optional)
+
+Control the radio from your phone using the same web interface — no firmware changes required.
+
+**Full install guide:** [android-app/README.md](android-app/README.md#install-on-your-android-device)
+
+Short version:
+
+1. Build the APK (`cd android-app && ./build-debug.sh`) or copy `app-debug.apk` to your phone.
+2. Install via USB: `adb install -r app/build/outputs/apk/debug/app-debug.apk`  
+   Or open the APK on the phone and allow installation from unknown sources.
+3. Open **ESP32 Webradio**, enter the radio’s IP address (e.g. `192.168.178.33`), tap **Save and open**.
+
+Phone and ESP32 must be on the same Wi‑Fi.
 
 ---
 

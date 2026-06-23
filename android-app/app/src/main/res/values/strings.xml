@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ESP32 Webradio</string>
+    <string name="settings_title">Radio address</string>
+    <string name="settings_host_hint">192.168.1.42 or ESP32Webradio.local</string>
+    <string name="settings_host_label">Host (IP or hostname)</string>
+    <string name="settings_save">Save and open</string>
+    <string name="settings_help">Phone and ESP32 must be on the same Wi‑Fi. Use the IP shown on the radio display or in your router.</string>
+    <string name="menu_settings">Change address</string>
+    <string name="menu_reload">Reload</string>
+    <string name="error_no_host">Please enter the radio address first.</string>
+    <string name="error_load_failed">Could not load the web interface.</string>
+    <string name="error_load_failed_detail">Could not load %1$s (error %2$d). Check IP and close the browser on your PC.</string>
+</resources>
