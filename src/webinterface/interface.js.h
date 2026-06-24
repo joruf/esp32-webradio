@@ -1495,7 +1495,7 @@ const char interface_js[] PROGMEM = R"=====(
                 alarm_fade_sec: 90,
                 vu_meter: true,
                 stream_watchdog: true,
-                ota_check_url: "https://www.loresoft.de/downloads/version.json"
+                ota_check_url: "https://raw.githubusercontent.com/joruf/ESP32-Webradio/main/ota/version.json"
             }
         };
     }
@@ -1597,11 +1597,14 @@ const char interface_js[] PROGMEM = R"=====(
         var statusText;
         $("#ota-status-text").removeClass("text-success text-warning text-danger");
         if (!data.latest_version) {
-            statusText = "Could not read remote version (check URL and WiFi)";
+            statusText = "Could not read version manifest";
             $("#ota-status-text").addClass("text-danger");
         } else if (data.update_available) {
             statusText = "Update available";
             $("#ota-status-text").addClass("text-warning");
+        } else if (data.remote_ok === false && data.check_error) {
+            statusText = "Firmware is up to date (built-in manifest; remote: " + data.check_error + ")";
+            $("#ota-status-text").addClass("text-success");
         } else {
             statusText = "Firmware is up to date";
             $("#ota-status-text").addClass("text-success");

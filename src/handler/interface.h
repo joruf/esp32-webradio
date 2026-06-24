@@ -22,6 +22,10 @@ String getContentType(String filename) {
     return "application/x-zip";
   else if (filename.endsWith(".gz"))
     return "application/x-gzip";
+  else if (filename.endsWith(".js"))
+    return "application/javascript";
+  else if (filename.endsWith(".json"))
+    return "application/json";
   else if (filename.endsWith(".mp3"))
     return "audio/mpeg";
   else if (filename.endsWith(".pw"))
@@ -96,6 +100,9 @@ void handleWebpage(const String &pagename) {
     } else if (pagename.indexOf("interface.js") >= 0) {
       p = interface_js;
       l = sizeof(interface_js) - 1;
+    } else if (pagename.indexOf("ota/version.json") >= 0) {
+      p = ota_version_embedded_json;
+      l = sizeof(ota_version_embedded_json) - 1;
       /*
       } else if (pagename.indexOf ("bootstrap.min.css") >= 0 ) {
         p = bootstrap_css;

@@ -1,12 +1,26 @@
 # OTA firmware releases
 
-This folder documents over-the-air (OTA) update metadata for the ESP32 Webradio.
+This folder holds OTA metadata and release binaries for the ESP32 Webradio on GitHub.
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `version.json` | Version manifest checked by the radio (`features.ota_check_url` in config) |
+| `version.json` | Version manifest (changelog + download URLs) |
+| `releases/*.bin` | Published firmware binaries |
+
+## Repository
+
+[https://github.com/joruf/ESP32-Webradio](https://github.com/joruf/ESP32-Webradio)
+
+## Default URLs (public GitHub repo)
+
+| Resource | URL |
+|----------|-----|
+| Version manifest | `https://raw.githubusercontent.com/joruf/ESP32-Webradio/main/ota/version.json` |
+| Firmware binary | `https://raw.githubusercontent.com/joruf/ESP32-Webradio/main/ota/releases/esp32_webradio_v2.19.bin` |
+
+The radio stores the manifest URL in `features.ota_check_url` (OTA Update page).
 
 ## `version.json` format
 
@@ -14,18 +28,13 @@ This folder documents over-the-air (OTA) update metadata for the ESP32 Webradio.
 {
   "version": "v2.19",
   "released": "2026-06-24",
-  "bin_url": "https://example.com/path/firmware.bin",
+  "bin_url": "https://raw.githubusercontent.com/joruf/ESP32-Webradio/main/ota/releases/esp32_webradio_v2.19.bin",
   "notes": "Release notes for the latest build",
   "history": [
     {
       "version": "v2.19",
       "released": "2026-06-24",
       "notes": "Release notes"
-    },
-    {
-      "version": "v2.18",
-      "released": "2026-06-22",
-      "notes": "Previous release notes"
     }
   ]
 }
@@ -35,39 +44,23 @@ This folder documents over-the-air (OTA) update metadata for the ESP32 Webradio.
 |-------|---------|
 | `version` | Latest firmware label (compared with on-device `FIRMWARE`) |
 | `released` | Release date (`YYYY-MM-DD`) |
-| `bin_url` | HTTPS/HTTP URL of the firmware binary |
+| `bin_url` | HTTPS URL of the firmware binary |
 | `notes` | Short summary for the latest release |
-| `history` | Optional changelog array (newest first); shown on the OTA Update page |
+| `history` | Changelog array (newest first); shown on the OTA Update page |
 
-Each `history` entry may contain `version`, `released`, and `notes`.
+## Publishing a new release
 
-The firmware compares the numeric part of `version` with the running `FIRMWARE` string.
-If remote is newer, the web UI diagnostics page shows **Update available**.
+1. Build: `pio run`
+2. Copy firmware: `cp .pio/build/esp32dev/firmware.bin ota/releases/esp32_webradio_vX.XX.bin`
+3. Update `ota/version.json` (`version`, `released`, `bin_url`, `notes`, new `history` entry)
+5. Commit and **push to GitHub** (repository must be **public** for `raw.githubusercontent.com`)
 
-## Building a release binary
+After changing `ota/version.json`, regenerate `src/handler/ota_version_embedded.h` from the same file before the next firmware build.
 
-```bash
-pio run
-```
-
-Copy `.pio/build/esp32dev/firmware.bin` to your web server (e.g. `BINFILE` in `main.cpp`).
-
-Update `ota/version.json` and publish it next to the firmware binary on your web server (default: `https://www.loresoft.de/downloads/version.json`).
-
-### Publishing `version.json`
-
-1. Copy `ota/version.json` to your download server, e.g. `www.loresoft.de/downloads/version.json`.
-2. Ensure the file is served with `Content-Type: application/json` and is reachable over HTTPS.
-3. Set **OTA version check URL** on the radio to that URL (or restore factory defaults after a firmware flash).
-
-GitHub `raw.githubusercontent.com` URLs only work for **public** repositories. The repo `joruf/ESP32-Webradio` is not publicly available, so the previous default URL returned HTTP 404.
-
-Alternatively, push this repository to GitHub as public and use:
-
-`https://raw.githubusercontent.com/<user>/ESP32-Webradio/main/ota/version.json`
+Until GitHub is reachable, the device uses the **embedded manifest** in firmware (also at `http://<radio-ip>/ota/version.json`).
 
 ## On-device update
 
-- **Diagnostics** page → **Check for updates**
-- Or send `GET /?checkupdate=1`
-- Or **Maintenance** / `/?update` for immediate flash from `UPDATEHOST` + `BINFILE`
+- **OTA Update** page → **Check for updates** → **Install update**
+- Or `GET /?checkupdate=1`
+- Legacy fallback: `UPDATEHOST` + `BINFILE` in `main.cpp` (loresoft.de)

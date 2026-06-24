@@ -1,0 +1,121 @@
+/**
+ * @file ota_version_embedded.h
+ * @brief Built-in OTA manifest (from ota/version.json).
+ */
+
+#ifndef OTA_VERSION_EMBEDDED_H
+#define OTA_VERSION_EMBEDDED_H
+
+const char ota_version_embedded_json[] PROGMEM = R"=====(
+{
+  "version": "v2.19",
+  "released": "2026-06-24",
+  "repository": "https://github.com/joruf/ESP32-Webradio",
+  "bin_url": "https://raw.githubusercontent.com/joruf/ESP32-Webradio/main/ota/releases/esp32_webradio_v2.19.bin",
+  "notes": "Multi-client HTTP, SSE live updates, stream watchdog (auto-reconnect). Alarm fade-in, snooze rename. Auto dark mode, VU meter, diagnostics, captive portal, OTA version check. Android companion app.",
+  "history": [
+    {
+      "version": "v2.19",
+      "released": "2026-06-24",
+      "notes": "Multi-client HTTP, SSE live updates, stream watchdog (auto-reconnect). Alarm fade-in, snooze rename. Auto dark mode (configurable hours). VU meter and WiFi/IP on TFT. Diagnostics page, captive portal, OTA version check. Android companion app. Display/behaviour and OTA subpages in Web UI."
+    },
+    {
+      "version": "v2.18",
+      "released": "2026-06-22",
+      "notes": "Bugfix radio scheduler."
+    },
+    {
+      "version": "v2.17",
+      "released": "2026-06-19",
+      "notes": "Alarm scheduler fix: NTP time via getLocalTime each second, weekday from SNTP, reliable minute matching, validated alarm times, auto-save on scheduler changes."
+    },
+    {
+      "version": "v2.16",
+      "released": "2026-06-19",
+      "notes": "Stream metadata fixes: keep last title on empty blocks, robust StreamTitle parse, no permanent metadata disable on large blocks, JSON escaping in getJSON."
+    },
+    {
+      "version": "v2.15",
+      "released": "2026-06-19",
+      "notes": "Song title history: last 10 recognized stream titles with date/time in Web UI JSON."
+    },
+    {
+      "version": "v2.14",
+      "released": "2026-06-18",
+      "notes": "Web UI overhaul: responsive nav (Unicode icons), Scheduler alarm row layout, Maintenance page. Config: preset drag-and-drop reorder, collapsible raw JSON editor. Index: volume slider, separate play/stop, display on/off panel."
+    },
+    {
+      "version": "v2.13",
+      "released": "2026-06-17",
+      "notes": "Alarm scheduler fixed: weekday check, reliable start/stop, per-second task handling. Boot preset select lists only configured presets. Scheduler alarm times as hh:mm masked inputs. Clock/NTP labels and tooltips. WEBUI_CACHE_MAX_AGE. Soft volume fade on play start/stop."
+    },
+    {
+      "version": "v2.12",
+      "released": "2026-06-16",
+      "notes": "Configuration auto-saves on field change. UTC offset and DST as select boxes. Sound settings moved to Sound Settings page. HTTP POST config save fixed. Scheduler alarm remove persists to NVS."
+    },
+    {
+      "version": "v2.11",
+      "released": "2026-06-15",
+      "notes": "Web config as JSON/NVS with form UI. Scheduler page (sleep timer, alarms). Preset reorder. Bugfixes playlist redirect, EEPROM/config load, alarm save."
+    },
+    {
+      "version": "v2.10",
+      "released": "2026-06-06",
+      "notes": "Code switch from Arduino IDE to VSCode PlatformIO. VS1053 semaphore bugfixes. Time format expanded with date."
+    },
+    {
+      "version": "v2.09",
+      "released": "2026-01-22",
+      "notes": "IR remote control recognition removed. defaultprefs.h structured."
+    },
+    {
+      "version": "v2.08",
+      "released": "2026-01-22",
+      "notes": "writeDefaultConfig.h for default props in NVS on problems. SD card disabled. Display WiFi network list on TFT."
+    },
+    {
+      "version": "v2.07",
+      "released": "2026-01-21",
+      "notes": "MQTT removed, mute button removed from index.html. Hardcoded GPIO pins for rotary encoder, TFT, and VS1053. Web interface layout adapted."
+    },
+    {
+      "version": "v2.06",
+      "released": "2026-01-17",
+      "notes": "Bugfix alarm start/stop not working after ESP32 Espressif-Systems update to 3.3.0."
+    },
+    {
+      "version": "v2.05",
+      "released": "2026-01-16",
+      "notes": "Rotary encoder click and double-click logic: click = radio on/off, double-click = select radio station."
+    },
+    {
+      "version": "v2.04",
+      "released": "2026-01-16",
+      "notes": "Update ESP32 Espressif-Systems platform from v2.0.17 to 3.3.0."
+    },
+    {
+      "version": "v2.03",
+      "released": "2026-01-15",
+      "notes": "Song title API for web interface (icystreamtitle and icyname). Sleep timer to stop MP3 stream after a defined time. Const VERSION renamed to FIRMWARE."
+    },
+    {
+      "version": "v2.02",
+      "released": "2025-05-07",
+      "notes": "Bugfix HTTP server for root directory \"/\". HTML tags and stylesheets adapted for menu."
+    },
+    {
+      "version": "v2.01",
+      "released": "2025-03-27",
+      "notes": "Responsive Design meta tag added to adapt content on different screen sizes."
+    },
+    {
+      "version": "v2.00",
+      "released": "2025-03-06",
+      "notes": "Reload time changes on problems with the data connection."
+    }
+  ]
+}
+)=====";
+
+#endif

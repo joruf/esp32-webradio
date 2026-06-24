@@ -71,10 +71,13 @@ const char ota_html[] PROGMEM = R"=====(
 			<div class="row panel panel-default">
 				<div class="panel-heading">Update source</div>
 				<div class="panel-body">
-					<p class="config-help">JSON metadata URL used to look up the latest firmware version and download link. Saved automatically when you leave the field. Default host is the same server as the firmware binary (<code>www.loresoft.de</code>).</p>
+					<p class="config-help">OTA metadata and firmware releases are hosted on GitHub:
+						<a href="https://github.com/joruf/ESP32-Webradio" target="_blank" rel="noopener">github.com/joruf/ESP32-Webradio</a>
+						(folder <code>ota/</code>).</p>
+					<p class="config-help">JSON manifest URL below (<code>raw.githubusercontent.com</code>). Saved automatically when you leave the field. If GitHub is unreachable, the radio uses its built-in manifest (<code>/ota/version.json</code> on this device).</p>
 					<div class="form-group">
 						<label for="feat-ota-url">OTA version check URL</label>
-						<input type="text" class="form-control" id="feat-ota-url" value="https://www.loresoft.de/downloads/version.json">
+						<input type="text" class="form-control" id="feat-ota-url" value="https://raw.githubusercontent.com/joruf/ESP32-Webradio/main/ota/version.json">
 					</div>
 				</div>
 			</div>
