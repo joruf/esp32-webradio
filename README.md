@@ -247,7 +247,7 @@ All user settings are stored in the ESP32’s **Non‑Volatile Storage (NVS)** p
 
 The project includes ready‑to‑use drivers for several display types. Switch by including the appropriate header in `main.cpp` (or via conditional compilation).
 
-- **ST7735 (160×128)** – Default display driver (`BlueTFT.h`, SPI interface)
+- **ST7735 (160×128)** – Default display driver (`BlueTFT.h`, SPI interface). Modern dashboard layout (see below).
 - **ST7789** – Same driver as ST7735 (`BlueTFT.h`, SPI, different initialisation)
 - **ILI9341** – 240×320 resolution (`ILI9341.h`, SPI, needs larger buffers)
 - **SSD1306 (OLED)** – 128×64 monochrome (`SSD1306.h`, I²C interface)
@@ -262,6 +262,35 @@ The project includes ready‑to‑use drivers for several display types. Switch 
 > - `displayBatteryChargeOnTFT()` – Show battery level (if configured)
 
 > **Layout:** See `display.h` for the segment layout configuration (top line, middle text, bottom area, and rotary encoder status line).
+
+### BLUETFT dashboard (160×128)
+
+On the default ST7735 display (`BLUETFT`), the firmware uses a compact dashboard layout without overflow:
+
+```text
+┌────────────────────────────────────────────┐
+│ ● │ Mo 15.06.25          20:30 │  Header   │
+├───┼────────────────────────────┼───────────┤
+│ V │ SWR3 (Sender)              │     VU    │
+│ O │────────────────────────────│     │     │
+│ L │ Songtitel mehrzeilig       │     █     │
+│   │ (ICy-Metadaten)            │     │     │
+│ % │────────────────────────────│     │     │
+│   │ Radio on / Mute …          │           │
+│   │ MeinWLAN        ▓▓▓░ 87%   │           │
+└───┴────────────────────────────┴───────────┘
+ 12px        136px Inhalt              12px
+```
+
+| Zone | Content |
+|------|---------|
+| Header (15 px) | Date, time, play indicator (green dot when streaming) |
+| Left gutter (12 px) | Vertical volume bar and percentage |
+| Right gutter (12 px) | Vertical VU meter |
+| Content (136 px) | Station name, wrapped song title (ICY metadata), status line |
+| Bottom row | WiFi SSID, signal bar, quality in % (same curve as the Web UI) |
+
+Implementation: `src/display/dsp_dashboard.h`, wired from `BlueTFT.h`.
 
 ---
 

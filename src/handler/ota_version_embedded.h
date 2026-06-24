@@ -8,12 +8,17 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.21",
-  "released": "2026-06-25",
+  "version": "v2.22",
+  "released": "2026-06-15",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.21.bin",
-  "notes": "OTA install fix (dual OTA partitions). Dark mode on all Web UI pages. Shared nav_menu.html. VU meter 2px bar with improved dynamics.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.22.bin",
+  "notes": "Modern BLUETFT dashboard (160x128): vertical volume and VU bars, date/time header, WiFi SSID with signal %, station and song metadata.",
   "history": [
+    {
+      "version": "v2.22",
+      "released": "2026-06-15",
+      "notes": "Modern TFT dashboard for BLUETFT (160x128): vertical volume bar with % on the left, vertical VU meter on the right, header with date and time, WiFi SSID with signal bar and quality % (same curve as Web UI), station name, wrapped song metadata, status line, play indicator, optional battery line in header. No layout overflow."
+    },
     {
       "version": "v2.21",
       "released": "2026-06-25",

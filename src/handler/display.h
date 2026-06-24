@@ -115,20 +115,28 @@ static void drawSegmentText(scrseg_struct *p) {
  * @note Assumes that 'tft' (display handle) is valid.
  */
 void displayinfo(uint16_t inx) {
-  uint16_t width = dsp_getwidth(); // Normal number of colums
+#if defined(BLUETFT)
+  if (!tft || inx >= TFTSECS) {
+    return;
+  }
+  if (inx == 0) {
+    return;
+  }
+  dspDashboardDrawSegment(inx, &tftdata[inx]);
+#else
+  uint16_t width = dsp_getwidth();
   scrseg_struct *p = &tftdata[inx];
 
-  if (inx == 0) // Topline is shorter
-  {
-    width += TIMEPOS; // Leave space for time
+  if (inx == 0) {
+    width += TIMEPOS;
   }
 
-  if (tft) // TFT active?
-  {
+  if (tft) {
     clearSegmentBackground(p, width);
     drawDividerAboveSegment(p, width);
     drawSegmentText(p);
   }
+#endif
 }
 
 /**
