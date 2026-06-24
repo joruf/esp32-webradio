@@ -1,3 +1,28 @@
+#if defined(BLUETFT)
+#include "display/dsp_dashboard.h"
+#endif
+
+/**
+ * @brief Show a preset station name on TFT segment 2 (station row).
+ *
+ * @param preset Preset index in NVS
+ */
+static void encShowPresetNameOnTft(int8_t preset) {
+  String tmp = nvsGetHostFromPref(preset);
+  int16_t inx;
+
+  if (tmp == "") {
+    return;
+  }
+
+  inx = tmp.indexOf("#");
+  if (inx > 0) {
+    tmp.remove(0, inx + 1);
+  }
+  chomp(tmp);
+  showTextOnTFT(2, tmp.c_str());
+}
+
 /**
  * @brief Rotary encoder handling: volume, preset selection, and track
  * selection.
@@ -20,7 +45,15 @@ void checkRotaryEncoder() {
       enc_inactivity = 0;
       enc_menu_mode = VOLUME;
       dbgprint("Encoder mode back to VOLUME");
-      showTextOnTFT(2, "");
+#if defined(BLUETFT)
+      dspDashboardInvalidateStation();
+#endif
+      if (icyname.length() > 0) {
+        showTextOnTFT(2, icyname.c_str());
+      } else {
+        showTextOnTFT(2, "");
+      }
+      showTextOnTFT(3, "");
     }
   }
 
@@ -37,8 +70,12 @@ void checkRotaryEncoder() {
     dbgprint("Double click detected - Enter preset selection mode");
     doubleclick = false;
     enc_menu_mode = PRESET;
-    showTextOnTFT(3, msgTurnToSelectStation);
     enc_preset = ini_block.newpreset;
+#if defined(BLUETFT)
+    dspDashboardInvalidateStation();
+#endif
+    encShowPresetNameOnTft(enc_preset);
+    showTextOnTFT(3, msgPresetSelectTft);
     return;
   }
 
@@ -47,8 +84,12 @@ void checkRotaryEncoder() {
     dbgprint("Long click detected - Enter preset selection mode");
     longclick = false; // Clear immediately
     enc_menu_mode = PRESET;
-    showTextOnTFT(3, msgTurnToSelectStation);
     enc_preset = ini_block.newpreset;
+#if defined(BLUETFT)
+    dspDashboardInvalidateStation();
+#endif
+    encShowPresetNameOnTft(enc_preset);
+    showTextOnTFT(3, msgPresetSelectTft);
     return; // Exit, don't process single click in same cycle
   }
 
@@ -73,18 +114,29 @@ void checkRotaryEncoder() {
     } else if (enc_menu_mode == PRESET) {
       // Confirm selected preset and return to volume mode
       dbgprint("Single click - Confirm preset");
-      currentpreset = -1;
       ini_block.newpreset = enc_preset;
+      playlist_num = 0;
+      currentpreset = -1;
       enc_menu_mode = VOLUME;
-      showTextOnTFT(1, "Radio an");
+      encShowPresetNameOnTft(enc_preset);
       showTextOnTFT(3, "Sender gewählt");
+#if defined(BLUETFT)
+      dspDashboardInvalidateStation();
+#endif
+      if (datamode != STOPPED) {
+        // Stop current stream first; mp3loop() loads the new host once STOPPED
+        datamode = STOPREQD;
+      } else {
+        runStream(true, enc_preset);
+      }
     }
     // TRACK mode is not used
   }
 
   // --- Rotation handling ---
-  if (rotationcount == 0)
+  if (rotationcount == 0) {
     return;
+  }
 
   switch (enc_menu_mode) {
     case VOLUME:
@@ -94,18 +146,20 @@ void checkRotaryEncoder() {
 
     case PRESET:
       enc_preset += rotationcount;
-      if (enc_preset < 0)
+      if (enc_preset < 0) {
         enc_preset = MAXPRESETS;
+      }
       tmp = nvsGetHostFromPref(enc_preset);
       if (tmp == "") {
         enc_preset = 0;
         tmp = nvsGetHostFromPref(enc_preset);
       }
       inx = tmp.indexOf("#");
-      if (inx > 0)
+      if (inx > 0) {
         tmp.remove(0, inx + 1);
+      }
       chomp(tmp);
-      showTextOnTFT(3, tmp);
+      showTextOnTFT(2, tmp.c_str());
       break;
 
     default:

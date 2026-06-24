@@ -428,7 +428,7 @@ void displayVolumeOnTFT() {
   }
 }
 
-void displayVuMeterOnTFT(uint8_t level, bool visible) {}
+void displayVuMeterOnTFT(uint8_t treble, uint8_t bass, bool visible) {}
 
 //**************************************************************************************************
 //                                      D I S P L A Y T I M E *

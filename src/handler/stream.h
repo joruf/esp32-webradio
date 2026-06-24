@@ -104,22 +104,30 @@ static void formatStreamTitle(char *streamtitle) {
 
   // Look for artist/title separator
   if ((p1 = strstr(streamtitle, " - "))) {
-    p2 = p1 + 3; // 2nd part of text at this position
+    p2 = p1 + 3;
 
+#if defined(BLUETFT)
+    (void)p2;
+#else
     if (displaytype == T_NEXTION) {
-      *p1++ = '\\'; // Replace 3 characters by "\r"
+      *p1++ = '\\';
       *p1++ = 'r';
     } else {
-      *p1++ = '\n'; // Replace 3 characters by newline
+      *p1++ = '\n';
     }
 
-    // Remove leading space in title
     if (*p2 == ' ') {
       p2++;
     }
-    strcpy(p1, p2); // Shift 2nd part of title
+    strcpy(p1, p2);
+#endif
   }
 }
+
+#if defined(BLUETFT)
+#include "display/dsp_dashboard.h"
+#include "handler/wifi_display.h"
+#endif
 
 /**
  * @brief Show artist and song title if present in metadata.
@@ -130,21 +138,33 @@ static void formatStreamTitle(char *streamtitle) {
  */
 void showStreamDataOnTFT(const char *ml, bool full) {
   char streamtitle[150];
+#if !defined(BLUETFT)
   char displaytitle[150];
+#endif
 
   if (extractStreamTitle(ml, streamtitle, sizeof(streamtitle))) {
     icystreamtitle = streamtitle;
     addTitleToHistory(streamtitle);
+#if defined(BLUETFT)
+    tftdata[1].str = icystreamtitle;
+    dspDashboardInvalidateTitle();
+#else
     strncpy(displaytitle, streamtitle, sizeof(displaytitle) - 1);
     displaytitle[sizeof(displaytitle) - 1] = '\0';
     formatStreamTitle(displaytitle);
     showTextOnTFT(1, displaytitle);
+#endif
   } else if (full && ml != nullptr && ml[0] != '\0') {
     strncpy(streamtitle, ml, sizeof(streamtitle));
     streamtitle[sizeof(streamtitle) - 1] = '\0';
     icystreamtitle = streamtitle;
     addTitleToHistory(streamtitle);
+#if defined(BLUETFT)
+    tftdata[1].str = icystreamtitle;
+    dspDashboardInvalidateTitle();
+#else
     showTextOnTFT(1, streamtitle);
+#endif
   }
 }
 
@@ -295,7 +315,6 @@ bool connectToWebradioServer() {
   String hostwoext;
   uint16_t port = 80;
   String extension = "/";
-  const char *s;
 
   stop_mp3client();
   dbgprint("Connect to new host %s", host.c_str());
@@ -314,8 +333,13 @@ bool connectToWebradioServer() {
   // Parse host components
   parseHostString(host, hostwoext, port, extension);
 
-  s = dbgprint("Connect to %s on port %d, extension %s", hostwoext.c_str(), port, extension.c_str());
-  showTextOnTFT(1, s);
+  dbgprint("Connect to %s on port %d, extension %s", hostwoext.c_str(), port, extension.c_str());
+#if !defined(BLUETFT)
+  {
+    const char *s = dbgprint("Connect to %s on port %d, extension %s", hostwoext.c_str(), port, extension.c_str());
+    showTextOnTFT(1, s);
+  }
+#endif
 
   if (mp3client.connect(hostwoext.c_str(), port)) {
     dbgprint("Connected to server");
@@ -401,6 +425,20 @@ void playStreamFromQueue(void *parameter) {
 }
 
 /**
+ * @brief Handle TFT info display updates.
+ */
+static void handleTftInfoDisplay() {
+  if (time_req) {
+    time_req = false;
+    if (NetworkFound) {
+      showTimeOnTFT(timetxt);
+      displayVolumeOnTFT();
+      displayBatteryChargeOnTFT();
+    }
+  }
+}
+
+/**
  * @brief Handle TFT update with SPI bus management.
  */
 static void handleTftUpdate() {
@@ -412,6 +450,11 @@ static void handleTftUpdate() {
 
   if (tft) {
     handle_tft_txt();
+#if defined(BLUETFT)
+    dspDashboardRefreshLiveStatus();
+    updateWifiStatusDisplay();
+#endif
+    handleTftInfoDisplay();
     dsp_update();
   }
 
@@ -456,33 +499,16 @@ static void handleVs1053VolumeAndTone() {
 }
 
 /**
- * @brief Handle TFT info display updates.
- */
-static void handleTftInfoDisplay() {
-  if (time_req) {
-    time_req = false;
-    if (NetworkFound) {
-      showTimeOnTFT(timetxt);
-      displayVolumeOnTFT();
-      displayBatteryChargeOnTFT();
-    }
-  }
-}
-
-/**
  * @brief Handle special (non-stream data) functions for spftask.
  *        Runs once per spftask iteration.
  */
 void handleDisplayData() {
-  // 1. Update TFT
-  handleTftUpdate();
-
-  // 2. Time and alarm calculation (no SPI required)
+  // 1. Time and alarm (no SPI)
   handleTimeAndAlarmUpdate();
 
-  // 3. VS1053 volume and tone settings
+  // 2. VS1053 volume and tone
   handleVs1053VolumeAndTone();
 
-  // 4. Update TFT info display
-  handleTftInfoDisplay();
+  // 3. TFT dashboard + segment queue (SPI claimed inside)
+  handleTftUpdate();
 }

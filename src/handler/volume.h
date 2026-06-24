@@ -272,7 +272,9 @@ bool runStream(bool _runStream, int16_t _preset = 0) {
 
     // Display info
     enableBacklight(true);
+#if !defined(BLUETFT)
     showTextOnTFT(1, "Stream started");
+#endif
     showTextOnTFT(3, "Radio on");
 
     playSound(true);
@@ -282,7 +284,9 @@ bool runStream(bool _runStream, int16_t _preset = 0) {
   } else {
     dbgprint("Stopping stream (soft fade)");
 
+#if !defined(BLUETFT)
     showTextOnTFT(1, "Stream stopped");
+#endif
     showTextOnTFT(3, "Radio off");
 
     if (datamode != STOPPED || volumeFadeActive) {

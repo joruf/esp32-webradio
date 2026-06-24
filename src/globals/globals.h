@@ -20,6 +20,7 @@ extern alarmStatus radioAlarmStatusChanged;
 extern bool vs1053Available;
 extern const char *msgPlayerStopped;
 extern const char *msgTurnToSelectStation;
+extern const char *msgPresetSelectTft;
 extern const char *msgRadioAlarmOn;
 extern const char *msgRadioAlarmOff;
 

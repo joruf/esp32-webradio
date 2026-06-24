@@ -15,8 +15,13 @@
 #include "globals/globals.h"
 #include "handler/features_config.h"
 
+extern int32_t sleeptimer_ms;
+extern int bitrate;
+extern int mbitrate;
+
 uint8_t getOutputVolume(void);
-uint8_t getVuMeterLevel(void);
+uint8_t getVuMeterTrebleLevel(void);
+uint8_t getVuMeterBassLevel(void);
 void utf8ascii(char *s);
 
 #if defined(BLUETFT)
@@ -31,29 +36,104 @@ void utf8ascii(char *s);
 #define DSP_BAR_HEIGHT 98U
 #define DSP_BAR_WIDTH 7U
 #define DSP_LEFT_BAR_X 2U
-#define DSP_RIGHT_BAR_X (DSP_DASH_W - DSP_GUTTER_W + 3U)
+#define DSP_VU_BAR_W 2U
+#define DSP_VU_GAP 2U
+#define DSP_VU_TREBLE_X (DSP_DASH_W - DSP_GUTTER_W + 2U)
+#define DSP_VU_BASS_X (DSP_VU_TREBLE_X + DSP_VU_BAR_W + DSP_VU_GAP)
 
 #define DSP_COL_HEADER_BG 0x1082U
 #define DSP_COL_LINE 0x39E7U
 #define DSP_COL_VOL 0x04DFU
 #define DSP_COL_VOL_BG 0x2104U
 #define DSP_COL_VU 0xFFE0U
+#define DSP_COL_VU_BASS 0x07FFU
 #define DSP_COL_VU_BG 0x3186U
 #define DSP_COL_WIFI 0x07E0U
 #define DSP_COL_WIFI_WEAK 0xFD20U
 #define DSP_COL_WIFI_OFF 0x7BEFU
 #define DSP_COL_LABEL 0xC618U
+#define DSP_FONT_W 6U
+#define DSP_TEXT_PAD 3U
+#define DSP_TEXT_X (DSP_CONTENT_X + DSP_TEXT_PAD)
+#define DSP_CHARS_PER_LINE ((DSP_CONTENT_W - DSP_TEXT_PAD - 1U) / DSP_FONT_W)
+#define DSP_STATION_Y 17U
+#define DSP_STATION_ROW_H 12U
+#define DSP_TITLE_Y (DSP_STATION_Y + DSP_STATION_ROW_H + 3U)
+#define DSP_TITLE_ROW_H 12U
 
 static bool dspDashboardChromeReady = false;
 static char dspDashboardLastDate[14] = "";
 static char dspDashboardLastTime[8] = "";
+static char dspDashboardLastHeaderState[24] = "";
 inline void dspDashboardInvalidateHeader(void) {
   dspDashboardLastDate[0] = '\0';
   dspDashboardLastTime[0] = '\0';
+  dspDashboardLastHeaderState[0] = '\0';
 }
 static uint8_t dspDashboardLastVol = 255;
-static uint8_t dspDashboardLastVu = 255;
-static char dspDashboardLastWifi[40] = "";
+static uint8_t dspDashboardLastVuTreble = 255;
+static uint8_t dspDashboardLastVuBass = 255;
+static char dspDashboardLastWifi[48] = "";
+static int32_t dspDashboardLastSnoozeSec = -1;
+static char dspDashboardLastStationKey[88] = "";
+static char dspDashboardLastTitle[150] = "";
+
+inline void dspDashboardInvalidateSnooze(void) {
+  dspDashboardLastSnoozeSec = -1;
+}
+
+inline void dspDashboardInvalidateStation(void) {
+  dspDashboardLastStationKey[0] = '\0';
+}
+
+/**
+ * @brief Force the song title row to redraw on the next refresh.
+ */
+inline void dspDashboardInvalidateTitle(void) {
+  dspDashboardLastTitle[0] = '\0';
+}
+
+/**
+ * @brief Normalize raw icy-br or measured values to display kbps (1-999).
+ *
+ * @param raw Bitrate from header (kbps or bps) or measured kbps
+ * @return int Normalized kbps for display, or 0 if invalid
+ */
+inline int dspDashboardNormalizeBitrateKbps(int raw) {
+  if (raw <= 0) {
+    return 0;
+  }
+
+  if (raw > 1000) {
+    raw = (raw + 500) / 1000;
+  }
+
+  if (raw > 999) {
+    raw = 999;
+  }
+
+  return raw;
+}
+
+/**
+ * @brief Bitrate label for the station row (0 = hidden).
+ *
+ * @return int kbps to show as e.g. "128k", or 0 while connecting or selecting
+ */
+inline int dspDashboardGetDisplayBitrateKbps(void) {
+  int raw;
+
+  if (enc_menu_mode == PRESET) {
+    return 0;
+  }
+
+  if (datamode != DATA && datamode != METADATA) {
+    return 0;
+  }
+
+  raw = mbitrate > 0 ? mbitrate : bitrate;
+  return dspDashboardNormalizeBitrateKbps(raw);
+}
 
 /**
  * @brief Convert RSSI (dBm) to quality percent (same curve as Web UI).
@@ -96,6 +176,59 @@ inline void dspDashboardTruncate(char *dest, size_t destSize, const char *src, u
     i++;
   }
   dest[i] = '\0';
+}
+
+/**
+ * @brief Print one line clipped to the content column (no println – avoids x=0 wrap).
+ *
+ * @param y Top Y position
+ * @param color Text color
+ * @param text Line text (truncated to fit content width)
+ */
+inline void dspDashboardPrintContentLine(uint16_t y, uint16_t color, const char *text) {
+  char clipped[DSP_CHARS_PER_LINE + 1];
+
+  if (!tft || !text) {
+    return;
+  }
+
+  dspDashboardTruncate(clipped, sizeof(clipped), text, DSP_CHARS_PER_LINE);
+  dsp_setTextColorFgBg(color, BLACK);
+  dsp_setTextSize(1);
+  dsp_setCursor(DSP_TEXT_X, y);
+  dsp_print(clipped);
+}
+
+/**
+ * @brief Build WiFi status as "SSID -67dBm (87%)" with SSID truncated to fit one line.
+ *
+ * @param out Output buffer
+ * @param outSize Size of out
+ * @param ssid WiFi network name
+ * @param rssi Signal strength in dBm
+ * @param quality Quality percent 0-100
+ */
+inline void dspDashboardFormatWifiLine(char *out, size_t outSize, const char *ssid, int rssi, uint8_t quality) {
+  char suffix[20];
+  char ssidPart[DSP_CHARS_PER_LINE + 1];
+  size_t suffixLen;
+  size_t maxSsidChars;
+
+  if (!out || outSize == 0) {
+    return;
+  }
+
+  snprintf(suffix, sizeof(suffix), " %ddBm (%u%%)", rssi, (unsigned)quality);
+  suffixLen = strlen(suffix);
+
+  if (suffixLen + 1 >= DSP_CHARS_PER_LINE) {
+    snprintf(out, outSize, "%ddBm (%u%%)", rssi, (unsigned)quality);
+    return;
+  }
+
+  maxSsidChars = DSP_CHARS_PER_LINE - suffixLen;
+  dspDashboardTruncate(ssidPart, sizeof(ssidPart), ssid, (uint8_t)maxSsidChars);
+  snprintf(out, outSize, "%s%s", ssidPart, suffix);
 }
 
 /**
@@ -157,7 +290,8 @@ inline void dspDashboardDrawChrome(void) {
   dsp_fillRect(DSP_CONTENT_X, 96, DSP_CONTENT_W, 1, DSP_COL_LINE);
 
   dsp_fillRect(DSP_LEFT_BAR_X, DSP_BAR_TOP, DSP_BAR_WIDTH, DSP_BAR_HEIGHT, DSP_COL_VOL_BG);
-  dsp_fillRect(DSP_RIGHT_BAR_X, DSP_BAR_TOP, DSP_BAR_WIDTH, DSP_BAR_HEIGHT, DSP_COL_VU_BG);
+  dsp_fillRect(DSP_VU_TREBLE_X, DSP_BAR_TOP, DSP_VU_BAR_W, DSP_BAR_HEIGHT, DSP_COL_VU_BG);
+  dsp_fillRect(DSP_VU_BASS_X, DSP_BAR_TOP, DSP_VU_BAR_W, DSP_BAR_HEIGHT, DSP_COL_VU_BG);
 
   dspDashboardChromeReady = true;
 }
@@ -170,6 +304,10 @@ inline void dspDashboardDrawChrome(void) {
 inline void dspDashboardDrawHeader(const char *timetxt) {
   char dateLine[14];
   char timeLine[8];
+  char headerState[24];
+  const char *dateStr;
+  const char *timeStr;
+  uint16_t timeX;
 
   if (!tft) {
     return;
@@ -180,31 +318,37 @@ inline void dspDashboardDrawHeader(const char *timetxt) {
   }
 
   dspDashboardSplitTimeText(timetxt, dateLine, sizeof(dateLine), timeLine, sizeof(timeLine));
+  dateStr = dateLine[0] ? dateLine : "--";
+  timeStr = timeLine[0] ? timeLine : "--:--";
+  snprintf(headerState, sizeof(headerState), "%s|%s|%c", dateStr, timeStr,
+           (datamode != STOPPED) ? 'P' : 'S');
 
-  if (strcmp(dateLine, dspDashboardLastDate) != 0) {
-    dsp_fillRect(DSP_CONTENT_X, 0, 90, 14, DSP_COL_HEADER_BG);
-    dsp_setTextColor(WHITE);
-    dsp_setTextSize(1);
-    dsp_setCursor(DSP_CONTENT_X, 3);
-    dsp_print(dateLine[0] ? dateLine : "--");
-    strncpy(dspDashboardLastDate, dateLine, sizeof(dspDashboardLastDate) - 1);
-    dspDashboardLastDate[sizeof(dspDashboardLastDate) - 1] = '\0';
+  if (strcmp(headerState, dspDashboardLastHeaderState) == 0) {
+    return;
   }
 
-  if (strcmp(timeLine, dspDashboardLastTime) != 0) {
-    uint16_t tw = (uint16_t)strlen(timeLine) * 6;
-    uint16_t tx = (tw < DSP_DASH_W) ? (DSP_DASH_W - DSP_GUTTER_W - tw - 2) : DSP_CONTENT_X;
+  strncpy(dspDashboardLastHeaderState, headerState, sizeof(dspDashboardLastHeaderState) - 1);
+  dspDashboardLastHeaderState[sizeof(dspDashboardLastHeaderState) - 1] = '\0';
+  strncpy(dspDashboardLastDate, dateStr, sizeof(dspDashboardLastDate) - 1);
+  dspDashboardLastDate[sizeof(dspDashboardLastDate) - 1] = '\0';
+  strncpy(dspDashboardLastTime, timeStr, sizeof(dspDashboardLastTime) - 1);
+  dspDashboardLastTime[sizeof(dspDashboardLastTime) - 1] = '\0';
 
-    dsp_fillRect(tx, 0, DSP_DASH_W - tx, 14, DSP_COL_HEADER_BG);
-    dsp_setTextColor(WHITE);
-    dsp_setTextSize(1);
-    dsp_setCursor(tx, 3);
-    dsp_print(timeLine[0] ? timeLine : "--:--");
-    strncpy(dspDashboardLastTime, timeLine, sizeof(dspDashboardLastTime) - 1);
-    dspDashboardLastTime[sizeof(dspDashboardLastTime) - 1] = '\0';
-  }
+  dsp_fillRect(0, 0, DSP_GUTTER_W, DSP_HEADER_H, DSP_COL_HEADER_BG);
+  dsp_fillRect(DSP_CONTENT_X, 0, DSP_CONTENT_W, DSP_HEADER_H, DSP_COL_HEADER_BG);
+  dsp_fillRect(DSP_DASH_W - DSP_GUTTER_W, 0, DSP_GUTTER_W, DSP_HEADER_H, DSP_COL_HEADER_BG);
+  dsp_fillRect(0, DSP_HEADER_H - 1, DSP_DASH_W, 1, DSP_COL_LINE);
 
-  dsp_fillRect(1, 4, 4, 4, (datamode != STOPPED) ? GREEN : DSP_COL_VOL_BG);
+  dsp_fillRect(3, 5, 4, 4, (datamode != STOPPED) ? GREEN : DSP_COL_HEADER_BG);
+
+  dsp_setTextColor(WHITE);
+  dsp_setTextSize(1);
+  dsp_setCursor(DSP_TEXT_X, 3);
+  dsp_print(dateStr);
+
+  timeX = (uint16_t)(DSP_CONTENT_X + DSP_CONTENT_W - (strlen(timeStr) * DSP_FONT_W) - 1U);
+  dsp_setCursor(timeX, 3);
+  dsp_print(timeStr);
 }
 
 /**
@@ -247,15 +391,33 @@ inline void dspDashboardDrawVolume(uint8_t volume) {
 }
 
 /**
- * @brief Draw vertical VU activity bar in the right gutter.
+ * @brief Draw one vertical 2px VU bar in the right gutter.
  *
+ * @param x Left X position
  * @param level Activity level 0-100
- * @param visible When false, clear the bar
+ * @param barColor Fill color for the active segment
  */
-inline void dspDashboardDrawVu(uint8_t level, bool visible) {
+inline void dspDashboardDrawVuBar(uint16_t x, uint8_t level, uint16_t barColor) {
   uint16_t fillH;
   uint16_t fillY;
 
+  fillH = map(level, 0, 100, 0, DSP_BAR_HEIGHT);
+  fillY = DSP_BAR_TOP + DSP_BAR_HEIGHT - fillH;
+
+  dsp_fillRect(x, DSP_BAR_TOP, DSP_VU_BAR_W, DSP_BAR_HEIGHT, DSP_COL_VU_BG);
+  if (fillH > 0) {
+    dsp_fillRect(x, fillY, DSP_VU_BAR_W, fillH, barColor);
+  }
+}
+
+/**
+ * @brief Draw treble and bass VU bars side by side in the right gutter.
+ *
+ * @param treble Treble activity level 0-100
+ * @param bass Bass activity level 0-100
+ * @param visible When false, clear both bars
+ */
+inline void dspDashboardDrawVu(uint8_t treble, uint8_t bass, bool visible) {
   if (!tft) {
     return;
   }
@@ -265,24 +427,22 @@ inline void dspDashboardDrawVu(uint8_t level, bool visible) {
   }
 
   if (!visible) {
-    if (dspDashboardLastVu == 0) {
+    if (dspDashboardLastVuTreble == 0 && dspDashboardLastVuBass == 0) {
       return;
     }
-    level = 0;
+    treble = 0;
+    bass = 0;
   }
 
-  if (level == dspDashboardLastVu) {
+  if (treble == dspDashboardLastVuTreble && bass == dspDashboardLastVuBass) {
     return;
   }
 
-  dspDashboardLastVu = level;
-  fillH = map(level, 0, 100, 0, DSP_BAR_HEIGHT);
-  fillY = DSP_BAR_TOP + DSP_BAR_HEIGHT - fillH;
+  dspDashboardLastVuTreble = treble;
+  dspDashboardLastVuBass = bass;
 
-  dsp_fillRect(DSP_RIGHT_BAR_X, DSP_BAR_TOP, DSP_BAR_WIDTH, DSP_BAR_HEIGHT, DSP_COL_VU_BG);
-  if (fillH > 0) {
-    dsp_fillRect(DSP_RIGHT_BAR_X, fillY, DSP_BAR_WIDTH, fillH, DSP_COL_VU);
-  }
+  dspDashboardDrawVuBar(DSP_VU_TREBLE_X, treble, DSP_COL_VU);
+  dspDashboardDrawVuBar(DSP_VU_BASS_X, bass, DSP_COL_VU_BASS);
 }
 
 /**
@@ -296,8 +456,7 @@ inline void dspDashboardDrawVu(uint8_t level, bool visible) {
  */
 inline void dspDashboardDrawWrappedText(uint16_t y, uint16_t height, uint16_t color, const char *text,
                                         uint8_t maxLines) {
-  char line[24];
-  const uint8_t charsPerLine = (uint8_t)(DSP_CONTENT_W / 6);
+  char line[DSP_CHARS_PER_LINE + 1];
   uint8_t lineIndex = 0;
   size_t pos = 0;
   size_t len;
@@ -307,22 +466,39 @@ inline void dspDashboardDrawWrappedText(uint16_t y, uint16_t height, uint16_t co
   }
 
   dsp_fillRect(DSP_CONTENT_X, y, DSP_CONTENT_W, height, BLACK);
-  dsp_setTextColor(color);
+  dsp_setTextColorFgBg(color, BLACK);
   dsp_setTextSize(1);
 
   len = strlen(text);
   while (text[pos] != '\0' && lineIndex < maxLines) {
-    size_t chunk = charsPerLine;
+    size_t chunk = 0;
+    size_t scan;
 
-    if (pos + chunk < len) {
-      while (chunk > 0 && text[pos + chunk] != ' ') {
-        chunk--;
+    for (scan = 0; pos + scan < len && scan < DSP_CHARS_PER_LINE; scan++) {
+      const char c = text[pos + scan];
+      if (c == '\n' || c == '\r') {
+        break;
       }
-      if (chunk == 0) {
-        chunk = charsPerLine;
+      chunk++;
+    }
+
+    if (chunk == 0) {
+      if (text[pos] == '\n' || text[pos] == '\r') {
+        pos++;
+        lineIndex++;
+        continue;
       }
-    } else {
-      chunk = len - pos;
+      break;
+    }
+
+    if (chunk == DSP_CHARS_PER_LINE && pos + chunk < len) {
+      size_t breakAt = chunk;
+      while (breakAt > 0 && text[pos + breakAt] != ' ') {
+        breakAt--;
+      }
+      if (breakAt > 0) {
+        chunk = breakAt;
+      }
     }
 
     memset(line, 0, sizeof(line));
@@ -331,10 +507,14 @@ inline void dspDashboardDrawWrappedText(uint16_t y, uint16_t height, uint16_t co
       memmove(line, line + 1, strlen(line));
     }
 
-    dsp_setCursor(DSP_CONTENT_X + 1, y + (lineIndex * 8));
-    dsp_println(line);
+    dspDashboardTruncate(line, sizeof(line), line, DSP_CHARS_PER_LINE);
+    dsp_setCursor(DSP_TEXT_X, y + (lineIndex * 8));
+    dsp_print(line);
 
     pos += chunk;
+    if (text[pos] == '\n' || text[pos] == '\r') {
+      pos++;
+    }
     while (text[pos] == ' ') {
       pos++;
     }
@@ -343,15 +523,14 @@ inline void dspDashboardDrawWrappedText(uint16_t y, uint16_t height, uint16_t co
 }
 
 /**
- * @brief Draw WiFi SSID, mini signal bar and quality percent.
+ * @brief Draw WiFi SSID, RSSI and quality percent on one line.
  */
 inline void dspDashboardDrawWifiStatus(void) {
-  char line[40];
-  char ssid[20];
+  char line[48];
+  char ssidRaw[33];
   int rssi = 0;
   uint8_t quality = 0;
-  uint16_t barColor = DSP_COL_WIFI_OFF;
-  uint16_t barW;
+  uint16_t textColor = DSP_COL_WIFI_OFF;
   const uint16_t y = 106;
 
   if (!tft) {
@@ -364,14 +543,14 @@ inline void dspDashboardDrawWifiStatus(void) {
 
   if (WiFi.status() == WL_CONNECTED) {
     String connected = WiFi.SSID();
-    dspDashboardTruncate(ssid, sizeof(ssid), connected.c_str(), 14);
+    strncpy(ssidRaw, connected.c_str(), sizeof(ssidRaw) - 1);
+    ssidRaw[sizeof(ssidRaw) - 1] = '\0';
     rssi = WiFi.RSSI();
     quality = dspDashboardRssiToPercent(rssi);
-    barColor = (quality >= 50) ? DSP_COL_WIFI : DSP_COL_WIFI_WEAK;
-    snprintf(line, sizeof(line), "%s %u%%", ssid, (unsigned)quality);
+    textColor = (quality >= 50) ? DSP_COL_WIFI : DSP_COL_WIFI_WEAK;
+    dspDashboardFormatWifiLine(line, sizeof(line), ssidRaw, rssi, quality);
   } else {
-    strcpy(ssid, "No WiFi");
-    snprintf(line, sizeof(line), "Offline");
+    snprintf(line, sizeof(line), "No WiFi");
   }
 
   if (strcmp(line, dspDashboardLastWifi) == 0) {
@@ -381,24 +560,234 @@ inline void dspDashboardDrawWifiStatus(void) {
   strncpy(dspDashboardLastWifi, line, sizeof(dspDashboardLastWifi) - 1);
   dspDashboardLastWifi[sizeof(dspDashboardLastWifi) - 1] = '\0';
 
-  dsp_fillRect(DSP_CONTENT_X, y, DSP_CONTENT_W, 14, BLACK);
-  dsp_setTextColor(barColor);
-  dsp_setTextSize(1);
-  dsp_setCursor(DSP_CONTENT_X + 1, y + 2);
-  dsp_print(ssid);
+  dsp_fillRect(DSP_CONTENT_X, y, DSP_CONTENT_W, 12, BLACK);
+  dspDashboardPrintContentLine(y + 2, textColor, line);
+}
 
-  if (WiFi.status() == WL_CONNECTED) {
-    char pct[6];
-    barW = map(quality, 0, 100, 0, 28);
-    snprintf(pct, sizeof(pct), "%u%%", (unsigned)quality);
-    dsp_fillRect(DSP_CONTENT_X + DSP_CONTENT_W - 50, y + 4, 28, 6, DSP_COL_VOL_BG);
-    if (barW > 0) {
-      dsp_fillRect(DSP_CONTENT_X + DSP_CONTENT_W - 50, y + 4, barW, 6, barColor);
-    }
-    dsp_setTextColor(barColor);
-    dsp_setCursor(DSP_CONTENT_X + DSP_CONTENT_W - 22, y + 2);
-    dsp_print(pct);
+/**
+ * @brief Draw snooze countdown on the status line (updates every second).
+ */
+inline void dspDashboardUpdateSnooze(void) {
+  char line[24];
+  int32_t sec;
+  const uint16_t y = 97;
+  const uint16_t snoozeColor = 0xF81FU;
+
+  if (!tft) {
+    return;
   }
+
+  if (enc_menu_mode == PRESET) {
+    return;
+  }
+
+  if (!dspDashboardChromeReady) {
+    dspDashboardDrawChrome();
+  }
+
+  if (sleeptimer_ms <= 0) {
+    if (dspDashboardLastSnoozeSec >= 0) {
+      dsp_fillRect(DSP_CONTENT_X, y, DSP_CONTENT_W, 8, BLACK);
+      dspDashboardLastSnoozeSec = -1;
+    }
+    return;
+  }
+
+  sec = sleeptimer_ms / 1000;
+  if (sec < 0) {
+    sec = 0;
+  }
+
+  if (sec == dspDashboardLastSnoozeSec) {
+    return;
+  }
+
+  dspDashboardLastSnoozeSec = sec;
+
+  if (sec >= 3600) {
+    snprintf(line, sizeof(line), "Snooze %luh%02lum", (unsigned long)(sec / 3600),
+             (unsigned long)((sec % 3600) / 60));
+  } else if (sec >= 60) {
+    snprintf(line, sizeof(line), "Snooze %lum%02lus", (unsigned long)(sec / 60), (unsigned long)(sec % 60));
+  } else {
+    snprintf(line, sizeof(line), "Snooze %lus", (unsigned long)sec);
+  }
+
+  dsp_fillRect(DSP_CONTENT_X, y, DSP_CONTENT_W, 8, BLACK);
+  dspDashboardPrintContentLine(y, snoozeColor, line);
+}
+
+/**
+ * @brief Draw station name (left) and bitrate label (right) on one row.
+ *
+ * @param station Station name text
+ * @param color Station name color
+ * @param brKbps Bitrate in kbps, or 0 to hide
+ */
+inline void dspDashboardDrawStationRow(const char *station, uint16_t color, int brKbps) {
+  char brLabel[6];
+  char stationClip[DSP_CHARS_PER_LINE + 1];
+  char cacheKey[88];
+  uint8_t stationMaxChars;
+  const uint16_t y = 17;
+
+  if (!tft) {
+    return;
+  }
+
+  brLabel[0] = '\0';
+  if (brKbps > 0) {
+    snprintf(brLabel, sizeof(brLabel), "%dk", brKbps);
+  }
+
+  snprintf(cacheKey, sizeof(cacheKey), "%s|%d", station ? station : "", brKbps);
+  if (strcmp(cacheKey, dspDashboardLastStationKey) == 0) {
+    return;
+  }
+
+  strncpy(dspDashboardLastStationKey, cacheKey, sizeof(dspDashboardLastStationKey) - 1);
+  dspDashboardLastStationKey[sizeof(dspDashboardLastStationKey) - 1] = '\0';
+
+  stationMaxChars = DSP_CHARS_PER_LINE;
+  if (brLabel[0] != '\0') {
+    const uint8_t brChars = (uint8_t)strlen(brLabel);
+    if (stationMaxChars > brChars + 1U) {
+      stationMaxChars = (uint8_t)(DSP_CHARS_PER_LINE - brChars - 1U);
+    }
+    if (stationMaxChars < 6U) {
+      stationMaxChars = 6U;
+    }
+  }
+
+  dsp_fillRect(DSP_CONTENT_X, y, DSP_CONTENT_W, 12, BLACK);
+  dspDashboardTruncate(stationClip, sizeof(stationClip), station ? station : "", stationMaxChars);
+
+  dsp_setTextColor(color);
+  dsp_setTextSize(1);
+  dsp_setCursor(DSP_TEXT_X, y + 2);
+  dsp_print(stationClip);
+
+  if (brLabel[0] != '\0') {
+    const uint16_t bx = (uint16_t)(DSP_CONTENT_X + DSP_CONTENT_W - (strlen(brLabel) * DSP_FONT_W) - 1U);
+    dsp_setTextColor(DSP_COL_LABEL);
+    dsp_setCursor(bx, y + 2);
+    dsp_print(brLabel);
+  }
+}
+
+/**
+ * @brief Refresh station row when measured bitrate changes during playback.
+ */
+inline void dspDashboardRefreshStationBitrate(void) {
+  char buf[150];
+  uint16_t len;
+  int brKbps;
+
+  if (!tft) {
+    return;
+  }
+
+  if (!dspDashboardChromeReady) {
+    dspDashboardDrawChrome();
+  }
+
+  len = tftdata[2].str.length();
+  if (len == 0) {
+    if (dspDashboardLastStationKey[0] != '\0') {
+      dsp_fillRect(DSP_CONTENT_X, 17, DSP_CONTENT_W, 12, BLACK);
+      dspDashboardLastStationKey[0] = '\0';
+    }
+    return;
+  }
+
+  if (len >= sizeof(buf)) {
+    len = sizeof(buf) - 1;
+  }
+  tftdata[2].str.toCharArray(buf, len + 1);
+  utf8ascii(buf);
+
+  brKbps = dspDashboardGetDisplayBitrateKbps();
+
+  dspDashboardDrawStationRow(buf, tftdata[2].color, brKbps);
+}
+
+/**
+ * @brief Draw song title on one row (same drawing code as dspDashboardDrawStationRow).
+ *
+ * @param title Title text
+ * @param color Text color
+ */
+inline void dspDashboardDrawTitleRow(const char *title, uint16_t color) {
+  char titleClip[DSP_CHARS_PER_LINE + 1];
+  const uint16_t y = DSP_TITLE_Y;
+
+  if (!tft) {
+    return;
+  }
+
+  if (strcmp(title ? title : "", dspDashboardLastTitle) == 0) {
+    return;
+  }
+
+  strncpy(dspDashboardLastTitle, title ? title : "", sizeof(dspDashboardLastTitle) - 1);
+  dspDashboardLastTitle[sizeof(dspDashboardLastTitle) - 1] = '\0';
+
+  dsp_fillRect(DSP_CONTENT_X, y, DSP_CONTENT_W, DSP_TITLE_ROW_H, BLACK);
+  dspDashboardTruncate(titleClip, sizeof(titleClip), title ? title : "", DSP_CHARS_PER_LINE);
+
+  dsp_setTextColor(color);
+  dsp_setTextSize(1);
+  dsp_setCursor(DSP_TEXT_X, y + 2);
+  dsp_print(titleClip);
+}
+
+/**
+ * @brief Refresh song title row (same pattern as dspDashboardRefreshStationBitrate).
+ */
+inline void dspDashboardRefreshTitle(void) {
+  char buf[150];
+  uint16_t len;
+
+  if (!tft) {
+    return;
+  }
+
+  if (!dspDashboardChromeReady) {
+    dspDashboardDrawChrome();
+  }
+
+  len = tftdata[1].str.length();
+  if (len == 0) {
+    if (dspDashboardLastTitle[0] != '\0') {
+      dsp_fillRect(DSP_CONTENT_X, DSP_TITLE_Y, DSP_CONTENT_W, DSP_TITLE_ROW_H, BLACK);
+      dspDashboardLastTitle[0] = '\0';
+    }
+    return;
+  }
+
+  if (len >= sizeof(buf)) {
+    len = sizeof(buf) - 1;
+  }
+  tftdata[1].str.toCharArray(buf, len + 1);
+  utf8ascii(buf);
+
+  dspDashboardDrawTitleRow(buf, tftdata[1].color);
+}
+
+/**
+ * @brief Refresh dashboard fields from live globals (same source as buildLiveStatusJson).
+ *
+ * Song title: icystreamtitle. Station row: tftdata[2] / icyname.
+ * Call only while the SPI bus is claimed when dsp_isUseSPI().
+ */
+inline void dspDashboardRefreshLiveStatus(void) {
+  if (!tft) {
+    return;
+  }
+
+  dspDashboardRefreshTitle();
+  dspDashboardUpdateSnooze();
+  dspDashboardRefreshStationBitrate();
 }
 
 /**
@@ -422,12 +811,18 @@ inline void dspDashboardDrawSegment(uint16_t inx, scrseg_struct *segment) {
   len = segment->str.length();
   if (len == 0) {
     if (inx == 1) {
-      dsp_fillRect(DSP_CONTENT_X, 32, DSP_CONTENT_W, 63, BLACK);
+      dsp_fillRect(DSP_CONTENT_X, DSP_TITLE_Y, DSP_CONTENT_W, DSP_TITLE_ROW_H, BLACK);
+      dspDashboardLastTitle[0] = '\0';
     } else if (inx == 2) {
       dsp_fillRect(DSP_CONTENT_X, 17, DSP_CONTENT_W, 12, BLACK);
-    } else if (inx == 3) {
+      dspDashboardLastStationKey[0] = '\0';
+    } else if (inx == 3 && sleeptimer_ms <= 0) {
       dsp_fillRect(DSP_CONTENT_X, 97, DSP_CONTENT_W, 8, BLACK);
     }
+    return;
+  }
+
+  if (inx == 3 && sleeptimer_ms > 0 && enc_menu_mode != PRESET) {
     return;
   }
 
@@ -438,9 +833,9 @@ inline void dspDashboardDrawSegment(uint16_t inx, scrseg_struct *segment) {
   utf8ascii(buf);
 
   if (inx == 1) {
-    dspDashboardDrawWrappedText(32, 62, segment->color, buf, 7);
+    dspDashboardDrawTitleRow(buf, segment->color);
   } else if (inx == 2) {
-    dspDashboardDrawWrappedText(17, 12, segment->color, buf, 1);
+    dspDashboardDrawStationRow(buf, segment->color, dspDashboardGetDisplayBitrateKbps());
   } else if (inx == 3) {
     dspDashboardDrawWrappedText(97, 8, segment->color, buf, 1);
   }
@@ -459,13 +854,16 @@ inline void dspDashboardTick(void) {
   }
 
   dspDashboardDrawHeader(timetxt);
+  dspDashboardRefreshStationBitrate();
   dspDashboardDrawVolume(getOutputVolume());
   dspDashboardDrawWifiStatus();
 
+  dspDashboardUpdateSnooze();
+
   if (features.vu_meter && datamode != STOPPED) {
-    dspDashboardDrawVu(getVuMeterLevel(), true);
+    dspDashboardDrawVu(getVuMeterTrebleLevel(), getVuMeterBassLevel(), true);
   } else {
-    dspDashboardDrawVu(0, false);
+    dspDashboardDrawVu(0, 0, false);
   }
 }
 

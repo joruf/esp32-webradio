@@ -37,6 +37,7 @@ Adafruit_ST7735 *tft = NULL;
 #define dsp_fillRect(a, b, c, d, e) tft->fillRect(a, b, c, d, e)
 #define dsp_setTextSize(a) tft->setTextSize(a)
 #define dsp_setTextColor(a) tft->setTextColor(a)
+#define dsp_setTextColorFgBg(fg, bg) tft->setTextColor(fg, bg)
 #define dsp_setCursor(a, b) tft->setCursor(a, b)
 #define dsp_erase() tft->fillScreen(BLACK)
 #define dsp_getwidth() 160
@@ -84,9 +85,9 @@ void displayVolumeOnTFT() {
   }
 }
 
-void displayVuMeterOnTFT(uint8_t level, bool visible) {
+void displayVuMeterOnTFT(uint8_t treble, uint8_t bass, bool visible) {
   if (tft) {
-    dspDashboardDrawVu(level, visible);
+    dspDashboardDrawVu(treble, bass, visible);
   }
 }
 

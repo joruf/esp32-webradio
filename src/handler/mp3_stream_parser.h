@@ -58,6 +58,7 @@ public:
     metaint = 0;          // No metaint found
     headerLineFeedCount_ = 0;          // For detection end of header
     bitrate = 0;          // Bitrate still unknown
+    mbitrate = 0;
     dbgprint("Switch to HEADER");
     datamode = HEADER; // Handle header
     totalcount = 0;    // Reset totalcount
@@ -97,6 +98,9 @@ public:
 
         if (lcml.startsWith("icy-br:")) {
           bitrate = metaline.substring(7).toInt(); // Found bitrate tag, read the bitrate
+          if (bitrate > 1000) {                    // Often bits/sec (e.g. 128000)
+            bitrate = (bitrate + 500) / 1000;
+          }
           if (bitrate == 0) {                      // For Ogg br is like "Quality 2"
             bitrate = 87;                          // Dummy bitrate
           }
@@ -448,6 +452,8 @@ void mp3loop() {
     queueFunctionForPlayTask(QSTOPSONG); // Queue a request to stop the song
     metaint = 0;                         // No metaint known now
     datamode = STOPPED;                  // state becomes STOPPED
+    mbitrate = 0;
+    bitrate = 0;
     return;
   }
 

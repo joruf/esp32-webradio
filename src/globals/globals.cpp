@@ -4,6 +4,7 @@ alarmStatus radioAlarmStatusChanged = ALRM_NONE;
 bool vs1053Available = false;
 const char *msgPlayerStopped = "Player stopped!\nclick\nto select new station";
 const char *msgTurnToSelectStation = "Turn to select station\nPress to confirm";
+const char *msgPresetSelectTft = "Drehen=Sender, Klick=OK";
 const char *msgRadioAlarmOn = "Radio Alarm\nhas turned the music ON";
 const char *msgRadioAlarmOff = "Radio Alarm\nhas turned the music OFF";
 

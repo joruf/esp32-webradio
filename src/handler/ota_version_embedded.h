@@ -8,12 +8,17 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.22",
-  "released": "2026-06-15",
+  "version": "v2.23",
+  "released": "2026-06-24",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.22.bin",
-  "notes": "Modern BLUETFT dashboard (160x128): vertical volume and VU bars, date/time header, WiFi SSID with signal %, station and song metadata.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.23.bin",
+  "notes": "BLUETFT song title on TFT (same refresh path as station name). Bitrate display kbps fix. Rotary encoder preset selection fix.",
   "history": [
+    {
+      "version": "v2.23",
+      "released": "2026-06-24",
+      "notes": "BLUETFT song title on TFT using the same direct-refresh path as the station row (icystreamtitle, single line below station, content-column X offset). Bitrate label normalized to kbps on station change. Rotary encoder preset switch while streaming fixed."
+    },
     {
       "version": "v2.22",
       "released": "2026-06-15",

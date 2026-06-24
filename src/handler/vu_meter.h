@@ -1,12 +1,17 @@
 /**
  * @file vu_meter.h
  * @brief Audio activity meter derived from stream chunk dynamics.
+ *
+ * Treble reacts to bursts and peaks (fast transients); bass follows sustained
+ * average chunk energy (slower). Both levels are shown as separate VU bars.
  */
 
 #ifndef VU_METER_H
 #define VU_METER_H
 
 #include "features_config.h"
+
+uint8_t getOutputVolume(void);
 
 /**
  * @brief Activity meter using per-read chunk size, burst rate, and peak decay.
@@ -28,6 +33,9 @@ public:
       const uint32_t delta = now - lastFeedMs_;
       const uint32_t burst = (uint32_t)bytes * 50U / (delta < 5U ? 5U : delta);
       const uint8_t instant = mapBurstToLevel(burst);
+      if (burst > burstPeak_) {
+        burstPeak_ = burst;
+      }
       if (instant > peak_) {
         peak_ = instant;
       }
@@ -50,10 +58,11 @@ public:
    */
   void update(void) {
     if (!features.vu_meter) {
-      if (level_ > 0) {
-        level_ = 0;
+      if (trebleLevel_ > 0 || bassLevel_ > 0) {
+        trebleLevel_ = 0;
+        bassLevel_ = 0;
         if (displaytype == T_BLUETFT || displaytype == T_ILI9341) {
-          displayVuMeterOnTFT(0, false);
+          displayVuMeterOnTFT(0, 0, false);
         }
       }
       return;
@@ -65,78 +74,149 @@ public:
 
     lastCalcMs_ = millis();
 
-    uint8_t target = 0;
+    uint8_t trebleTarget = 0;
+    uint8_t bassTarget = 0;
+
     if (datamode != STOPPED && feedCount_ > 0) {
       const uint32_t avgChunk = byteAccum_ / feedCount_;
       const uint16_t span = (maxChunk_ > minChunk_) ? (maxChunk_ - minChunk_) : 0;
 
-      uint8_t base = mapChunkToLevel((uint16_t)avgChunk);
-      uint8_t swing = (uint8_t)constrain((int32_t)map((int32_t)span, 0, 1400, 0, 40), 0, 40);
-      uint8_t peakLevel = mapChunkToLevel(maxChunk_);
-
-      target = base;
-      if (swing > target) {
-        target = swing;
-      }
-      if (peakLevel > target) {
-        target = peakLevel;
-      }
-      if (peak_ > target) {
-        target = peak_;
+      bassTarget = mapChunkToLevel((uint16_t)avgChunk);
+      const uint8_t bassSwing = (uint8_t)constrain((int32_t)map((int32_t)span, 0, 1200, 0, 36), 0, 36);
+      if (bassSwing > bassTarget) {
+        bassTarget = bassSwing;
       }
 
-      target = (uint8_t)constrain((int32_t)target, 0, 100);
+      trebleTarget = mapChunkToLevel(maxChunk_);
+      if (burstPeak_ > 0) {
+        const uint8_t burstLevel = mapBurstToLevel(burstPeak_);
+        if (burstLevel > trebleTarget) {
+          trebleTarget = burstLevel;
+        }
+      }
+      const uint8_t trebleSwing = (uint8_t)constrain((int32_t)map((int32_t)span, 0, 1200, 0, 65), 0, 65);
+      if (trebleSwing > trebleTarget) {
+        trebleTarget = trebleSwing;
+      }
+      if (peak_ > trebleTarget) {
+        trebleTarget = peak_;
+      }
+
+      trebleTarget = boostVuLevel(trebleTarget);
+      bassTarget = boostVuLevel(bassTarget);
+
+      const uint8_t vol = getOutputVolume();
+      trebleTarget = scaleVuByVolume(trebleTarget, vol);
+      bassTarget = scaleVuByVolume(bassTarget, vol);
+
+      trebleTarget = (uint8_t)constrain((int32_t)trebleTarget, 0, 100);
+      bassTarget = (uint8_t)constrain((int32_t)bassTarget, 0, 100);
     }
 
     feedCount_ = 0;
     byteAccum_ = 0;
     minChunk_ = 65535;
     maxChunk_ = 0;
+    burstPeak_ = 0;
 
-    if (target > level_) {
-      level_ = target;
-    } else if (level_ > target + 2) {
-      level_ -= 3;
-    } else if (level_ > 0) {
-      level_--;
-    } else {
-      level_ = target;
-    }
+    trebleLevel_ = smoothToward(trebleLevel_, trebleTarget, 16, 4);
+    bassLevel_ = smoothToward(bassLevel_, bassTarget, 7, 2);
 
     if (peak_ > 0) {
-      if (peak_ > 2) {
-        peak_ -= 2;
+      if (peak_ > 1) {
+        peak_ -= 1;
       } else {
         peak_ = 0;
       }
     }
 
     if (displaytype == T_BLUETFT || displaytype == T_ILI9341) {
-      const bool visible = (datamode != STOPPED && level_ > 0);
-      displayVuMeterOnTFT(level_, visible);
+      const bool visible = (datamode != STOPPED && (trebleLevel_ > 0 || bassLevel_ > 0));
+      displayVuMeterOnTFT(trebleLevel_, bassLevel_, visible);
     }
   }
 
   /**
-   * @brief Current VU level for JSON output.
+   * @brief Combined VU level (max of treble and bass) for JSON output.
    *
    * @return uint8_t Level 0-100
    */
   uint8_t level(void) const {
-    return level_;
+    return trebleLevel_ > bassLevel_ ? trebleLevel_ : bassLevel_;
+  }
+
+  /**
+   * @brief Treble VU level (fast transients).
+   *
+   * @return uint8_t Level 0-100
+   */
+  uint8_t trebleLevel(void) const {
+    return trebleLevel_;
+  }
+
+  /**
+   * @brief Bass VU level (sustained energy).
+   *
+   * @return uint8_t Level 0-100
+   */
+  uint8_t bassLevel(void) const {
+    return bassLevel_;
   }
 
 private:
+  static uint8_t smoothToward(uint8_t current, uint8_t target, uint8_t riseStep, uint8_t fallStep) {
+    if (target > current) {
+      const uint8_t rise = target - current;
+      return current + (rise > riseStep ? riseStep : rise);
+    }
+    if (current > target + fallStep) {
+      return current - fallStep;
+    }
+    if (current > target) {
+      return current - 1;
+    }
+    return target;
+  }
+
+  static uint8_t boostVuLevel(uint8_t level) {
+    if (level <= 10) {
+      return level;
+    }
+
+    const uint16_t boosted = 10U + (((uint16_t)level - 10U) * 135U) / 100U;
+    return (uint8_t)(boosted > 100U ? 100U : boosted);
+  }
+
+  static uint8_t scaleVuByVolume(uint8_t level, uint8_t volume) {
+    uint16_t volWeight;
+    uint16_t scaled;
+
+    if (level == 0 || volume == 0) {
+      return 0;
+    }
+
+    volWeight = 10U + ((uint16_t)volume * 90U) / 100U;
+    scaled = ((uint16_t)level * volWeight) / 100U;
+
+    if (volume >= 75U && scaled < 100U) {
+      scaled += ((uint16_t)volume - 75U) / 4U;
+    }
+
+    return (uint8_t)(scaled > 100U ? 100U : scaled);
+  }
+
   static uint8_t mapChunkToLevel(uint16_t chunkBytes) {
-    return (uint8_t)constrain((int32_t)map((int32_t)chunkBytes, 64, 1800, 8, 98), 0, 100);
+    return (uint8_t)constrain((int32_t)map((int32_t)chunkBytes, 40, 1200, 14, 100), 0, 100);
   }
 
   static uint8_t mapBurstToLevel(uint32_t burst) {
-    return (uint8_t)constrain((int32_t)map((int32_t)burst, 400, 28000, 12, 100), 0, 100);
+    return (uint8_t)constrain((int32_t)map((int32_t)burst, 200, 18000, 18, 100), 0, 100);
   }
 
-  uint8_t level_ = 0;
+  uint8_t trebleLevel_ = 0;
+  uint8_t bassLevel_ = 0;
   uint8_t peak_ = 0;
+  uint32_t burstPeak_ = 0;
   uint32_t byteAccum_ = 0;
   uint16_t feedCount_ = 0;
   uint16_t minChunk_ = 65535;
@@ -157,6 +237,14 @@ inline void vuMeterUpdate(void) {
 
 inline uint8_t getVuMeterLevel(void) {
   return vuMeter.level();
+}
+
+inline uint8_t getVuMeterTrebleLevel(void) {
+  return vuMeter.trebleLevel();
+}
+
+inline uint8_t getVuMeterBassLevel(void) {
+  return vuMeter.bassLevel();
 }
 
 #endif

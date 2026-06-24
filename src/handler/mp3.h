@@ -131,6 +131,8 @@ void mp3loop() {
     queueFunctionForPlayTask(QSTOPSONG);
     metaint = 0;
     datamode = STOPPED;
+    mbitrate = 0;
+    bitrate = 0;
     return;
   }
 

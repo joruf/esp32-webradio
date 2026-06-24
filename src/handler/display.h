@@ -1,3 +1,7 @@
+#if defined(BLUETFT)
+#include "display/dsp_dashboard.h"
+#endif
+
 /**
  * @brief Requests display of a text on the TFT display (char* version).
  *
@@ -8,6 +12,16 @@
 void showTextOnTFT(uint16_t inx, const char *str) {
   if (inx < TFTSECS) // Segment available on display
   {
+#if defined(BLUETFT)
+    if (inx == 1) {
+      if (str) {
+        icystreamtitle = String(str);
+        tftdata[inx].str = icystreamtitle;
+      }
+      dspDashboardInvalidateTitle();
+      return;
+    }
+#endif
     if (str) // String specified?
     {
       tftdata[inx].str = String(str); // set string
@@ -26,6 +40,14 @@ void showTextOnTFT(uint16_t inx, const char *str) {
 void showTextOnTFT(uint16_t inx, String &str) {
   if (inx < TFTSECS) // Segment available on display
   {
+#if defined(BLUETFT)
+    if (inx == 1) {
+      icystreamtitle = str;
+      tftdata[inx].str = icystreamtitle;
+      dspDashboardInvalidateTitle();
+      return;
+    }
+#endif
     tftdata[inx].str = str;         // Set string
     tftdata[inx].update_req = true; // and request flag
   }
@@ -150,15 +172,23 @@ void displayinfo(uint16_t inx) {
  * @note This function should be called regularly in the main loop.
  */
 bool handle_tft_txt() {
-  for (uint16_t i = 0; i < TFTSECS; i++) // Handle all sections
-  {
-    if (tftdata[i].update_req) // Refresh requested?
-    {
-      displayinfo(i);                // do the refresh
-      dsp_update();                  // Updates to the screen
-      tftdata[i].update_req = false; // Reset request
-      return true;                   // Just handle 1 request
+  bool updated = false;
+
+  for (uint16_t i = 0; i < TFTSECS; i++) {
+#if defined(BLUETFT)
+    if (i == 0 || i == 1) {
+      if (tftdata[i].update_req) {
+        tftdata[i].update_req = false;
+      }
+      continue;
+    }
+#endif
+    if (tftdata[i].update_req) {
+      displayinfo(i);
+      tftdata[i].update_req = false;
+      updated = true;
     }
   }
-  return false; // Not a single request
+
+  return updated;
 }

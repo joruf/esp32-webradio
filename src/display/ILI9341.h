@@ -91,9 +91,11 @@ void displayVolumeOnTFT() {
  * @param level Activity level 0-100
  * @param visible When false, hide the bar
  */
-void displayVuMeterOnTFT(uint8_t level, bool visible) {
-  if (tft) {
-    dspCommonVuMeterBar(dsp_getwidth(), level, true, visible);
+void displayVuMeterOnTFT(uint8_t treble, uint8_t bass, bool visible) {
+  if (treble > bass) {
+    dspCommonVuMeterBar(dsp_getwidth(), treble, true, visible);
+  } else {
+    dspCommonVuMeterBar(dsp_getwidth(), bass, true, visible);
   }
 }
 

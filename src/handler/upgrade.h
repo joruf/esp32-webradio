@@ -5,6 +5,9 @@
 #include <WiFiClientSecure.h>
 #include <esp_ota_ops.h>
 
+#include "display/dsp_ota_display.h"
+#include "ota_check.h"
+
 /**
  * @brief Check whether the partition table provides an OTA slot large enough.
  *
@@ -24,29 +27,98 @@ inline bool isOtaUpdateCapable(size_t imageSize = 0) {
 
 /**
  * @brief Scan for content-length information in header line.
- *        If the line contains content-length information, set the clength
- * counter.
  *
  * @param metalinebf Header line to scan
  */
 void scan_content_length(const char *metalinebf) {
   if (strstr(metalinebf, "Content-Length")) {
-    char *p;
     clength = atoi(metalinebf + 15);
-    p = dbgprint("Content-Length is %d", clength);
-    dsp_println(p);
-    delay(2000);
+    dbgprint("Content-Length is %d", clength);
+    if (clength > 0) {
+      dspOtaDisplaySetTotalBytes((size_t)clength);
+    }
   }
+}
+
+/**
+ * @brief Write an OTA stream to flash with on-screen progress updates.
+ *
+ * @param stream Network stream to read from
+ * @param totalBytes Expected total size, or 0 if unknown
+ * @param phaseLabel Label shown during this phase
+ * @return size_t Bytes written to the OTA partition
+ */
+static size_t otaWriteStreamWithProgress(Stream &stream, size_t totalBytes, const char *phaseLabel) {
+  uint8_t buff[1024];
+  size_t written = 0;
+  uint32_t lastUiMs = 0;
+  uint8_t lastPct = 255;
+
+  dspOtaDisplayPhase(phaseLabel);
+
+  uint32_t noDataSince = millis();
+
+  while (true) {
+    int avail = stream.available();
+    if (avail <= 0) {
+      if (totalBytes > 0U && written >= totalBytes) {
+        break;
+      }
+      if ((millis() - noDataSince) > 60000U) {
+        break;
+      }
+      delay(1);
+      continue;
+    }
+
+    noDataSince = millis();
+    size_t chunk = stream.readBytes(buff, (size_t)avail > sizeof(buff) ? sizeof(buff) : (size_t)avail);
+    if (chunk == 0) {
+      delay(1);
+      continue;
+    }
+
+    size_t nw = Update.write(buff, chunk);
+    if (nw != chunk) {
+      dbgprint("OTA write error at %u", (unsigned)written);
+      break;
+    }
+
+    written += nw;
+
+    uint32_t now = millis();
+    uint8_t pct = 255;
+    if (totalBytes > 0) {
+      pct = (uint8_t)min(100UL, (written * 100UL) / totalBytes);
+    }
+    if (pct != lastPct || (now - lastUiMs) >= 350U) {
+      dspOtaDisplayProgress(written, totalBytes, phaseLabel);
+      lastUiMs = now;
+      lastPct = pct;
+    }
+  }
+
+  return written;
+}
+
+/**
+ * @brief Show the OTA start screen using manifest data when available.
+ *
+ * @param totalBytes Known firmware size, or 0
+ */
+static void otaShowStartScreen(size_t totalBytes) {
+  const char *target = otaChecker.latestVersion().c_str();
+  if (target[0] == '\0') {
+    target = nullptr;
+  }
+  dspOtaDisplayBegin(target, FIRMWARE, totalBytes);
 }
 
 /**
  * @brief Update via WiFi has been started by Arduino IDE or update request.
  */
 void otastart() {
-  char *p;
-  p = dbgprint("OTA update Started");
-  dsp_println(p);
-  delay(2000);
+  dbgprint("OTA update Started");
 }
 
 /**
@@ -76,6 +148,7 @@ bool do_nextion_update(uint32_t clength) {
   bool res = false;
   uint32_t k;
   int c;
+  uint32_t remaining = clength;
 
   if (!nxtserial) {
     return false;
@@ -84,9 +157,8 @@ bool do_nextion_update(uint32_t clength) {
   vTaskDelete(xspftask);
   delay(1000);
 
-  nxtserial->printf("\xFF\xFF\xFF"); // Empty command
+  nxtserial->printf("\xFF\xFF\xFF");
 
-  // Read garbage input
   for (int i = 0; i < 100; i++) {
     if (nxtserial->available()) {
       nxtserial->read();
@@ -101,8 +173,11 @@ bool do_nextion_update(uint32_t clength) {
     return false;
   }
 
-  while (clength) {
-    k = (clength > 4096) ? 4096 : clength;
+  dspOtaDisplaySetTotalBytes(clength);
+  dspOtaDisplayPhase("Updating display...");
+
+  while (remaining) {
+    k = (remaining > 4096U) ? 4096U : remaining;
     k = otaclient.read(tmpbuff, k);
     dbgprint("TFT file, read %d bytes", k);
     nxtserial->write(tmpbuff, k);
@@ -111,12 +186,13 @@ bool do_nextion_update(uint32_t clength) {
     if (c != 0x05) {
       break;
     }
-    clength -= k;
+    remaining -= k;
+    dspOtaDisplayProgress(clength - remaining, clength, "Updating display...");
   }
 
   otaclient.flush();
 
-  if (clength == 0) {
+  if (remaining == 0) {
     dbgprint("Update successfully completed");
     res = true;
   }
@@ -132,20 +208,30 @@ bool do_nextion_update(uint32_t clength) {
  */
 bool do_software_update(uint32_t clength) {
   bool res = false;
+  size_t written;
 
   if (!Update.begin(clength)) {
     dbgprint("Not enough space to begin OTA: %s", Update.errorString());
     otaclient.flush();
+    dspOtaDisplayFailed(Update.errorString());
     return false;
   }
 
   dbgprint("Begin OTA update, length is %d", clength);
+  dspOtaDisplaySetTotalBytes(clength);
+  dspOtaDisplayPhase("Installing...");
 
-  if (Update.writeStream(otaclient) == clength) {
-    dbgprint("Written %d bytes successfully", clength);
-  } else {
-    dbgprint("Write failed!");
+  written = otaWriteStreamWithProgress(otaclient, clength, "Installing...");
+  otaclient.flush();
+
+  if (written != clength) {
+    dbgprint("Write failed! %u of %u", (unsigned)written, (unsigned)clength);
+    Update.abort();
+    dspOtaDisplayFailed("Write failed");
+    return false;
   }
+
+  dbgprint("Written %u bytes successfully", (unsigned)written);
 
   if (Update.end()) {
     dbgprint("OTA done");
@@ -154,9 +240,11 @@ bool do_software_update(uint32_t clength) {
       res = true;
     } else {
       dbgprint("Update not finished!");
+      dspOtaDisplayFailed("Not finished");
     }
   } else {
     dbgprint("Error Occurred. Error %s", Update.getError());
+    dspOtaDisplayFailed(Update.errorString());
   }
 
   return res;
@@ -172,11 +260,9 @@ bool do_software_update(uint32_t clength) {
 static bool parseOtaHeaders(const String &line, String &newlstmod) {
   if (line.startsWith("HTTP/1.1")) {
     if (line.indexOf(" 200 ") < 0) {
-      dsp_erase();
-      dsp_println("Invalid HTTP Status");
-      dsp_println("Exit OTA Update");
+      dspOtaDisplayFailed("Invalid HTTP status");
       dbgprint("Got a non 200 status code from server!");
-      delay(2000);
+      delay(3000);
       return false;
     }
   }
@@ -198,24 +284,18 @@ static bool parseOtaHeaders(const String &line, String &newlstmod) {
  * @return true if connection successful, false otherwise
  */
 static bool connectToUpdateServer(const char *updatehost, const char *binfile) {
-  dsp_erase();
-  dsp_println("Connecting to host");
-  dsp_println(updatehost);
-  delay(2000);
+  dspOtaDisplayPhase("Connecting...");
 
   dbgprint("Connecting to %s for %s", updatehost, binfile);
 
   if (!otaclient.connect(updatehost, 80)) {
-    dsp_erase();
-    dsp_println("Connecting failed");
+    dspOtaDisplayFailed("Connect failed");
     dbgprint("Connect to updatehost failed!");
-    delay(2000);
+    delay(3000);
     return false;
   }
 
-  dsp_erase();
-  dsp_println("Loading bin file");
-  delay(2000);
+  dspOtaDisplayPhase("Requesting file...");
 
   otaclient.printf("GET %s HTTP/1.1\r\n"
                    "Host: %s\r\n"
@@ -236,10 +316,9 @@ static bool waitForResponse(uint32_t timeout_ms) {
   uint32_t timeout = millis();
   while (otaclient.available() == 0) {
     if (millis() - timeout > timeout_ms) {
-      dsp_erase();
-      dsp_println("Connect Timeout");
+      dspOtaDisplayFailed("Connect timeout");
       dbgprint("Connect to Update host Timeout!");
-      delay(2000);
+      delay(3000);
       otaclient.stop();
       return false;
     }
@@ -256,9 +335,6 @@ static bool waitForResponse(uint32_t timeout_ms) {
  * @return true if update was successful, false otherwise
  */
 static bool performUpdate(const char *binfile, const String &newlstmod, const char *lstmodkey) {
-  dsp_erase();
-  dsp_println("Updating sketch");
-
   bool success = false;
 
   if (strstr(binfile, ".bin")) {
@@ -289,30 +365,29 @@ bool update_software(const char *lstmodkey, const char *updatehost, const char *
   String lstmod;
   String newlstmod;
 
-  dsp_erase();
-  dsp_println("OTA Update");
-  delay(2000);
-
   updatereq = false;
   otastart();
   stop_mp3client();
+
+  otaShowStartScreen(0);
+  dspOtaDisplayPhase("Preparing...");
   lstmod = nvsGetValue(lstmodkey);
 
   if (!connectToUpdateServer(updatehost, binfile)) {
+    dspOtaDisplayRestoreDashboard();
     return false;
   }
 
   if (!waitForResponse(20000)) {
+    dspOtaDisplayRestoreDashboard();
     return false;
   }
 
-  // Parse HTTP response headers
-  dsp_erase();
+  dspOtaDisplayPhase("Reading headers...");
+
   while (otaclient.available()) {
     line = otaclient.readStringUntil('\n');
     line.trim();
-
-    dsp_println(line.c_str());
     dbgprint(line.c_str());
 
     if (!line.length()) {
@@ -320,31 +395,29 @@ bool update_software(const char *lstmodkey, const char *updatehost, const char *
     }
 
     if (!parseOtaHeaders(line, newlstmod)) {
+      dspOtaDisplayRestoreDashboard();
       return false;
     }
   }
 
-  // Check if update is needed
   if (newlstmod == lstmod) {
-    dsp_erase();
-    dsp_println("No update required");
-    dsp_println("Exit OTA Update");
+    dspOtaDisplayInfo("No update required", "Firmware is current");
     dbgprint("No new version available");
-    delay(2000);
+    delay(3000);
     otaclient.flush();
+    dspOtaDisplayRestoreDashboard();
     return false;
   }
 
-  // Perform the update
   if (clength > 0) {
     return performUpdate(binfile, newlstmod, lstmodkey);
   }
 
-  dsp_erase();
-  dsp_println("Missing content in response");
+  dspOtaDisplayFailed("Missing file data");
   dbgprint("There was no content in the response");
-  delay(2000);
+  delay(3000);
   otaclient.flush();
+  dspOtaDisplayRestoreDashboard();
   return false;
 }
 
@@ -356,18 +429,26 @@ bool update_software(const char *lstmodkey, const char *updatehost, const char *
  */
 bool updateFirmwareFromUrl(const String &url) {
   if (url.length() == 0 || WiFi.status() != WL_CONNECTED) {
+    dspOtaDisplayFailed("No WiFi");
+    delay(3000);
+    dspOtaDisplayRestoreDashboard();
     return false;
   }
 
   if (!isOtaUpdateCapable()) {
     dbgprint("OTA failed: no OTA slot in partition table");
-    tftlog("OTA: no update slot");
+    dspOtaDisplayFailed("No OTA slot");
+    delay(3000);
+    dspOtaDisplayRestoreDashboard();
     return false;
   }
 
   updatereq = false;
   otastart();
   stop_mp3client();
+
+  otaShowStartScreen(0);
+  dspOtaDisplayPhase("Connecting...");
 
   HTTPClient http;
   WiFiClient plainClient;
@@ -385,13 +466,21 @@ bool updateFirmwareFromUrl(const String &url) {
 
   if (!httpReady) {
     dbgprint("OTA URL invalid");
+    dspOtaDisplayFailed("Invalid URL");
+    delay(3000);
+    dspOtaDisplayRestoreDashboard();
     return false;
   }
 
   int code = http.GET();
   if (code != HTTP_CODE_OK) {
     dbgprint("OTA download failed: HTTP %d", code);
+    char err[20];
+    snprintf(err, sizeof(err), "HTTP error %d", code);
+    dspOtaDisplayFailed(err);
     http.end();
+    delay(3000);
+    dspOtaDisplayRestoreDashboard();
     return false;
   }
 
@@ -399,30 +488,47 @@ bool updateFirmwareFromUrl(const String &url) {
   const esp_partition_t *otaPart = esp_ota_get_next_update_partition(NULL);
   if (otaPart && contentLength > 0 && (size_t)contentLength > otaPart->size) {
     dbgprint("OTA image too large (%d > %u)", contentLength, (unsigned)otaPart->size);
+    dspOtaDisplayFailed("Image too large");
     http.end();
+    delay(3000);
+    dspOtaDisplayRestoreDashboard();
     return false;
   }
 
-  if (!Update.begin(contentLength > 0 ? (size_t)contentLength : UPDATE_SIZE_UNKNOWN)) {
+  size_t totalBytes = (contentLength > 0) ? (size_t)contentLength : 0U;
+  dspOtaDisplaySetTotalBytes(totalBytes);
+  dspOtaDisplayPhase("Downloading...");
+
+  if (!Update.begin(totalBytes > 0 ? totalBytes : UPDATE_SIZE_UNKNOWN)) {
     dbgprint("OTA begin failed: %s", Update.errorString());
+    dspOtaDisplayFailed(Update.errorString());
     http.end();
+    delay(3000);
+    dspOtaDisplayRestoreDashboard();
     return false;
   }
 
-  size_t written = Update.writeStream(*http.getStreamPtr());
+  size_t written = otaWriteStreamWithProgress(*http.getStreamPtr(), totalBytes, "Installing...");
   http.end();
 
   if (written == 0 || !Update.end(true)) {
     dbgprint("OTA write failed: %s", Update.errorString());
     Update.abort();
+    dspOtaDisplayFailed(Update.errorString());
+    delay(3000);
+    dspOtaDisplayRestoreDashboard();
     return false;
   }
 
   if (!Update.isFinished()) {
     dbgprint("OTA finished flag not set");
+    dspOtaDisplayFailed("Verify failed");
+    delay(3000);
+    dspOtaDisplayRestoreDashboard();
     return false;
   }
 
   dbgprint("OTA success, %u bytes", (unsigned)written);
+  dspOtaDisplayProgress(written, totalBytes > 0 ? totalBytes : written, "Complete");
   return true;
 }

@@ -298,9 +298,17 @@ const char *analyzeCmd(const char *par, const char *val) {
     if (mins > 0) {
       sleeptimer_ms = (int32_t)mins * 60 * 1000;
       dbgprint("Snooze set to %d min", mins);
+#if defined(BLUETFT)
+      dspDashboardInvalidateSnooze();
+      dspDashboardUpdateSnooze();
+#endif
     } else {
       sleeptimer_ms = -1;
       dbgprint("Snooze off");
+#if defined(BLUETFT)
+      dspDashboardInvalidateSnooze();
+      dspDashboardUpdateSnooze();
+#endif
     }
   } else if (argument.indexOf("checkupdate") >= 0) {
     otaChecker.check(true);

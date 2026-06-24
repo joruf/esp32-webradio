@@ -96,7 +96,6 @@
 #include "handler/radio_config.h"
 #include "handler/captive_portal.h"
 #include "handler/sd.h"
-#include "handler/upgrade.h"
 #include "handler/alarm.h"
 #include "handler/loop.h"
 #include "handler/wifi_signal.h"
@@ -108,6 +107,7 @@
 #include "handler/vu_meter.h"
 #include "handler/stream_watchdog.h"
 #include "handler/ota_check.h"
+#include "handler/upgrade.h"
 #include "handler/live_status.h"
 #include "handler/wifi_display.h"
 #include "handler/http.h"
@@ -133,6 +133,9 @@ void loop() {
     updatereq = false;
     bool updated = false;
 
+    enableBacklight(true);
+    otaCheckForUpdate(true);
+
     if (displaytype == T_NEXTION) // NEXTION in use?
     {
       updated = update_software("lstmodn", // update NEXTION image from remote image
@@ -148,10 +151,13 @@ void loop() {
     }
 
     if (updated) {
+      dspOtaDisplaySuccess();
+      delay(3000);
       resetreq = true;
     } else {
       dbgprint("OTA update failed, device not restarted");
-      tftlog("OTA update failed");
+      delay(5000);
+      dspOtaDisplayRestoreDashboard();
     }
   }
 
@@ -206,7 +212,6 @@ void loop() {
   captivePortal.loop();
   streamWatchdog.poll();
   vuMeter.update();
-  updateWifiStatusDisplay();
 
   nvsAutoSave();         // See if time to save settings
   updateEncoderSwitch(); // Poll encoder push button (debounced)

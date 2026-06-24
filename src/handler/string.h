@@ -1,3 +1,5 @@
+static byte utf8_multibyte_state = 0;
+
 /**
  * @brief Convert a single character from UTF8 to Extended ASCII.
  *
@@ -7,14 +9,14 @@
  */
 byte utf8ascii(byte ascii) {
   static const byte lut_C3[] = {"AAAAAAACEEEEIIIIDNOOOOO#0UUUU###aaaaaaaceeeeiiiidnooooo##uuuuyyy"};
-  static byte c1 = 0; // Last character buffer
-  byte res = 0;       // Result, default 0
+  byte res = 0;
+  byte c1 = utf8_multibyte_state;
 
-  if (ascii <= 0x7F) { // Standard ASCII-set 0..0x7F handling
-    c1 = 0;
-    res = ascii; // Return unmodified
+  if (ascii <= 0x7F) {
+    utf8_multibyte_state = 0;
+    res = ascii;
   } else {
-    switch (c1) { // Conversion depending on first UTF8-character
+    switch (c1) {
       case 0xC2:
         res = '~';
         break;
@@ -23,15 +25,15 @@ byte utf8ascii(byte ascii) {
         break;
       case 0x82:
         if (ascii == 0xAC) {
-          res = 'E'; // Special case Euro symbol
+          res = 'E';
         }
         break;
       default:
         break;
     }
-    c1 = ascii; // Remember actual character
+    utf8_multibyte_state = ascii;
   }
-  return res; // Return zero if character should be ignored
+  return res;
 }
 
 /**
@@ -41,16 +43,18 @@ byte utf8ascii(byte ascii) {
  * @param s Pointer to the null-terminated string to convert (modified in place)
  */
 void utf8ascii(char *s) {
-  int i, k = 0; // Indexes for input and output strings
+  int i, k = 0;
   char c;
 
-  for (i = 0; s[i]; i++) { // For every input character
-    c = utf8ascii(s[i]);   // Translate if necessary
-    if (c) {               // Good translation?
-      s[k++] = c;          // Put in output string
+  utf8_multibyte_state = 0;
+
+  for (i = 0; s[i]; i++) {
+    c = utf8ascii(s[i]);
+    if (c) {
+      s[k++] = c;
     }
   }
-  s[k] = 0; // Null-terminate the result
+  s[k] = 0;
 }
 
 /**
