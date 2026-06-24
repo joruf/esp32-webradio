@@ -3,7 +3,7 @@
 //  Sollte der Upload abbrechen mit "Fehlgeschlagenes Hochladen: Hochladefehler: exit status 2", den USB-Stecker
 //  ausstecken, auf Hochladen klicken etwas warten bis "Kompiliere Scatch" bei 3/4 steht und dann USB wieder einstecken
 //  während des ende der Kompilierungsphase BOARD-VERWALTUNG: esp32 (Espressif Systems) v3.3.0 Space overlaod>100% -->
-//  Tools > Partition Scheme > Huge App (3MB no OTA)
+//  Tools > Partition Scheme > custom ota_app (dual OTA slots, see partitions/ota_app.csv)
 
 // Upload Sketch: Port 7 on Samsung I right bottom. Use AVRISP mkII, Click Sketch Hochladen,
 
@@ -130,19 +130,28 @@ void loop() {
   mp3loop();     // Do mp3 related actions
   if (updatereq) // Software update requested?
   {
+    updatereq = false;
+    bool updated = false;
+
     if (displaytype == T_NEXTION) // NEXTION in use?
     {
-      update_software("lstmodn", // update NEXTION image from remote image
-                      UPDATEHOST, TFTFILE);
+      updated = update_software("lstmodn", // update NEXTION image from remote image
+                                UPDATEHOST, TFTFILE);
+    } else {
+      if (otaChecker.latestBinUrl().length() > 0) {
+        updated = updateFirmwareFromUrl(otaChecker.latestBinUrl());
+      }
+      if (!updated) {
+        updated = update_software("lstmods", // Update sketch from remote file
+                                  UPDATEHOST, BINFILE);
+      }
     }
-    bool updated = false;
-    if (otaChecker.latestBinUrl().length() > 0) {
-      updated = updateFirmwareFromUrl(otaChecker.latestBinUrl());
-    }
-    if (!updated) {
-      update_software("lstmods", // Update sketch from remote file
-                      UPDATEHOST, BINFILE);
-      resetreq = true; // And reset
+
+    if (updated) {
+      resetreq = true;
+    } else {
+      dbgprint("OTA update failed, device not restarted");
+      tftlog("OTA update failed");
     }
   }
 

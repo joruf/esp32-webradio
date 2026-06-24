@@ -2,6 +2,25 @@
 
 #include <HTTPClient.h>
 #include <Update.h>
+#include <WiFiClientSecure.h>
+#include <esp_ota_ops.h>
+
+/**
+ * @brief Check whether the partition table provides an OTA slot large enough.
+ *
+ * @param imageSize Expected firmware size in bytes, or 0 to skip size check
+ * @return true when HTTP/OTA firmware updates can be written
+ */
+inline bool isOtaUpdateCapable(size_t imageSize = 0) {
+  const esp_partition_t *part = esp_ota_get_next_update_partition(NULL);
+  if (!part) {
+    return false;
+  }
+  if (imageSize > 0 && imageSize > part->size) {
+    return false;
+  }
+  return true;
+}
 
 /**
  * @brief Scan for content-length information in header line.
@@ -115,7 +134,7 @@ bool do_software_update(uint32_t clength) {
   bool res = false;
 
   if (!Update.begin(clength)) {
-    dbgprint("Not enough space to begin OTA");
+    dbgprint("Not enough space to begin OTA: %s", Update.errorString());
     otaclient.flush();
     return false;
   }
@@ -263,8 +282,9 @@ static bool performUpdate(const char *binfile, const String &newlstmod, const ch
  * @param lstmodkey NVS key for storing Last-Modified timestamp
  * @param updatehost Hostname of the update server
  * @param binfile Path to the binary file
+ * @return true if update was started and completed successfully
  */
-void update_software(const char *lstmodkey, const char *updatehost, const char *binfile) {
+bool update_software(const char *lstmodkey, const char *updatehost, const char *binfile) {
   String line;
   String lstmod;
   String newlstmod;
@@ -279,11 +299,11 @@ void update_software(const char *lstmodkey, const char *updatehost, const char *
   lstmod = nvsGetValue(lstmodkey);
 
   if (!connectToUpdateServer(updatehost, binfile)) {
-    return;
+    return false;
   }
 
   if (!waitForResponse(20000)) {
-    return;
+    return false;
   }
 
   // Parse HTTP response headers
@@ -300,7 +320,7 @@ void update_software(const char *lstmodkey, const char *updatehost, const char *
     }
 
     if (!parseOtaHeaders(line, newlstmod)) {
-      return;
+      return false;
     }
   }
 
@@ -312,19 +332,20 @@ void update_software(const char *lstmodkey, const char *updatehost, const char *
     dbgprint("No new version available");
     delay(2000);
     otaclient.flush();
-    return;
+    return false;
   }
 
   // Perform the update
   if (clength > 0) {
-    performUpdate(binfile, newlstmod, lstmodkey);
-  } else {
-    dsp_erase();
-    dsp_println("Missing content in response");
-    dbgprint("There was no content in the response");
-    delay(2000);
-    otaclient.flush();
+    return performUpdate(binfile, newlstmod, lstmodkey);
   }
+
+  dsp_erase();
+  dsp_println("Missing content in response");
+  dbgprint("There was no content in the response");
+  delay(2000);
+  otaclient.flush();
+  return false;
 }
 
 /**
@@ -338,13 +359,31 @@ bool updateFirmwareFromUrl(const String &url) {
     return false;
   }
 
+  if (!isOtaUpdateCapable()) {
+    dbgprint("OTA failed: no OTA slot in partition table");
+    tftlog("OTA: no update slot");
+    return false;
+  }
+
   updatereq = false;
   otastart();
   stop_mp3client();
 
   HTTPClient http;
+  WiFiClient plainClient;
+  WiFiClientSecure secureClient;
   http.setTimeout(60000);
-  if (!http.begin(url)) {
+  http.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
+
+  bool httpReady = false;
+  if (url.startsWith("https://")) {
+    secureClient.setInsecure();
+    httpReady = http.begin(secureClient, url);
+  } else {
+    httpReady = http.begin(plainClient, url);
+  }
+
+  if (!httpReady) {
     dbgprint("OTA URL invalid");
     return false;
   }
@@ -357,6 +396,13 @@ bool updateFirmwareFromUrl(const String &url) {
   }
 
   int contentLength = http.getSize();
+  const esp_partition_t *otaPart = esp_ota_get_next_update_partition(NULL);
+  if (otaPart && contentLength > 0 && (size_t)contentLength > otaPart->size) {
+    dbgprint("OTA image too large (%d > %u)", contentLength, (unsigned)otaPart->size);
+    http.end();
+    return false;
+  }
+
   if (!Update.begin(contentLength > 0 ? (size_t)contentLength : UPDATE_SIZE_UNKNOWN)) {
     dbgprint("OTA begin failed: %s", Update.errorString());
     http.end();
@@ -372,7 +418,11 @@ bool updateFirmwareFromUrl(const String &url) {
     return false;
   }
 
+  if (!Update.isFinished()) {
+    dbgprint("OTA finished flag not set");
+    return false;
+  }
+
   dbgprint("OTA success, %u bytes", (unsigned)written);
-  resetreq = true;
   return true;
 }

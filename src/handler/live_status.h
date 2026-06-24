@@ -11,6 +11,7 @@
 #include "vu_meter.h"
 #include "stream_watchdog.h"
 #include "ota_check.h"
+#include <esp_ota_ops.h>
 
 /**
  * @brief Build the live status JSON payload used by polling and SSE.
@@ -62,7 +63,11 @@ static String buildDiagnosticsJson(void) {
   json += "\"volume\":" + String(ini_block.reqvol) + ",";
   json += "\"ota_check_url\":\"" + jsonEscapeString(features.ota_check_url.c_str()) + "\",";
   json += "\"ota_update_available\":" + String(otaChecker.isUpdateAvailable() ? "true" : "false") + ",";
-  json += "\"ota_latest_version\":\"" + jsonEscapeString(otaChecker.latestVersion().c_str()) + "\"";
+  json += "\"ota_latest_version\":\"" + jsonEscapeString(otaChecker.latestVersion().c_str()) + "\",";
+  const esp_partition_t *otaSlot = esp_ota_get_next_update_partition(NULL);
+  json += "\"ota_capable\":" + String(otaSlot ? "true" : "false") + ",";
+  json += "\"ota_slot_bytes\":" + String(otaSlot ? otaSlot->size : 0) + ",";
+  json += "\"sketch_bytes\":" + String(ESP.getSketchSize());
   json += "}";
   return json;
 }

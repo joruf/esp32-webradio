@@ -1,6 +1,8 @@
 #ifndef APP_SETUP_H
 #define APP_SETUP_H
 
+#include <esp_ota_ops.h>
+
 void radioSetup() {
   int i;     // Loop control
   int pinnr; // Input pinnumber
@@ -20,6 +22,13 @@ void radioSetup() {
   dbgprint("BOOT: Firmware %s", FIRMWARE);
   dbgprint("BOOT: CPU core %d at %d MHz", xPortGetCoreID(), ESP.getCpuFreqMHz());
   dbgprint("BOOT: Free heap %d bytes", ESP.getFreeHeap());
+  const esp_partition_t *otaSlot = esp_ota_get_next_update_partition(NULL);
+  if (otaSlot) {
+    dbgprint("BOOT: OTA slot available, size %u bytes, sketch %u bytes", (unsigned)otaSlot->size,
+             (unsigned)ESP.getSketchSize());
+  } else {
+    dbgprint("BOOT: WARNING - no OTA slot in partition table, firmware updates will fail");
+  }
   dbgprint("========================================");
 
   // ATTENTION NVS config problems (joruf)
