@@ -4,6 +4,7 @@ static const uint32_t VOLUME_FADE_MS = 1000;
 static bool volumeFadeActive = false;
 static bool volumeFadeIn = true;
 static uint32_t volumeFadeStartMs = 0;
+static uint32_t volumeFadeDurationMs = VOLUME_FADE_MS;
 static uint8_t volumeFadeStartLevel = 0;
 static uint8_t volumeFadeCurrent = 0;
 static bool volumeFadeStopPending = false;
@@ -83,26 +84,28 @@ static void updateVolumeFade(void) {
     const uint8_t target = ini_block.reqvol;
     const uint8_t start = volumeFadeStartLevel;
 
-    if (elapsed >= VOLUME_FADE_MS || target <= start) {
+    if (elapsed >= volumeFadeDurationMs || target <= start) {
       volumeFadeCurrent = target;
       volumeFadeActive = false;
+      volumeFadeDurationMs = VOLUME_FADE_MS;
     } else {
-      volumeFadeCurrent = start + (uint8_t)((uint32_t)(target - start) * elapsed / VOLUME_FADE_MS);
+      volumeFadeCurrent = start + (uint8_t)((uint32_t)(target - start) * elapsed / volumeFadeDurationMs);
     }
     return;
   }
 
   const uint8_t start = volumeFadeStartLevel;
 
-  if (elapsed >= VOLUME_FADE_MS || start == 0) {
+  if (elapsed >= volumeFadeDurationMs || start == 0) {
     volumeFadeCurrent = 0;
     volumeFadeActive = false;
+    volumeFadeDurationMs = VOLUME_FADE_MS;
     if (volumeFadeStopPending) {
       volumeFadeStopPending = false;
       finishStreamStop();
     }
   } else {
-    volumeFadeCurrent = start - (uint8_t)((uint32_t)start * elapsed / VOLUME_FADE_MS);
+    volumeFadeCurrent = start - (uint8_t)((uint32_t)start * elapsed / volumeFadeDurationMs);
   }
 }
 
@@ -122,6 +125,25 @@ static void startVolumeFadeIn(void) {
   volumeFadeStartLevel = fromLevel;
   volumeFadeCurrent = fromLevel;
   volumeFadeActive = (ini_block.reqvol > fromLevel);
+}
+
+/**
+ * @brief Starts a long fade-in for alarm wake (from silence to reqvol).
+ *
+ * @param durationSec Fade duration in seconds
+ */
+void startAlarmVolumeFade(uint16_t durationSec) {
+  volumeFadeDurationMs = (uint32_t)durationSec * 1000UL;
+  if (volumeFadeDurationMs < 1000UL) {
+    volumeFadeDurationMs = 1000UL;
+  }
+  volumeFadeIn = true;
+  volumeFadeStopPending = false;
+  volumeFadeStartMs = millis();
+  volumeFadeStartLevel = 0;
+  volumeFadeCurrent = 0;
+  volumeFadeActive = true;
+  muteflag = false;
 }
 
 /**

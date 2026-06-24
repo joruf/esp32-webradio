@@ -45,6 +45,11 @@ const char index_css[] PROGMEM = R"=====(
 	.config-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 	.config-row-body strong { display: block; }
 	.config-row-meta { display: block; color: #777; font-size: 12px; word-break: break-all; }
+	.wifi-signal { font-family: monospace; }
+	.wifi-signal-connected { color: #3c763d; }
+	.wifi-signal-strong { color: #3c763d; }
+	.wifi-signal-weak { color: #a94442; }
+	.wifi-signal-none { color: #999; font-style: italic; }
 	.config-row-body-inline strong { flex: 0 0 auto; }
 	.config-row-actions { display: flex; gap: 8px; margin-left: 15px; flex-shrink: 0; }
 	.config-row-draggable { cursor: default; }
@@ -82,7 +87,6 @@ const char index_css[] PROGMEM = R"=====(
 	.alarm-actions { display: flex; flex-wrap: nowrap; gap: 8px; align-items: flex-end; flex: 0 0 auto; }
 	.alarm-actions .btn { min-width: 88px; width: auto; }
 	.alarm-day { margin-right: 0; font-weight: normal; white-space: nowrap; }
-	.alarm-day-short { display: none; }
 	.alarm-time-field { flex: 0 0 auto; margin: 0; padding: 0; min-width: 0; }
 	.alarm-time-field label { display: block; margin: 0 0 4px 0; white-space: nowrap; font-weight: normal; }
 	.alarm-time-input { width: 5.5em; max-width: none; font-family: monospace; letter-spacing: 0.05em; text-align: center; }
@@ -132,8 +136,6 @@ const char index_css[] PROGMEM = R"=====(
 		}
 		.alarm-schedule-layout { flex-direction: column; align-items: flex-start; }
 		.alarm-days { width: 100%; }
-		.alarm-day-full { display: none; }
-		.alarm-day-short { display: inline; }
 	}
 	@media (min-width: 768px) {
 		.alarm-schedule-layout { flex-direction: row; flex-wrap: nowrap; align-items: flex-end; gap: 10px 12px; }
@@ -141,5 +143,44 @@ const char index_css[] PROGMEM = R"=====(
 		.config-row-body-inline { flex-direction: row; align-items: baseline; gap: 12px; }
 		.config-row-body-inline strong { display: inline; white-space: nowrap; }
 		.config-row-body-inline .config-row-meta { display: inline; flex: 1 1 auto; min-width: 0; }
+	}
+	body.theme-dark {
+		background: #121212;
+		color: #e8e8e8;
+	}
+	body.theme-dark .panel-default {
+		background: #1e1e1e;
+		border-color: #333;
+	}
+	body.theme-dark .panel-heading {
+		background: #2a2a2a;
+		color: #f0f0f0;
+		border-color: #333;
+	}
+	body.theme-dark .panel-body,
+	body.theme-dark .form-control,
+	body.theme-dark .config-help,
+	body.theme-dark .title-history-cell {
+		background: #1a1a1a;
+		color: #e0e0e0;
+		border-color: #444;
+	}
+	body.theme-dark .navbar-default,
+	body.theme-dark .btn-regular {
+		background: #2a2a2a;
+		color: #eee;
+		border-color: #444;
+	}
+	body.theme-dark a,
+	body.theme-dark .title-history-when { color: #9ecbff; }
+	body.theme-dark .title-history-table { border-top-color: #444; }
+	.diag-output {
+		background: #111;
+		color: #cfc;
+		padding: 12px;
+		border-radius: 4px;
+		max-height: 420px;
+		overflow: auto;
+		font-size: 0.85em;
 	}
 )=====" ;

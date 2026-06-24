@@ -9,6 +9,10 @@ void restoreDefaultConfig();
  */
 void saveDefaultConfig();
 
+#include "http_queue.h"
+#include "captive_portal.h"
+
+static String http_host_header = "";
 static uint8_t rinbyt_buf[1024]; // HTTP input buffer shared with body reader
 static uint16_t rinbyt_i = 0;    // Read position in rinbyt_buf
 static uint16_t rinbyt_len = 0;  // Number of valid bytes in rinbyt_buf
@@ -23,6 +27,7 @@ static void resetHttpRequestState() {
   http_rqfile = "";
   http_post_content_length = 0;
   http_response_flag = false;
+  http_host_header = "";
   rinbytResetBuffer();
 }
 
@@ -39,6 +44,9 @@ void recoverHttpServerState() {
  * @brief Close the active HTTP client connection and clear request state.
  */
 static void closeHttpClient() {
+  if (sseStreamActive) {
+    return;
+  }
   if (cmdclient.connected()) {
     cmdclient.flush();
     cmdclient.stop();
@@ -488,14 +496,18 @@ void handlehttpreply() {
     }
     if (http_rqfile.length() == 0 && // An empty "GET"?
         http_getcmd.length() == 0) {
-        if (NetworkFound) // check network
+        if (captivePortalShouldRedirect(http_host_header, "/")) {
+          handleWebpage(String("config.html"));
+        } else if (NetworkFound) // check network
         {
           handleWebpage(String("index.html")); // Okay, send the startpage
         } else {
           handleWebpage(String("config.html")); // Or the configuration page if in AP mode
         }
       } else {
-        if (http_rqfile.length()) // Static file has priority over query parameters
+        if (captivePortalShouldRedirect(http_host_header, http_rqfile)) {
+          handleWebpage(String("config.html"));
+        } else if (http_rqfile.length()) // Static file has priority over query parameters
         {
           dbgprint("Start file reply for %s", http_rqfile.c_str());
           handleWebpage(http_rqfile);
@@ -522,7 +534,11 @@ void handlehttpreply() {
               dbgprint("getconfig: rebuilt JSON invalid, using defaults");
               json = getDefaultRadioConfigJson();
             }
+            json = appendWifiSignalsToConfigJson(json, false);
             sendHttpJsonResponse(json);
+            return;
+          } else if (http_getcmd.startsWith("getwifisignals")) {
+            sendHttpJsonResponse(buildWifiSignalsJson(true));
             return;
           } else if (http_getcmd.startsWith("saveconfig")) // Save unified JSON config
           {
@@ -665,6 +681,10 @@ void handlehttp() {
         if (currentLine.startsWith("Content-Length:") || currentLine.startsWith("content-length:")) {
           http_post_content_length = (uint32_t)currentLine.substring(15).toInt();
         }
+        if (currentLine.startsWith("Host:") || currentLine.startsWith("host:")) {
+          http_host_header = currentLine.substring(5);
+          http_host_header.trim();
+        }
         if (inx0) // GET or POST request?
         {
           reqseen = true;                 // Request seen
@@ -704,32 +724,29 @@ void handlehttp() {
     }
   }
 
+  // Server-Sent Events stream for live UI updates
+  if (http_getcmd.startsWith("events") || http_rqfile == "events") {
+    httpAttachSseClient(cmdclient);
+    http_getcmd = "";
+    http_rqfile = "";
+    http_response_flag = false;
+    return;
+  }
+
   // Sends: sender name, song title, time and date as JSON
   if (http_getcmd.startsWith("getJSON")) {
-    String jsonResponse = "{";
-    jsonResponse += "\"station\":\"" + jsonEscapeString(icyname.c_str()) + "\",";
-    jsonResponse += "\"title\":\"" + jsonEscapeString(icystreamtitle.c_str()) + "\",";
-    jsonResponse += "\"firmware\":\"" + jsonEscapeString(FIRMWARE) + "\",";
-    jsonResponse += "\"volume\":" + String(ini_block.reqvol) + ",";
-    jsonResponse += "\"time\":\"" + jsonEscapeString(timetxt) + "\",";
-    jsonResponse += "\"date\":\"" + jsonEscapeString(timetxt) + "\",";
-    jsonResponse += buildTitleHistoryJson();
-    jsonResponse += "}";
+    sendHttpJsonResponse(buildLiveStatusJson());
+    return;
+  }
 
-    // Send JSON header
-    cmdclient.print("HTTP/1.1 200 OK\r\n");
-    cmdclient.print("Content-Type: application/json; charset=utf-8\r\n");
-    cmdclient.print("Content-Length: ");
-    cmdclient.print(jsonResponse.length());
-    cmdclient.print("\r\n");
-    cmdclient.print("Access-Control-Allow-Origin: *\r\n");
-    cmdclient.print("Connection: close\r\n");
-    cmdclient.print("\r\n");
+  if (http_getcmd.startsWith("getdiagnostics")) {
+    sendHttpJsonResponse(buildDiagnosticsJson());
+    return;
+  }
 
-    cmdclient.print(jsonResponse);
-
-    cmdclient.flush();
-    closeHttpClient();
+  if (http_getcmd.startsWith("checkupdate")) {
+    otaCheckForUpdate(true);
+    sendHttpJsonResponse(buildOtaCheckJson());
     return;
   }
 

@@ -1,5 +1,8 @@
 // OTA-Update: https://github.com/esp8266/Arduino/issues/4400
 
+#include <HTTPClient.h>
+#include <Update.h>
+
 /**
  * @brief Scan for content-length information in header line.
  *        If the line contains content-length information, set the clength
@@ -322,4 +325,54 @@ void update_software(const char *lstmodkey, const char *updatehost, const char *
     delay(2000);
     otaclient.flush();
   }
+}
+
+/**
+ * @brief Download and install firmware from an HTTPS or HTTP URL.
+ *
+ * @param url Full URL to the firmware binary
+ * @return true if the update completed successfully
+ */
+bool updateFirmwareFromUrl(const String &url) {
+  if (url.length() == 0 || WiFi.status() != WL_CONNECTED) {
+    return false;
+  }
+
+  updatereq = false;
+  otastart();
+  stop_mp3client();
+
+  HTTPClient http;
+  http.setTimeout(60000);
+  if (!http.begin(url)) {
+    dbgprint("OTA URL invalid");
+    return false;
+  }
+
+  int code = http.GET();
+  if (code != HTTP_CODE_OK) {
+    dbgprint("OTA download failed: HTTP %d", code);
+    http.end();
+    return false;
+  }
+
+  int contentLength = http.getSize();
+  if (!Update.begin(contentLength > 0 ? (size_t)contentLength : UPDATE_SIZE_UNKNOWN)) {
+    dbgprint("OTA begin failed: %s", Update.errorString());
+    http.end();
+    return false;
+  }
+
+  size_t written = Update.writeStream(*http.getStreamPtr());
+  http.end();
+
+  if (written == 0 || !Update.end(true)) {
+    dbgprint("OTA write failed: %s", Update.errorString());
+    Update.abort();
+    return false;
+  }
+
+  dbgprint("OTA success, %u bytes", (unsigned)written);
+  resetreq = true;
+  return true;
 }

@@ -152,6 +152,8 @@ void listNetworks() {
     networks += WiFi.SSID(i) + String("|");
   }
 
+  wifiSignalStoreScanResults(numSsid);
+
   dbgprint("End of list");
   delay(1000);
 }
@@ -216,6 +218,7 @@ static bool setupAccessPoint() {
   } else {
     dbgprint("BOOT: AP IP address: %s", ipaddress.c_str());
   }
+  captivePortalBegin();
   pfs = dbgprint("IP = %s", ipaddress.c_str());
   NetworkFound = true;
   tftlog(pfs);
@@ -265,6 +268,7 @@ bool connectwifi() {
   }
 
   ipaddress = WiFi.localIP().toString();
+  captivePortalStop();
   tftlog((String("WiFi Name: ") + WiFi.SSID()).c_str());
   pfs = dbgprint("IP = %s", ipaddress.c_str());
   NetworkFound = true;

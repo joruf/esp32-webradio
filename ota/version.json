@@ -1,0 +1,6 @@
+{
+  "version": "v2.19",
+  "released": "2026-06-23",
+  "bin_url": "https://www.loresoft.de/downloads/Esp32_radio.ino.esp32.bin",
+  "notes": "Multi-client HTTP, SSE live updates, stream watchdog, alarm fade-in, snooze rename, dark mode, VU meter, diagnostics, captive portal, OTA version check."
+}

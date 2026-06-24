@@ -1,0 +1,77 @@
+// ota.html file in raw data format for PROGMEM
+// "=====( CONTENT )====="; Equal chars required as terminating char
+
+const char ota_html[] PROGMEM = R"=====(
+<!DOCTYPE html>
+<html prefix="og: http://purl.org/dc/elements/1.1/" lang="en-EN">
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+		<link rel="stylesheet" type="text/css" href="index.css" />
+
+		<title>Webradio - OTA Update</title>
+	</head>
+
+	<body itemscope itemtype="http://schema.org/WebPage">
+
+		<nav class="navbar navbar-default navbar-static-top">
+			<div id="body" class="container">
+				<div class="navbarDistance">
+						<a href="index.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#9835;</span><span class="nav-label">WEBRADIO</span></span></a>
+
+
+						<a href="scheduler.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#9200;</span><span class="nav-label">SCHEDULER</span></span></a>
+						<a href="config.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#9881;</span><span class="nav-label">CONFIGURATION</span></span></a>
+						<a href="sound.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#128266;</span><span class="nav-label">SOUND SETTINGS</span></span></a>
+						<a href="display.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#128187;</span><span class="nav-label">DISPLAY SETTINGS</span></span></a>
+						<a href="ota.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#11015;</span><span class="nav-label">OTA UPDATE</span></span></a>
+						<a href="maintenance.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#128295;</span><span class="nav-label">MAINTENANCE</span></span></a>
+						<a href="about.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#8505;</span><span class="nav-label">ABOUT</span></span></a>
+				</div>
+
+				<input id="command_log" type="text" style="width:100%" placeholder="Waiting for a command...." disabled><br>
+			</div>
+		</nav>
+
+		<div id="body" class="container">
+			<h1>OTA Update</h1>
+
+			<div id="ota-settings" class="row panel panel-default">
+				<div class="panel-heading">Firmware status</div>
+				<div class="panel-body">
+					<p class="config-help">Check online for a newer firmware build, then install it over the air. Do not unplug power during the update.</p>
+					<table class="table table-condensed ota-status-table">
+						<tbody>
+							<tr><th scope="row">Installed version</th><td id="ota-current-version">…</td></tr>
+							<tr><th scope="row">Installed release</th><td id="ota-current-date">…</td></tr>
+							<tr><th scope="row">Available version</th><td id="ota-latest-version">—</td></tr>
+							<tr><th scope="row">Available release</th><td id="ota-latest-date">—</td></tr>
+							<tr><th scope="row">Status</th><td id="ota-status-text">Not checked yet</td></tr>
+							<tr><th scope="row">Firmware URL</th><td id="ota-bin-url" class="config-row-meta">—</td></tr>
+						</tbody>
+					</table>
+					<div class="maintenance-actions">
+						<button type="button" id="ota-check-btn" class="btn btn-default"><span class="btn-icon" aria-hidden="true">&#8635;</span> Check for updates</button>
+						<button type="button" id="ota-install-btn" class="btn btn-warning" disabled><span class="btn-icon" aria-hidden="true">&#11015;</span> Install update</button>
+					</div>
+				</div>
+			</div>
+
+			<div class="row panel panel-default">
+				<div class="panel-heading">Update source</div>
+				<div class="panel-body">
+					<p class="config-help">JSON metadata URL used to look up the latest firmware version and download link. Saved automatically when you leave the field.</p>
+					<div class="form-group">
+						<label for="feat-ota-url">OTA version check URL</label>
+						<input type="text" class="form-control" id="feat-ota-url" value="https://raw.githubusercontent.com/joruf/ESP32-Webradio/main/ota/version.json">
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<script src="interface.js"></script>
+	</body>
+</html>
+
+)=====";

@@ -32,7 +32,7 @@ static void resetAlarmMinuteTracking(void) {
 }
 
 /**
- * @brief Handles the sleep timer for automatically turning off the radio.
+ * @brief Handles the snooze timer (formerly sleep timer) for automatically turning off the radio.
  *
  * This function must be called regularly (e.g., in the main loop).
  * It reduces the remaining sleep timer by the elapsed time and
@@ -58,7 +58,7 @@ void handleSleepTimer() {
     // Debug output only once per second
     if (current_millis - last_debug_output >= 1000) {
       last_debug_output = current_millis;
-      dbgprint("SleepTimer running: %d", sleeptimer_ms / 1000);
+      dbgprint("Snooze timer running: %d", sleeptimer_ms / 1000);
     }
 
     if (sleeptimer_ms <= 0) {
@@ -83,17 +83,13 @@ void handleSleepTimer() {
 static bool tryStartRadioAlarm(int8_t alrm_start_hour, int8_t alrm_start_min) {
   if (timeinfo.tm_hour == alrm_start_hour && timeinfo.tm_min == alrm_start_min) {
 
-    // 1. Use the configured alarm station (ini_block.newpreset)
     runStream(true, ini_block.newpreset);
 
-    // 2. Signal that the MP3 loop should start immediately
-    // (This also happens in the background on web click)
     hostreq = true;
 
-    // 3. Turn on sound
     muteflag = false;
+    startAlarmVolumeFade(features.alarm_fade_sec);
 
-    // 4. Visual feedback
     enableBacklight(true);
     showTextOnTFT(1, msgRadioAlarmOn);
     radioAlarmStatusChanged = ALRM_START;

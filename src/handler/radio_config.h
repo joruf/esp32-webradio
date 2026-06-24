@@ -8,12 +8,13 @@
 
 #include <ArduinoJson.h>
 #include "alarm_config.h"
+#include "features_config.h"
 
 void applyClockConfiguration(bool restartNtp);
 
 #define RADIO_CONFIG_MAX_LEN 8192
 #define RADIO_CONFIG_NVS_KEY "radio_config"
-#define RADIO_CONFIG_VERSION 2
+#define RADIO_CONFIG_VERSION 3
 #define RADIO_CONFIG_MASKED_PASSWORD "********"
 
 /**
@@ -256,6 +257,8 @@ static String buildFreshDefaultRadioConfigJson() {
   appendDefaultPresets(presets);
   JsonArray gpio = doc["gpio"].to<JsonArray>();
   appendDefaultGpio(gpio);
+  setFeatureDefaults();
+  appendFeaturesToDoc(doc);
 
   String output;
   serializeJson(doc, output);
@@ -372,6 +375,16 @@ String buildRadioConfigJsonFromNvs(bool maskWifiPasswords) {
   if (gpio.size() == 0) {
     appendDefaultGpio(gpio);
   }
+
+  setFeatureDefaults();
+  String storedCfg = nvsGetRadioConfig();
+  if (storedCfg.length() > 0) {
+    JsonDocument featDoc;
+    if (!deserializeJson(featDoc, storedCfg)) {
+      applyFeaturesFromDoc(featDoc);
+    }
+  }
+  appendFeaturesToDoc(doc);
 
   if (doc.overflowed()) {
     dbgprint("buildRadioConfigJsonFromNvs: JSON document overflow");
@@ -540,7 +553,15 @@ bool applyRadioConfig(const String &json, bool maskWifiPasswords) {
     }
   }
 
-  if (nvsSetRadioConfig(json) != ESP_OK) {
+  applyFeaturesFromDoc(doc);
+
+  String outputJson;
+  serializeJson(doc, outputJson);
+  if (outputJson.length() == 0) {
+    return false;
+  }
+
+  if (nvsSetRadioConfig(outputJson) != ESP_OK) {
     return false;
   }
 

@@ -441,6 +441,8 @@ void mp3loop() {
       // Check if there is anything to read
       if (maxchunk) {
         res = mp3client.read(tmpbuff, maxchunk); // Read a number of bytes from the stream
+        streamWatchdogFeed((uint16_t)res);
+        vuMeterFeed((uint16_t)res);
       } else {
         if (datamode == PLAYLISTDATA) { // If End of playlist
           playlist_num = 0;             // And reset

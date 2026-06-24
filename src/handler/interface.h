@@ -69,6 +69,12 @@ void handleWebpage(const String &pagename) {
     } else if (pagename.indexOf("scheduler.html") >= 0) {
       p = scheduler_html;
       l = sizeof(scheduler_html) - 1;
+    } else if (pagename.indexOf("display.html") >= 0) {
+      p = display_html;
+      l = sizeof(display_html) - 1;
+    } else if (pagename.indexOf("ota.html") >= 0) {
+      p = ota_html;
+      l = sizeof(ota_html) - 1;
     } else if (pagename.indexOf("maintenance.html") >= 0) {
       p = maintenance_html;
       l = sizeof(maintenance_html) - 1;
@@ -81,6 +87,9 @@ void handleWebpage(const String &pagename) {
     } else if (pagename.indexOf("about.html") >= 0) {
       p = about_html;
       l = sizeof(about_html) - 1;
+    } else if (pagename.indexOf("diagnostics.html") >= 0) {
+      p = diagnostics_html;
+      l = sizeof(diagnostics_html) - 1;
     } else if (pagename.indexOf("index.css") >= 0) {
       p = index_css;
       l = sizeof(index_css) - 1;
@@ -275,16 +284,23 @@ const char *analyzeCmd(const char *par, const char *val) {
     }
   } else if (argument.indexOf("ir_") >= 0)       // Ir setting?
   {                                              // Do not handle here
-  } else if (argument.indexOf("sleeptime") >= 0) // Sleep timer request?
+  } else if (argument.indexOf("sleeptime") >= 0 || argument.indexOf("snooze") >= 0) // Snooze timer
   {
-    dbgprint("SleepTimer set");
+    dbgprint("Snooze timer set");
     int mins = value.toInt();
     if (mins > 0) {
-      sleeptimer_ms = (int32_t)mins * 60 * 1000; // Convert minutes to milliseconds
-      dbgprint("Sleep Timer set to %d min", mins);
+      sleeptimer_ms = (int32_t)mins * 60 * 1000;
+      dbgprint("Snooze set to %d min", mins);
     } else {
-      sleeptimer_ms = -1; // Deactivate
-      dbgprint("Sleep Timer off");
+      sleeptimer_ms = -1;
+      dbgprint("Snooze off");
+    }
+  } else if (argument.indexOf("checkupdate") >= 0) {
+    otaCheckForUpdate(true);
+    if (otaUpdateAvailable) {
+      sprintf(reply, "Update available: %s", otaLatestVersion.c_str());
+    } else {
+      strcpy(reply, "Firmware is up to date");
     }
   } else if (argument.indexOf("preset_") >= 0) // Enumerated preset?
   {                                            // Do not handle here
@@ -364,7 +380,8 @@ const char *analyzeCmd(const char *par, const char *val) {
     resetreq = true;                        // Reset all
   } else if (argument.startsWith("update")) // Update request
   {
-    updatereq = true;            // Reset all
+    otaCheckForUpdate(true);
+    updatereq = true;
   } else if (argument == "test") // Test command
   {
     if (localfile) {

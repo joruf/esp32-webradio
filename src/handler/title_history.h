@@ -1,4 +1,12 @@
 /**
+ * @file title_history.h
+ * @brief Song title history for Web UI JSON output.
+ */
+
+#ifndef TITLE_HISTORY_H
+#define TITLE_HISTORY_H
+
+/**
  * @brief Escape a string for safe inclusion in JSON values.
  *
  * @param input Null-terminated input string
@@ -104,3 +112,5 @@ String buildTitleHistoryJson() {
   json += "]";
   return json;
 }
+
+#endif

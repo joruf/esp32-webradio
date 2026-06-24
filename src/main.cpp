@@ -38,13 +38,13 @@
 
 // Define the version number, also used for webserver as Last-Modified header and to
 // check version for update.  The format must be exactly as specified by the HTTP standard!
-#define FIRMWARE "v2.18 2026-06-22"
+#define FIRMWARE "v2.19 2026-06-24"
 
 // Web UI cache duration in seconds for static files (HTML, CSS, JS).
 // 0 = caching disabled. Values >= 1 enable Cache-Control: max-age=<seconds>.
 #define WEBUI_CACHE_MAX_AGE 60
 /*
-Firmware Changes:
+Firmware Changes/History Log:
 2.00  2025-03-06  Reload time changes on problems with the data connection.
 2.01  2025-03-27  Responsive Design meta tag added to adapt the content on differenz screen sizes.
 2.02  2025-05-07  Bugfix HTTP server for root directory "/". HTML tags and stylesheets adapted for menu.
@@ -86,7 +86,11 @@ Firmware Changes:
                   no permanent metadata disable on large blocks, JSON escaping in getJSON.
 2.17  2026-06-19  Alarm scheduler fix: NTP time via getLocalTime each second, weekday from SNTP,
                   reliable minute matching, validated alarm times, auto-save on scheduler changes.
-2.18  2026-06-22  Bugfix radio scheduler
+2.18  2026-06-22  Bugfix radio scheduler.
+2.19  2026-06-24  Multi-client HTTP, SSE live updates, stream watchdog (auto-reconnect).
+                  Alarm fade-in, snooze rename. Auto dark mode (configurable hours).
+                  VU meter and WiFi/IP on TFT. Diagnostics page, captive portal, OTA version check.
+                  Android companion app (WebView). Config: display/behaviour features panel.
 */
 
 // ESP32-Radio can be updated (OTA) to the latest version from a remote server.
@@ -499,9 +503,12 @@ touchpin_struct touchpin[] = // Touch pins and programmed function
 #include "webinterface/sound.html.h"
 #include "webinterface/config.html.h"
 #include "webinterface/scheduler.html.h"
+#include "webinterface/display.html.h"
+#include "webinterface/ota.html.h"
 #include "webinterface/maintenance.html.h"
 #include "webinterface/firmware.html.h"
 #include "webinterface/about.html.h"
+#include "webinterface/diagnostics.html.h"
 #include "webinterface/index.css.h"
 #include "webinterface/interface.js.h"
 /*#include "webinterface/favicon.ico.h"*/
@@ -547,15 +554,23 @@ VS1053 *vs1053player;
 #include "handler/helper.h"
 #include "handler/alarm_config.h"
 #include "handler/radio_config.h"
+#include "handler/captive_portal.h"
 #include "handler/sd.h"
 #include "handler/upgrade.h"
 #include "handler/volume.h"
 #include "handler/alarm.h"
 #include "handler/loop.h"
+#include "handler/wifi_signal.h"
 #include "handler/setup.h"
 #include "handler/xml.h"
 #include "handler/time.h"
 #include "handler/title_history.h"
+#include "handler/features_config.h"
+#include "handler/vu_meter.h"
+#include "handler/stream_watchdog.h"
+#include "handler/ota_check.h"
+#include "handler/live_status.h"
+#include "handler/wifi_display.h"
 #include "handler/http.h"
 #include "handler/rotary_encoder.h"
 #include "handler/encoder_switch.h"
@@ -856,12 +871,23 @@ void setup() {
   mk_lsan(); // Make a list of acceptable networks
              // in preferences.
   dbgprint("BOOT: %d WiFi credential(s) loaded from NVS", wifilist.size());
-  WiFi.mode(WIFI_STA);      // This ESP is a station
-  WiFi.persistent(false);   // Do not save SSID and password
-  WiFi.disconnect();        // After restart router could still
-  delay(100);               // keep old connection
-  listNetworks();           // Find WiFi networks
-  readprefs(false);         // Read preferences
+  WiFi.mode(WIFI_STA);    // This ESP is a station
+  WiFi.persistent(false); // Do not save SSID and password
+  WiFi.disconnect();      // After restart router could still
+  delay(100);             // keep old connection
+  listNetworks();         // Find WiFi networks
+  readprefs(false);       // Read preferences
+  setFeatureDefaults();
+  {
+    String cfg = nvsGetRadioConfig();
+    if (cfg.length() > 0) {
+      JsonDocument doc;
+      if (!deserializeJson(doc, cfg)) {
+        applyFeaturesFromDoc(doc);
+      }
+    }
+  }
+  otaCheckForUpdate(false);
   loadAlarmConfigFromNvs(); // Load or migrate alarm JSON configuration
   dbgprint("BOOT: Preferences loaded, active preset %d, volume %d", ini_block.newpreset, ini_block.reqvol);
   // tcpip_adapter_set_hostname(TCPIP_ADAPTER_IF_STA, NAME);
@@ -995,9 +1021,15 @@ void loop() {
       update_software("lstmodn", // update NEXTION image from remote image
                       UPDATEHOST, TFTFILE);
     }
-    update_software("lstmods", // Update sketch from remote file
-                    UPDATEHOST, BINFILE);
-    resetreq = true; // And reset
+    bool updated = false;
+    if (otaLatestBinUrl.length() > 0) {
+      updated = updateFirmwareFromUrl(otaLatestBinUrl);
+    }
+    if (!updated) {
+      update_software("lstmods", // Update sketch from remote file
+                      UPDATEHOST, BINFILE);
+      resetreq = true; // And reset
+    }
   }
 
   // WiFi-Reconnect-Logik, 10sec adaption
@@ -1034,16 +1066,24 @@ void loop() {
   // scanIR();                                        // See if IR input
   ArduinoOTA.handle(); // Check for OTA
   mp3loop();           // Do more mp3 related actions
-  if (http_response_flag && !cmdclient.connected()) {
+  if (http_response_flag && !cmdclient.connected() && !sseStreamActive) {
     recoverHttpServerState();
   }
   handlehttpreply();
-  if (!cmdclient.connected() && !http_response_flag) {
+  httpPromotePending(cmdclient, http_response_flag);
+  httpAcceptPending(cmdserver, cmdclient, http_response_flag);
+  if (sseStreamActive) {
+    httpServiceSse(cmdclient);
+  } else if (!cmdclient.connected() && !http_response_flag) {
     cmdclient = cmdserver.available(); // Accept a new client only when idle
   }
-  if (cmdclient.connected() && !http_response_flag) {
+  if (!sseStreamActive && cmdclient.connected() && !http_response_flag) {
     handlehttp();
   }
+  captivePortalLoop();
+  streamWatchdogPoll();
+  vuMeterUpdate();
+  updateWifiStatusDisplay();
 
   nvsAutoSave();         // See if time to save settings
   updateEncoderSwitch(); // Poll encoder push button (debounced)
