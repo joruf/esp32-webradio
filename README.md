@@ -269,9 +269,9 @@ On the default ST7735 display (`BLUETFT`), the firmware uses a compact dashboard
 
 ```text
 ┌────────────────────────────────────────────┐
-│ ● │ Mo 15.06.XX          20:30 │  Header   │
+│ ● │ Mo 15.06.25          20:30 │  Header   │
 ├───┼────────────────────────────┼───────────┤
-│ V │ Sender name                │     VU    │
+│ V │ SWR3 (Sender)              │     VU    │
 │ O │────────────────────────────│     │     │
 │ L │ Songtitel mehrzeilig       │     █     │
 │   │ (ICy-Metadaten)            │     │     │
