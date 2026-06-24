@@ -1,6 +1,6 @@
 {
   "version": "v2.23",
-  "released": "2026-06-24",
+  "released": "2026-06-25",
   "repository": "https://github.com/joruf/esp32-webradio",
   "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.23.bin",
   "notes": "BLUETFT song title on TFT (same refresh path as station name). Bitrate display kbps fix. Rotary encoder preset selection fix.",
@@ -12,7 +12,7 @@
     },
     {
       "version": "v2.22",
-      "released": "2026-06-15",
+      "released": "2026-06-24",
       "notes": "Modern TFT dashboard for BLUETFT (160x128): vertical volume bar with % on the left, vertical VU meter on the right, header with date and time, WiFi SSID with signal bar and quality % (same curve as Web UI), station name, wrapped song metadata, status line, play indicator, optional battery line in header. No layout overflow."
     },
     {
@@ -22,7 +22,7 @@
     },
     {
       "version": "v2.20",
-      "released": "2026-06-14",
+      "released": "2026-06-24",
       "notes": "VU meter fix: visible yellow activity bar below the top line on BLUETFT/ILI9341 (displaytype set at boot). HTTP/SSE no longer block normal requests. Web UI GET queue, SSE polling fallback, config save race fixes. SPI claim timeout prevents display/audio deadlock."
     },
     {
