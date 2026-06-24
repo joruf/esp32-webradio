@@ -6,23 +6,30 @@
 A fully‑featured, high‑performance Internet radio based on the **ESP32** dual‑core microcontroller, the **VS1053** hardware MP3/Ogg decoder and a colour TFT display.  
 The firmware supports **multi‑tasking** (FreeRTOS), **fail‑safe startup**, **JSON REST API**, **rotary encoder** control, **alarm clock**, **sleep timer**, **WiFi scanning** and **OTA updates** – all managed through a modern, responsive web interface.
 
+**Source code:** [github.com/joruf/esp32-webradio](https://github.com/joruf/esp32-webradio)
+
 ---
 
 
 ## Project Structure
 
 ```text
-ESP32_Webradio/
+esp32-webradio/
 ├─ src/
 │  ├─ main.cpp                     # Entry point, tasks, initialisation
+│  ├─ boot/                        # Startup validation & radioSetup()
+│  ├─ config/                      # firmware_config.h (display type, version)
+│  ├─ globals/                     # Shared types and globals
 │  ├─ handler/                     # Core modules
-│  │  ├─ alarm.h                   # Sleep timer & alarm clock
+│  │  ├─ alarm.h / alarm_config.h  # Sleep timer & alarm scheduler
 │  │  ├─ display.h                 # TFT text/battery/volume rendering
-│  │  ├─ http.h                    # HTTP server, JSON API
+│  │  ├─ http.h / http_queue.h     # HTTP server, JSON API, SSE
+│  │  ├─ radio_config.h            # Unified JSON configuration (NVS)
 │  │  ├─ interface.h               # Command parser (analyzeCmd)
-│  │  ├─ isr.h                     # Encoder & IR interrupt handlers
+│  │  ├─ isr.h                     # Encoder interrupt handlers
 │  │  ├─ mp3.h                     # Streaming loop, data parsing
 │  │  ├─ nvs.h                     # NVS read/write functions
+│  │  ├─ ota_check.h               # OTA manifest check
 │  │  ├─ rotary_encoder.h          # Encoder state machine
 │  │  ├─ setup.h                   # WiFi scanning, connection, AP mode
 │  │  ├─ stream.h                  # Audio queue & playback task
@@ -36,6 +43,7 @@ ESP32_Webradio/
 │  │  └─ web_assets.h              # Umbrella include
 │  └─ display/                     # Display drivers
 │     ├─ BlueTFT.h, ILI9341.h, ...
+├─ ota/                            # version.json & release binaries (GitHub OTA)
 ├─ platformio.ini
 ├─ android-app/                  # Optional Android companion app (WebView)
 └─ README.md
@@ -54,18 +62,20 @@ ESP32_Webradio/
   - Double click → change station (preset selection)  
   - Long press / triple click (configurable)
 - **Rich Web Interface** – Built with Bootstrap 3, jQuery and a JSON API.  
-  - Real‑time metadata (station name, song title)  
+  - Real‑time metadata (station name, song title) via SSE (`/?events`) or polling  
+  - Pages: Webradio, Scheduler, Configuration, Sound, Display, OTA Update, Maintenance, About, Diagnostics  
   - Volume, tone control (bass/treble gain & frequency)  
-  - Preset management (add, edit, delete)  
-  - Sleep timer & alarm clock configuration
-- **Alarm & Sleep Timer** – Set a wake‑up time (radio starts automatically) and an auto‑shutoff after a chosen number of minutes.
+  - Preset management (add, edit, delete, drag-and-drop reorder)  
+  - Snooze timer & alarm scheduler (weekdays, multiple alarms)
+- **Alarm & Sleep Timer** – Wake‑up alarms on the **Scheduler** page; snooze timer on the index page (`/?snooze=XX`).
 - **Automatic TFT Backlight Control** – Turns on when any interaction occurs, dims/powers off after 5 minutes of inactivity.
-- **SD Card MP3 Player** – Play MP3 files directly from a FAT‑formatted SD card (optional).
-- **Playlist Support** – Handles `.m3u` playlists (local and remote).
-- **Non‑Volatile Storage (NVS)** – All settings (presets, WiFi credentials, tone parameters, alarm times) survive reboots.
-- **OTA Firmware Update** – Upgrade directly from the web interface.
-- **Multiple Display Types** – Supports ST7735, ST7789, ILI9341, SSD1306, LCD1602, NEXTION and a dummy (serial only) display – easily switchable in the code.
+- **Playlist Support** – Handles `.m3u` playlists (remote streams).
+- **Non‑Volatile Storage (NVS)** – All settings survive reboots (unified `radio_config` JSON plus legacy keys).
+- **OTA Firmware Update** – Version check and install from the OTA page (GitHub manifest in `ota/`).
+- **Multiple Display Types** – Supports ST7735, ST7789, ILI9341, SSD1306, LCD1602, NEXTION and a dummy (serial only) display – switchable in `firmware_config.h`.
 - **Android Companion App** – Optional WebView app in `android-app/` to control the radio from your phone (same web UI, no firmware changes).
+
+> **Current hardware setup:** SD card playback and IR remote are **not** used in the active firmware (`mountSDCard()` disabled in `app_setup.h`; `scanIR()` not called in `main.cpp`). Legacy code paths remain in the repository for optional future use.
 
 ---
 
@@ -77,8 +87,6 @@ ESP32_Webradio/
 | Audio Decoder                  | VS1053B breakout board (e.g. from Adafruit or generic)   |
 | Display                        | ST7735 (160×128) / ST7789 / ILI9341 / SSD1306 / LCD1602  |
 | Rotary Encoder                 | KY‑040 or similar with built‑in push button              |
-| SD Card Module (optional)      | SPI interface (e.g. microSD breakout)                    |
-| IR Receiver (optional)         | VS1838B (or any 38 kHz receiver)                         |
 | Amplifier Shutdown (optional)  | Use `pin_shutdown` or `pin_shutdownx` for external amp   |
 
 ---
@@ -93,17 +101,15 @@ You can change all pins in the web interface – the settings are saved in NVS.
 | VS1053 CS              | 5         | CS                              |
 | VS1053 DCS             | 32        | DCS (Data / Command)            |
 | VS1053 DREQ            | 4         | DREQ                            |
-| SPI SCK                | 18        | SCK (shared with SD and TFT)    |
+| SPI SCK                | 18        | SCK (shared with TFT)           |
 | SPI MISO               | 19        | MISO                            |
 | SPI MOSI               | 23        | MOSI                            |
-| SD Card CS             | 21        | SD_CS                           |
 | TFT CS                 | 15        | TFT_CS                          |
 | TFT DC                 | 2         | TFT_DC                          |
 | TFT Backlight          | 33        | BL (active high)                |
 | Rotary Encoder CLK     | 25        | CLK                             |
 | Rotary Encoder DT      | 26        | DT                              |
 | Rotary Encoder SW      | 27        | SW (push button)                |
-| IR Receiver            | 35        | IR out                          |
 | Amplifier Shutdown     | –         | (optional, set in preferences)  |
 
 > The default pins are defined in `ini_block` inside `readIOprefs()`.  
@@ -123,7 +129,7 @@ git clone https://github.com/joruf/esp32-webradio.git
 ```
 
 - Open in VS Code: Ensure the PlatformIO extension is installed.
-- Build & Upload: Open the project folder in VS Code. PlatformIO will automatically fetch the required dependencies (Adafruit GFX/ST7735, PubSubClient, etc.) defined in your platformio.ini.
+- Build & Upload: Open the project folder in VS Code. PlatformIO will automatically fetch the required dependencies (Adafruit GFX/ST7735, ArduinoJson, etc.) defined in your `platformio.ini`.
 - Flash: Upload the firmware to your ESP32 via USB.
 
 ### Android companion app (optional)
@@ -149,8 +155,15 @@ The ESP32 responds to HTTP GET requests on port 80.
 You can query the current radio status, change volume, select presets, etc.
 
 - **JSON Live Metadata** – `GET /?getJSON` returns real-time station and playback information.
-  - Returns: `{"station":"Radio Paradise","title":"Bob Marley - Could You Be Loved","firmware":"v2.0","time":"14:35","date":"Sa 12.04.25"}`
-  - Used by the web interface for automatic UI updates
+  - Returns: `{"station":"Radio Paradise","title":"Bob Marley - Could You Be Loved","firmware":"v2.19","time":"14:35","date":"Sa 12.04.25",...}`
+  - Live updates on the index page via SSE (`GET /?events`) with polling fallback
+
+- **Configuration (JSON)** – Unified settings document.
+  - `GET /?getconfig` → full radio configuration
+  - `POST /?saveconfig` → save JSON body to NVS
+  - `GET /?getalarms` / `POST /?savealarms` → alarm scheduler JSON
+
+- **OTA** – `GET /?checkupdate=1` → version manifest comparison
 
 - **Preset Control** – Change or navigate between saved radio stations.
   - `/?preset=5` → Play preset number 5
@@ -172,8 +185,8 @@ You can query the current radio status, change volume, select presets, etc.
   - `/?tonela=8` → Bass gain (0=off, 1…15 = +1…+15 dB)
   - `/?tonelf=11` → Bass frequency (2…15 = 10…140 Hz)
 
-- **Timer Functions** – Schedule automatic playback or shutdown.
-  - `/?sleeptime=30` → Enable sleep timer for 30 minutes (0 = disable)
+- **Timer Functions** – Schedule automatic shutdown (snooze).
+  - `/?snooze=30` or `/?sleeptime=30` → Stop playback after 30 minutes (`0` = disable)
 
 - **System Control** – Manage the device remotely.
   - `/?reset` → Restart the ESP32
@@ -185,24 +198,27 @@ You can query the current radio status, change volume, select presets, etc.
 
 ## Alarm & Sleep Timer
 
-- **Alarm Clock** – Fully automatic wake‑up functionality.
-  - Set start and stop times in the **Configuration** page
-  - At the specified start time, the radio automatically plays the `newpreset` station (the one selected in the web UI)
-  - At the stop time it shuts off completely
-  - The alarm is active every day (weekday selection can be added easily)
-  - Implemented in `alarm.h` using NTP‑synchronised time (see `time.h`)
+- **Alarm Clock** – Configured on the **Scheduler** page (`scheduler.html`).
+  - Multiple alarms with start/stop times and weekday selection
+  - At start time the radio plays the configured boot preset; at stop time it shuts off
+  - Stored as JSON in NVS (`alrm_config`, also part of `radio_config`)
+  - Implemented in `alarm_config.h` and `alarm.h` using NTP time (`time.h`)
 
-- **Sleep Timer** – Automatic shutoff for night-time listening.
-  - Use the drop‑down menu in the web interface or send `/?sleeptime=XX`
+- **Snooze / Sleep Timer** – Automatic shutoff for night-time listening.
+  - Use the drop‑down on the index page or send `/?snooze=XX` (also `/?sleeptime=XX`)
   - After the chosen minutes, the radio stops and the display turns off
   - Any interaction (encoder, button, web command) resets the timer
-  - Implemented in `alarm.h` with millisecond precision
+  - Implemented in `alarm.h`
 
 ---
 
 ## Configuration Storage (NVS)
 
-All user settings are stored in the ESP32’s **Non‑Volatile Storage (NVS)** partition, ensuring all preferences survive reboots and power cycles.
+All user settings are stored in the ESP32’s **Non‑Volatile Storage (NVS)** partition.
+
+**Primary:** `radio_config` – unified JSON document (WiFi, presets, GPIO, clock, volume, tone, alarms, feature flags). Load/save via `/?getconfig` and `/?saveconfig`.
+
+**Legacy keys** (still read and migrated into `radio_config`):
 
 - **Station Presets** – `preset_00`, `preset_01`, …
   - Format: `"http://stream.url#Station Name"`
@@ -216,18 +232,14 @@ All user settings are stored in the ESP32’s **Non‑Volatile Storage (NVS)** p
   - Saved automatically every 10 minutes
   - Restored on boot
 
-- **Alarm Configuration** – `alrm_start`, `alrm_stop`
-  - Format: `"HH:MM"` (24-hour format)
-
-- **Pin Assignments** – `pin_enc_clk`, `pin_enc_dt`, `pin_enc_sw`, `pin_ir`, etc.
-  - Customisable without recompiling the firmware
+- **Alarm Configuration** – `alrm_config` (JSON) or legacy `alrm_start` / `alrm_stop`
 
 - **Time Configuration** – `clk_server`, `clk_offset`, `clk_dst`
   - NTP server selection and timezone settings
 
-> **Editing:** You can edit the raw preferences directly in the web interface (**Configuration → Configuration File**). After clicking **Save Configuration**, the changes are written to NVS and become active immediately – no restart needed for most settings.
+> **Editing:** Use the web UI (**Configuration**, **Scheduler**, **Sound**, **Display**) or the raw JSON editor under **Configuration → Advanced**. Changes are written to NVS via `/?saveconfig`.
 
-> **Implementation:** NVS handling is found in `nvs.h` and `http.h` (functions `writeprefs()`, `readprefs()`).
+> **Implementation:** `radio_config.h`, `nvs.h`, `http.h` (`writeprefs()` / `readprefs()` for legacy format).
 
 ---
 
@@ -250,3 +262,15 @@ The project includes ready‑to‑use drivers for several display types. Switch 
 > - `displayBatteryChargeOnTFT()` – Show battery level (if configured)
 
 > **Layout:** See `display.h` for the segment layout configuration (top line, middle text, bottom area, and rotary encoder status line).
+
+---
+
+## OTA Updates
+
+Firmware updates are distributed via the GitHub repository:
+
+- Repository: [github.com/joruf/esp32-webradio](https://github.com/joruf/esp32-webradio)
+- Version manifest: `https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/version.json`
+- Details: [ota/README.md](ota/README.md)
+
+The manifest URL is stored in `features.ota_check_url` (editable on the **OTA Update** page).
