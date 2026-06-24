@@ -70,7 +70,7 @@ inline void dspCommonVuMeterBar(uint16_t screenWidth, uint8_t level, bool displa
   }
 
   const uint16_t y = 9;
-  const uint16_t h = 5;
+  const uint16_t h = 2;
   static uint8_t previousLevel = 255;
 
   if (!visible) {

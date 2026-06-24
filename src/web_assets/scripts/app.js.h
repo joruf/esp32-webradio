@@ -2200,6 +2200,8 @@ const char app_js[] PROGMEM = R"=====(
     }
 
     $(function() {
+        syncThemeFromServer();
+        setInterval(syncThemeFromServer, 60000);
         initConfigPage();
         initSoundPage();
         initDisplayPage();
@@ -2487,6 +2489,25 @@ const char app_js[] PROGMEM = R"=====(
         });
     }
 
+    function applyThemeDarkMode(enabled) {
+        if (enabled) {
+            document.body.classList.add("theme-dark");
+        } else {
+            document.body.classList.remove("theme-dark");
+        }
+    }
+
+    function syncThemeFromServer() {
+        fetch("/?getJSON&_t=" + Date.now())
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                applyThemeDarkMode(!!data.dark_mode);
+            })
+            .catch(function(err) {
+                console.log("Theme sync failed:", err);
+            });
+    }
+
     function applyLiveStatusData(data) {
             if(document.getElementById("statlabel")) document.getElementById("statlabel").innerHTML = data.station;
             if(document.getElementById("songlabel")) document.getElementById("songlabel").innerHTML = data.title;
@@ -2519,11 +2540,7 @@ const char app_js[] PROGMEM = R"=====(
 
             renderTitleHistory(data.history);
 
-            if (data.dark_mode) {
-                document.body.classList.add("theme-dark");
-            } else {
-                document.body.classList.remove("theme-dark");
-            }
+            applyThemeDarkMode(!!data.dark_mode);
 
             let linkElement = document.getElementById("youtubelink");
             if(linkElement && data.title) {

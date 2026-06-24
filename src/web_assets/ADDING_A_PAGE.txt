@@ -1,8 +1,12 @@
 1. Add a new page header under src/web_assets/pages/, e.g. myfeature_page.h
    - PROGMEM symbol: myfeature_html
    - HTTP URL remains myfeature.html in the HTML nav links
+   - Include WEB_NAV_MENU_HTML from src/web_assets/partials/nav_menu.h (see an existing *_page.h)
 2. Register the include in src/web_assets/web_assets.h
 3. Add routing in src/handler/interface.h (handleWebpage else-if branch)
+
+Shared navigation: edit src/web_assets/partials/nav_menu.html.
+Pages use the @include_nav@ placeholder; scripts/embed_web_assets.py inlines it on build.
 
 For styles/scripts use src/web_assets/styles/ and src/web_assets/scripts/.
 HTTP paths: app.css, app.js

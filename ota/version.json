@@ -1,10 +1,15 @@
 {
-  "version": "v2.20",
-  "released": "2026-06-15",
+  "version": "v2.21",
+  "released": "2026-06-25",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.20.bin",
-  "notes": "VU meter fix: visible graphic activity bar on TFT (display type detection). HTTP/SSE concurrency fixes. Web UI request queue and polling fallback. SPI claim timeout.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.21.bin",
+  "notes": "OTA install fix (dual OTA partitions). Dark mode on all Web UI pages. Shared nav_menu.html. VU meter 2px bar with improved dynamics.",
   "history": [
+    {
+      "version": "v2.21",
+      "released": "2026-06-25",
+      "notes": "OTA install fix: dual OTA partition table (ota_app.csv), HTTPS firmware download, restart only after successful update. Dark mode on all Web UI pages including preset select. Navigation from nav_menu.html (build-time embed). VU meter: 2px bar, improved activity display."
+    },
     {
       "version": "v2.20",
       "released": "2026-06-15",

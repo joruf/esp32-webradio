@@ -7,6 +7,7 @@
  *
  * Layout:
  *   pages/   – HTML views (symbols: *_html)
+ *   partials/ – Shared HTML sources (e.g. nav_menu.html with @include_nav@)
  *   styles/  – CSS (app_css)
  *   scripts/ – JavaScript (app_js)
  *   vendor/  – Optional third-party bundles (currently unused at runtime)

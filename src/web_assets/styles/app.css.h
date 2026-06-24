@@ -97,6 +97,7 @@ const char app_css[] PROGMEM = R"=====(
 	.webradio-control-slider { flex: 1 1 140px; min-width: 100px; max-width: 320px; width: auto; margin: 0; }
 	.webradio-playback-actions { display: flex; flex-wrap: nowrap; gap: 8px; align-items: center; flex: 0 0 auto; }
 	.webradio-control-toolbar .btn { width: auto; min-width: 88px; flex: 0 0 auto; }
+	.webradio-preset-list { width: 100%; min-height: 12em; }
 	.webradio-display-body { display: flex; flex-wrap: wrap; gap: 8px; }
 	.maintenance-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 	.ota-history-list {
@@ -181,6 +182,15 @@ const char app_css[] PROGMEM = R"=====(
 	body.theme-dark {
 		background: #121212;
 		color: #e8e8e8;
+		color-scheme: dark;
+	}
+	body.theme-dark h1,
+	body.theme-dark h2,
+	body.theme-dark h3,
+	body.theme-dark label,
+	body.theme-dark .panel-heading small,
+	body.theme-dark .webradio-control-label {
+		color: #e8e8e8;
 	}
 	body.theme-dark .panel-default {
 		background: #1e1e1e;
@@ -193,10 +203,65 @@ const char app_css[] PROGMEM = R"=====(
 	}
 	body.theme-dark .panel-body,
 	body.theme-dark .form-control,
-	body.theme-dark .config-help,
-	body.theme-dark .title-history-cell {
-		background: #1a1a1a;
+	body.theme-dark select,
+	body.theme-dark textarea,
+	body.theme-dark input[type="text"],
+	body.theme-dark input[type="number"],
+	body.theme-dark input[type="url"],
+	body.theme-dark input[type="password"],
+	body.theme-dark input[type="search"],
+	body.theme-dark #preset,
+	body.theme-dark .webradio-preset-list,
+	body.theme-dark .sound-select,
+	body.theme-dark .config-raw-json {
+		background-color: #1a1a1a;
 		color: #e0e0e0;
+		border-color: #444;
+	}
+	body.theme-dark select option,
+	body.theme-dark #preset option {
+		background-color: #1a1a1a;
+		color: #e0e0e0;
+	}
+	body.theme-dark select option:checked,
+	body.theme-dark #preset option:checked {
+		background-color: #2a4a6a;
+		color: #fff;
+	}
+	body.theme-dark .config-help,
+	body.theme-dark .config-empty,
+	body.theme-dark .config-row-meta,
+	body.theme-dark .title-history-cell,
+	body.theme-dark .title-history-empty {
+		background: transparent;
+		color: #b8b8b8;
+		border-color: #444;
+	}
+	body.theme-dark .config-row {
+		background: #1e1e1e;
+		border-color: #333;
+	}
+	body.theme-dark .config-row-drag-handle,
+	body.theme-dark .config-collapse-heading .config-collapse-icon,
+	body.theme-dark .alarm-help {
+		color: #999;
+	}
+	body.theme-dark .config-dialog-backdrop {
+		background: rgba(0, 0, 0, 0.72);
+	}
+	body.theme-dark .config-dialog-card {
+		background: #1e1e1e;
+		border-color: #333;
+	}
+	body.theme-dark .table,
+	body.theme-dark .table-condensed,
+	body.theme-dark .ota-status-table {
+		color: #e0e0e0;
+		background-color: transparent;
+	}
+	body.theme-dark .table > thead > tr > th,
+	body.theme-dark .table > tbody > tr > th,
+	body.theme-dark .table > tbody > tr > td {
 		border-color: #444;
 	}
 	body.theme-dark .navbar-default,
@@ -205,13 +270,47 @@ const char app_css[] PROGMEM = R"=====(
 		color: #eee;
 		border-color: #444;
 	}
+	body.theme-dark .btn-default {
+		background: #333;
+		color: #eee;
+		border-color: #555;
+	}
+	body.theme-dark .btn-default:hover,
+	body.theme-dark .btn-default:focus {
+		background: #3d3d3d;
+		color: #fff;
+		border-color: #666;
+	}
+	body.theme-dark .input-group-addon {
+		background: #2a2a2a;
+		color: #e0e0e0;
+		border-color: #444;
+	}
+	body.theme-dark code {
+		background: #2a2a2a;
+		color: #f0c674;
+	}
+	body.theme-dark hr { border-color: #444; }
 	body.theme-dark a,
 	body.theme-dark .title-history-when { color: #9ecbff; }
+	body.theme-dark #statlabel { color: #ff8a80 !important; }
+	body.theme-dark #youtubelink,
+	body.theme-dark #songlabel { color: #9ecbff !important; }
 	body.theme-dark .title-history-table { border-top-color: #444; }
+	body.theme-dark .panel-danger-zone .panel-heading,
+	body.theme-dark .config-danger-text { color: #f28b82; }
+	body.theme-dark .wifi-signal-connected,
+	body.theme-dark .wifi-signal-strong { color: #81c995; }
+	body.theme-dark .wifi-signal-weak { color: #f28b82; }
+	body.theme-dark .wifi-signal-none { color: #888; }
 	body.theme-dark .ota-history-list { background: #2a2a2a; border-color: #444; }
 	body.theme-dark .ota-history-item { border-bottom-color: #444; }
 	body.theme-dark .ota-history-date { color: #9ecbff; }
 	body.theme-dark .ota-history-notes { color: #ddd; }
+	body.theme-dark .webradio-volume-value { color: #e0e0e0; }
+	body.theme-dark input[type="range"] {
+		accent-color: #5b9bd5;
+	}
 	.diag-output {
 		background: #111;
 		color: #cfc;
