@@ -25,7 +25,7 @@ static void setFeatureDefaults(void) {
   features.vu_meter = true;
   features.stream_watchdog = true;
   features.alarm_fade_sec = 90;
-  features.ota_check_url = "https://raw.githubusercontent.com/joruf/ESP32-Webradio/main/ota/version.json";
+  features.ota_check_url = "https://www.loresoft.de/downloads/version.json";
 }
 
 /**

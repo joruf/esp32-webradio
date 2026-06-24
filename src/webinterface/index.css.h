@@ -99,6 +99,40 @@ const char index_css[] PROGMEM = R"=====(
 	.webradio-control-toolbar .btn { width: auto; min-width: 88px; flex: 0 0 auto; }
 	.webradio-display-body { display: flex; flex-wrap: wrap; gap: 8px; }
 	.maintenance-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+	.ota-history-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		max-height: 420px;
+		overflow-y: auto;
+		border: 1px solid #eee;
+		border-radius: 3px;
+		background: #fafafa;
+	}
+	.ota-history-item {
+		padding: 10px 12px;
+		border-bottom: 1px solid #eee;
+	}
+	.ota-history-item:last-child { border-bottom: 0; }
+	.ota-history-head { margin-bottom: 4px; line-height: 1.3; }
+	.ota-history-date {
+		margin-left: 8px;
+		font-size: 0.85em;
+		color: #666;
+		font-weight: normal;
+	}
+	.ota-history-notes {
+		font-size: 0.9em;
+		line-height: 1.4;
+		color: #333;
+		white-space: pre-wrap;
+		word-break: break-word;
+	}
+	.ota-history-empty {
+		padding: 12px;
+		color: #888;
+		font-style: italic;
+	}
 	.title-history-table {
 		display: grid;
 		grid-template-columns: repeat(10, minmax(0, 1fr));
@@ -174,6 +208,10 @@ const char index_css[] PROGMEM = R"=====(
 	body.theme-dark a,
 	body.theme-dark .title-history-when { color: #9ecbff; }
 	body.theme-dark .title-history-table { border-top-color: #444; }
+	body.theme-dark .ota-history-list { background: #2a2a2a; border-color: #444; }
+	body.theme-dark .ota-history-item { border-bottom-color: #444; }
+	body.theme-dark .ota-history-date { color: #9ecbff; }
+	body.theme-dark .ota-history-notes { color: #ddd; }
 	.diag-output {
 		background: #111;
 		color: #cfc;

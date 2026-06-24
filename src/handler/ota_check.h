@@ -13,6 +13,7 @@ bool otaUpdateAvailable = false;
 String otaLatestVersion = "";
 String otaLatestReleased = "";
 String otaLatestBinUrl = "";
+String otaVersionHistoryJson = "[]";
 
 static uint32_t otaLastCheckMs = 0;
 
@@ -64,6 +65,7 @@ void otaCheckForUpdate(bool force) {
   otaLatestVersion = "";
   otaLatestReleased = "";
   otaLatestBinUrl = "";
+  otaVersionHistoryJson = "[]";
 
   HTTPClient http;
   http.setTimeout(8000);
@@ -91,6 +93,9 @@ void otaCheckForUpdate(bool force) {
   otaLatestVersion = String((const char *)(doc["version"] | ""));
   otaLatestReleased = String((const char *)(doc["released"] | ""));
   otaLatestBinUrl = String((const char *)(doc["bin_url"] | ""));
+  if (doc["history"].is<JsonArray>()) {
+    serializeJson(doc["history"], otaVersionHistoryJson);
+  }
   if (otaLatestVersion.length() == 0) {
     return;
   }
@@ -119,7 +124,9 @@ static String buildOtaCheckJson(void) {
   json += jsonEscapeString(otaLatestBinUrl.c_str());
   json += "\",\"ota_check_url\":\"";
   json += jsonEscapeString(features.ota_check_url.c_str());
-  json += "\"}";
+  json += "\",\"history\":";
+  json += otaVersionHistoryJson.length() ? otaVersionHistoryJson : "[]";
+  json += "}";
   return json;
 }
 

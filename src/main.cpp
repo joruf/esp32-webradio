@@ -43,55 +43,6 @@
 // Web UI cache duration in seconds for static files (HTML, CSS, JS).
 // 0 = caching disabled. Values >= 1 enable Cache-Control: max-age=<seconds>.
 #define WEBUI_CACHE_MAX_AGE 60
-/*
-Firmware Changes/History Log:
-2.00  2025-03-06  Reload time changes on problems with the data connection.
-2.01  2025-03-27  Responsive Design meta tag added to adapt the content on differenz screen sizes.
-2.02  2025-05-07  Bugfix HTTP server for root directory "/". HTML tags and stylesheets adapted for menu.
-2.03  2026-01-15  Song title API for webinterface implemented. Now we can see icystreamtitle and icyname.
-                  Sleep-Time implemented to stop mp3 stream after a defined time.
-                  Const VERSION renamed to FIRMWARE.
-2.04  2026-01-16  Update ESP32 Espressif-Systems v2.0.17 to 3.3.0.
-2.05  2026-01-16  Rotary encoder click and doubleclick logic implemented click=radio on/off, doubleclick=select
-                  radio station.
-2.06  2026-01-17  Bugfix alarm start/stop not working after ESP32 Espressif-Systems update to 3.3.0.
-2.07  2026-01-21  MQTT removed, mute button removed from index.html, html button size changed. Hardcoded GPIO pins for
-                  the rotary encoder, IR receiver, SD card, TFT, and VS1053 fixed within the code. Webinterface layout
-                  adapted.
-2.08 2026-01-22   writeDefaultConfig.h implemented to write the default props into the NVS on problems. SD-Card
-                  disabled. Display NetworkList listNetworks() into the display.
-2.09  2026-01-22  IR remote control recognition removed. defaultprefs.h structured
-2.10  2026-06-06  Code switch from Arduino IDE to
-                  VSCode PlatformIO Bugfixes vs1053 semaphores Time format expanded with date
-2.11  2026-06-15  Web config as JSON/NVS with form UI. Scheduler page (sleep timer, alarms). Preset reorder.
-                  Bugfixes playlist redirect, EEPROM/config load, alarm save.
-2.12  2026-06-16  Configuration auto-saves immediately on field change (select change sends setting at once).
-                  UTC offset and DST as select boxes (0 or 1 only); other numeric options use select boxes.
-                  Sound settings (volume, equalizer) moved from Configuration to Sound Settings page.
-                  HTTP POST config save fixed (Content-Length, full body read, save error feedback).
-                  Scheduler: removing an alarm now persists to NVS.
-2.13  2026-06-17  Alarm scheduler fixed: weekday check, reliable start/stop, per-second task handling.
-                  Boot preset select lists only configured presets. Scheduler alarm times as hh:mm masked inputs
-                  (two-digit entry, e.g. 20:00 and 23:59). Save/remove alarm feedback in command log.
-                  Clock/NTP: descriptive labels and tooltips; UTC offset UTC-11..UTC+14, DST Off/On.
-                  Clock settings apply immediately (applyClockConfiguration); command log shows updated time.
-                  WEBUI_CACHE_MAX_AGE for static UI caching (60s). HTTP server stability improvements.
-                  Soft volume fade in/out on radio play start and stop (2s).
-2.14  2026-06-18  Web UI overhaul: responsive nav (Unicode icons, icon-only on narrow screens),
-                  Unicode symbols on all buttons, Scheduler alarm row layout, Maintenance page
-                  Config: preset drag-and-drop reorder, collapsible raw JSON editor, responsive preset/GPIO rows.
-                  Index: volume slider, separate play/stop, display on/off panel; firmware info removed from index.
-2.15  2026-06-19  Song title history: last 10 recognized stream titles with date/time in Web UI JSON.
-2.16  2026-06-19  Stream metadata fixes: keep last title on empty blocks, robust StreamTitle parse,
-                  no permanent metadata disable on large blocks, JSON escaping in getJSON.
-2.17  2026-06-19  Alarm scheduler fix: NTP time via getLocalTime each second, weekday from SNTP,
-                  reliable minute matching, validated alarm times, auto-save on scheduler changes.
-2.18  2026-06-22  Bugfix radio scheduler.
-2.19  2026-06-24  Multi-client HTTP, SSE live updates, stream watchdog (auto-reconnect).
-                  Alarm fade-in, snooze rename. Auto dark mode (configurable hours).
-                  VU meter and WiFi/IP on TFT. Diagnostics page, captive portal, OTA version check.
-                  Android companion app (WebView). Config: display/behaviour features panel.
-*/
 
 // ESP32-Radio can be updated (OTA) to the latest version from a remote server.
 // The download uses the following server and files:

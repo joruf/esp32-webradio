@@ -1495,7 +1495,7 @@ const char interface_js[] PROGMEM = R"=====(
                 alarm_fade_sec: 90,
                 vu_meter: true,
                 stream_watchdog: true,
-                ota_check_url: "https://raw.githubusercontent.com/joruf/ESP32-Webradio/main/ota/version.json"
+                ota_check_url: "https://www.loresoft.de/downloads/version.json"
             }
         };
     }
@@ -1577,8 +1577,8 @@ const char interface_js[] PROGMEM = R"=====(
     function parseFirmwareString(firmware) {
         var parts = String(firmware || "").trim().split(/\s+/);
         return {
-            version: parts[0] || "—",
-            date: parts[1] || "—"
+            version: parts[0] || "-",
+            date: parts[1] || "-"
         };
     }
 
@@ -1590,9 +1590,9 @@ const char interface_js[] PROGMEM = R"=====(
         var current = parseFirmwareString(data.current_firmware);
         $("#ota-current-version").text(current.version);
         $("#ota-current-date").text(current.date);
-        $("#ota-latest-version").text(data.latest_version || "—");
-        $("#ota-latest-date").text(data.latest_released || "—");
-        $("#ota-bin-url").text(data.bin_url || "—");
+        $("#ota-latest-version").text(data.latest_version || "-");
+        $("#ota-latest-date").text(data.latest_released || "-");
+        $("#ota-bin-url").text(data.bin_url || "-");
 
         var statusText;
         $("#ota-status-text").removeClass("text-success text-warning text-danger");
@@ -1608,6 +1608,34 @@ const char interface_js[] PROGMEM = R"=====(
         }
         $("#ota-status-text").text(statusText);
         $("#ota-install-btn").prop("disabled", !data.update_available);
+        renderOtaVersionHistory(data.history);
+    }
+
+    function renderOtaVersionHistory(history) {
+        var list = $("#ota-version-history");
+        if (!list.length) {
+            return;
+        }
+
+        list.empty();
+        if (!history || !history.length) {
+            list.append($("<li class='ota-history-empty'></li>").text("No release history in version manifest."));
+            return;
+        }
+
+        history.forEach(function(entry) {
+            var item = $("<li class='ota-history-item'></li>");
+            var head = $("<div class='ota-history-head'></div>");
+            head.append($("<strong></strong>").text(entry.version || "-"));
+            if (entry.released) {
+                head.append($("<span class='ota-history-date'></span>").text(entry.released));
+            }
+            item.append(head);
+            if (entry.notes) {
+                item.append($("<div class='ota-history-notes'></div>").text(entry.notes));
+            }
+            list.append(item);
+        });
     }
 
     function refreshOtaStatus() {
@@ -1627,7 +1655,7 @@ const char interface_js[] PROGMEM = R"=====(
         loadRadioConfig();
 
         $("#ota-check-btn").off("click.ota").on("click.ota", function() {
-            $("#ota-status-text").removeClass("text-success text-warning text-danger").text("Checking…");
+            $("#ota-status-text").removeClass("text-success text-warning text-danger").text("Checking...");
             refreshOtaStatus()
                 .then(function(data) {
                     showCommandLog(data.update_available ?
@@ -1644,7 +1672,7 @@ const char interface_js[] PROGMEM = R"=====(
                 return;
             }
             httpGet("update");
-            showCommandLog("Firmware update started…");
+            showCommandLog("Firmware update started...");
         });
 
         refreshOtaStatus().catch(function() {

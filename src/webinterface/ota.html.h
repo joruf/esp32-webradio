@@ -43,12 +43,12 @@ const char ota_html[] PROGMEM = R"=====(
 					<p class="config-help">Check online for a newer firmware build, then install it over the air. Do not unplug power during the update.</p>
 					<table class="table table-condensed ota-status-table">
 						<tbody>
-							<tr><th scope="row">Installed version</th><td id="ota-current-version">…</td></tr>
-							<tr><th scope="row">Installed release</th><td id="ota-current-date">…</td></tr>
-							<tr><th scope="row">Available version</th><td id="ota-latest-version">—</td></tr>
-							<tr><th scope="row">Available release</th><td id="ota-latest-date">—</td></tr>
+							<tr><th scope="row">Installed version</th><td id="ota-current-version">...</td></tr>
+							<tr><th scope="row">Installed release</th><td id="ota-current-date">...</td></tr>
+							<tr><th scope="row">Available version</th><td id="ota-latest-version">-</td></tr>
+							<tr><th scope="row">Available release</th><td id="ota-latest-date">-</td></tr>
 							<tr><th scope="row">Status</th><td id="ota-status-text">Not checked yet</td></tr>
-							<tr><th scope="row">Firmware URL</th><td id="ota-bin-url" class="config-row-meta">—</td></tr>
+							<tr><th scope="row">Firmware URL</th><td id="ota-bin-url" class="config-row-meta">-</td></tr>
 						</tbody>
 					</table>
 					<div class="maintenance-actions">
@@ -59,12 +59,22 @@ const char ota_html[] PROGMEM = R"=====(
 			</div>
 
 			<div class="row panel panel-default">
+				<div class="panel-heading">Release history</div>
+				<div class="panel-body">
+					<p class="config-help">Changelog from the remote version manifest. Refreshed when you open this page or run <strong>Check for updates</strong>.</p>
+					<ul id="ota-version-history" class="ota-history-list">
+						<li class="ota-history-empty">No release history loaded yet.</li>
+					</ul>
+				</div>
+			</div>
+
+			<div class="row panel panel-default">
 				<div class="panel-heading">Update source</div>
 				<div class="panel-body">
-					<p class="config-help">JSON metadata URL used to look up the latest firmware version and download link. Saved automatically when you leave the field.</p>
+					<p class="config-help">JSON metadata URL used to look up the latest firmware version and download link. Saved automatically when you leave the field. Default host is the same server as the firmware binary (<code>www.loresoft.de</code>).</p>
 					<div class="form-group">
 						<label for="feat-ota-url">OTA version check URL</label>
-						<input type="text" class="form-control" id="feat-ota-url" value="https://raw.githubusercontent.com/joruf/ESP32-Webradio/main/ota/version.json">
+						<input type="text" class="form-control" id="feat-ota-url" value="https://www.loresoft.de/downloads/version.json">
 					</div>
 				</div>
 			</div>
