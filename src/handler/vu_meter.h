@@ -30,7 +30,12 @@ public:
    */
   void update(void) {
     if (!features.vu_meter) {
-      level_ = 0;
+      if (level_ > 0) {
+        level_ = 0;
+        if (displaytype == T_BLUETFT || displaytype == T_ILI9341) {
+          displayVuMeterOnTFT(0, false);
+        }
+      }
       return;
     }
 
@@ -60,17 +65,8 @@ public:
     }
 
     if (displaytype == T_BLUETFT || displaytype == T_ILI9341) {
-      char bar[22];
-      uint8_t blocks = level_ / 10;
-      if (blocks > 10) {
-        blocks = 10;
-      }
-      memset(bar, '.', 10);
-      bar[10] = '\0';
-      for (uint8_t i = 0; i < blocks; i++) {
-        bar[i] = '|';
-      }
-      showTextOnTFT(0, bar);
+      const bool visible = (datamode != STOPPED && level_ > 0);
+      displayVuMeterOnTFT(level_, visible);
     }
   }
 

@@ -1,7 +1,7 @@
 #ifndef FIRMWARE_CONFIG_H
 #define FIRMWARE_CONFIG_H
 
-#define FIRMWARE "v2.19 2026-06-24"
+#define FIRMWARE "v2.20 2026-06-15"
 #define WEBUI_CACHE_MAX_AGE 60
 #define UPDATEHOST "www.loresoft.de"
 #define BINFILE "/downloads/Esp32_radio.ino.esp32.bin"

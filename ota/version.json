@@ -1,10 +1,15 @@
 {
-  "version": "v2.19",
-  "released": "2026-06-24",
+  "version": "v2.20",
+  "released": "2026-06-15",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.19.bin",
-  "notes": "Multi-client HTTP, SSE live updates, stream watchdog (auto-reconnect). Alarm fade-in, snooze rename. Auto dark mode, VU meter, diagnostics, captive portal, OTA version check. Android companion app.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.20.bin",
+  "notes": "VU meter fix: visible graphic activity bar on TFT (display type detection). HTTP/SSE concurrency fixes. Web UI request queue and polling fallback. SPI claim timeout.",
   "history": [
+    {
+      "version": "v2.20",
+      "released": "2026-06-15",
+      "notes": "VU meter fix: visible yellow activity bar below the top line on BLUETFT/ILI9341 (displaytype set at boot). HTTP/SSE no longer block normal requests. Web UI GET queue, SSE polling fallback, config save race fixes. SPI claim timeout prevents display/audio deadlock."
+    },
     {
       "version": "v2.19",
       "released": "2026-06-24",

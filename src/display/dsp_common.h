@@ -56,4 +56,46 @@ inline void dspCommonVolumeBar(uint16_t screenWidth, uint16_t screenHeight, uint
   dsp_fillRect(pos, screenHeight - 2, screenWidth - pos, 2, GREEN);
 }
 
+/**
+ * @brief Draw audio activity bar between the top line and the first segment divider.
+ *
+ * @param screenWidth Display width in pixels
+ * @param level VU level 0-100
+ * @param displayReady True when the TFT driver is initialized
+ * @param visible When false, clears the bar area
+ */
+inline void dspCommonVuMeterBar(uint16_t screenWidth, uint8_t level, bool displayReady, bool visible) {
+  if (!displayReady) {
+    return;
+  }
+
+  const uint16_t y = 9;
+  const uint16_t h = 5;
+  static uint8_t previousLevel = 255;
+
+  if (!visible) {
+    if (previousLevel == 0) {
+      return;
+    }
+    previousLevel = 0;
+    dsp_fillRect(0, y, screenWidth, h, BLACK);
+    return;
+  }
+
+  if (level == previousLevel) {
+    return;
+  }
+
+  previousLevel = level;
+  uint16_t pos = map(level, 0, 100, 0, screenWidth);
+  if (pos > screenWidth) {
+    pos = screenWidth;
+  }
+
+  dsp_fillRect(0, y, pos, h, YELLOW);
+  if (pos < screenWidth) {
+    dsp_fillRect(pos, y, screenWidth - pos, h, BLACK);
+  }
+}
+
 #endif

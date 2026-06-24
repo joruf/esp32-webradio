@@ -56,6 +56,9 @@ bool dsp_begin() {
     return false;
   }
   tft = ili9341Display.panel();
+  if (tft != NULL) {
+    displaytype = T_ILI9341;
+  }
   return (tft != NULL);
 }
 
@@ -79,6 +82,18 @@ void displayBatteryChargeOnTFT() {
 void displayVolumeOnTFT() {
   if (tft) {
     dspCommonVolumeBar(dsp_getwidth(), dsp_getheight(), getOutputVolume(), true);
+  }
+}
+
+/**
+ * @brief Show stream activity as a horizontal VU bar below the top line.
+ *
+ * @param level Activity level 0-100
+ * @param visible When false, hide the bar
+ */
+void displayVuMeterOnTFT(uint8_t level, bool visible) {
+  if (tft) {
+    dspCommonVuMeterBar(dsp_getwidth(), level, true, visible);
   }
 }
 
