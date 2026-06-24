@@ -4,30 +4,28 @@
 // BASE64 Glyphicons: https://andrew.hedges.name/experiments/glyphicons/
 /*
 <div class="panel panel-default">
-  <div class="panel-heading">Webradio Control</div>
-  <div class="panel-body">
-  </div>
+	<div class="panel-heading">Webradio Control</div>
+	<div class="panel-body">
+	</div>
 </div>
  */
 
-const char about_html[] PROGMEM = R"=====(
+const char mp3play_html[] PROGMEM = R"=====(
 <!DOCTYPE html>
 <html prefix="og: http://purl.org/dc/elements/1.1/" lang="en-EN">
 	<head>
 		<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<!--
 		<link rel="icon" href="favicon.ico" type="image/x-icon">
 		<link rel="icon" href="favicon.ico" type="image/png">
 		-->
 
-		<link rel="stylesheet" type="text/css" href="index.css" />
+		<link rel="stylesheet" type="text/css" href="app.css" />
 
-		<title>Webradio - About</title>
+		<title>Webradio - MP3 Player</title>
 	</head>
 	
-	<body itemscope itemtype="http://schema.org/WebPage">	
-
+	<body itemscope itemtype="http://schema.org/WebPage">
 		<nav class="navbar navbar-default navbar-static-top">
 			<div id="body" class="container">
 				<div class="navbarDistance">
@@ -45,61 +43,39 @@ const char about_html[] PROGMEM = R"=====(
 				</div>
 			</div>
 		</nav>
-		
-	
+
 		<div id="body" class="container">
-			<h1>About</h1>
-
-			<div class="row panel panel-default">
-				<div class="panel-heading">Firmware</div>
+			<h1>MP3 Player</h1>	
+	
+			<div class="panel panel-default">
+				<div class="panel-heading">MP3 File List<br /><small>Click on a MP3 files to play it</small></div>
 				<div class="panel-body">
-					<p class="config-help">Installed version, release information, and over-the-air updates are on a dedicated page.</p>
-					<a href="ota.html" class="btn btn-default"><span class="btn-icon" aria-hidden="true">&#11015;</span> Open OTA Update</a>
+
+					<div class="row">
+						<div class="col-xs-12 col-sm-2">
+							<div>
+								<button id="downpreset" class="btn btn-regular" onclick="httpGet('downpreset=1', true)"><span class="btn-icon" aria-hidden="true">&#9664;</span> PREVIOUS FILE</button>
+							</div>
+							<div>
+								<button id="uppreset" class="btn btn-regular" onclick="httpGet('uppreset=1', true)"><span class="btn-icon" aria-hidden="true">&#9654;</span> NEXT FILE</button>
+							</div>
+							<div>
+								<button id="mp3track" class="btn btn-regular" onclick="httpGet('mp3track=0', true)"><span class="btn-icon" aria-hidden="true">&#128256;</span> RANDOM FILE</button>
+							</div>
+						</div>
+						<div class="col-xs-12 col-sm-10">
+							<label for="seltrack">MP3 files on SD card</label><br />
+							<select id="seltrack" class="select selectw" size="16">
+								<option value="-1">Select a track here</option>
+							</select>
+						</div>
+					</div>
+					
 				</div>
 			</div>
-
-			<p class="lead">
-				This is a high-performance ESP32-based web radio featuring an integrated alarm clock and sleep functionality.
-			</p>
-
-			<div class="row">
-				<div class="col-md-6">
-					<h3>Core Features</h3>
-					<ul>
-						<li><strong>Web Radio & Streaming:</strong> Plays high-quality audio streams with full metadata (Artist & Track) display.</li>
-						<li><strong>Alarm & Sleep Timer:</strong> Integrated wake-up functionality and a customizable sleep timer for nightly use.</li>
-						<li><strong>Smart Connectivity:</strong> Stores multiple WiFi profiles and automatically connects to the best available network.</li>
-						<li><strong>Time Synchronization:</strong> Supports custom NTP servers (e.g., <code>pool.ntp.org</code>) for precise timekeeping.</li>
-					</ul>
-				</div>
-				<div class="col-md-6">
-					<h3>Smart Display & Audio</h3>
-					<ul>
-						<li><strong>Auto-Display Control:</strong> The screen activates instantly upon interaction (volume, station change) and features a 5-minute auto-dim/power-off function.</li>
-						<li><strong>Advanced DSP:</strong> Full control over audio characteristics:
-							<ul>
-								<li>Treble Gain & Frequency tuning</li>
-								<li>Bass Gain & Frequency enhancement</li>
-							</ul>
-						</li>
-					</ul>
-				</div>
-			</div>
-
-			<hr>
-			
-			<div class="row">
-				<div class="col-xs-12 text-center">
-					<p>
-						Developed by <strong>Loresoft</strong><br>
-						<a href="https://www.loresoft.de" target="_blank" class="btn btn-default"><span class="btn-icon" aria-hidden="true">&#127760;</span> Visit Loresoft</a>
-					</p>
-				</div>
-			</div>
-		</div>
-
-		<script src="interface.js"></script>
+		</div>	
+	
+		<script src="app.js"></script>
 	</body>
 </html>
-
 )=====";

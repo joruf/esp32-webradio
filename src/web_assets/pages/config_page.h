@@ -21,7 +21,7 @@ const char config_html[] PROGMEM = R"=====(
 		<link rel="icon" href="favicon.ico" type="image/png">
 		-->
 
-		<link rel="stylesheet" type="text/css" href="index.css" />
+		<link rel="stylesheet" type="text/css" href="app.css" />
 
 		<title>Webradio - Configuration</title>
 	</head>
@@ -44,7 +44,6 @@ const char config_html[] PROGMEM = R"=====(
 						<a href="about.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#8505;</span><span class="nav-label">ABOUT</span></span></a>
 				</div>
 
-				<input id="command_log" type="text" style="width:100%" placeholder="Waiting for a command...." disabled><br>
 			</div>
 		</nav>
 		
@@ -112,14 +111,6 @@ const char config_html[] PROGMEM = R"=====(
 			</div>
 
 			<div class="row panel panel-default">
-				<div class="panel-heading">OTA Update</div>
-				<div class="panel-body">
-					<p class="config-help">Check for firmware updates, install OTA builds, and configure the version check URL.</p>
-					<a href="ota.html" class="btn btn-default"><span class="btn-icon" aria-hidden="true">&#11015;</span> Open OTA Update</a>
-				</div>
-			</div>
-
-			<div class="row panel panel-default">
 				<div class="panel-heading config-collapse-heading" id="raw-config-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="raw-config-panel">
 					Raw Configuration
 					<span class="config-collapse-icon" aria-hidden="true">&#9654;</span>
@@ -144,7 +135,7 @@ const char config_html[] PROGMEM = R"=====(
 			</div>
 		</div>
 		
-		<script src="interface.js"></script>
+		<script src="app.js"></script>
 	</body>
 </html>
 

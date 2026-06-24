@@ -6,6 +6,7 @@
 // x 128 version.  Select INITR_144GREENTAB for this and set dsp_getwidth() to
 // 128.
 
+#include "St7735Display.h"
 #include <Adafruit_ST7735.h>
 
 // Color definitions for the TFT screen (if used)
@@ -31,7 +32,8 @@ scrseg_struct tftdata[TFTSECS] = // Screen divided in 3 segments + 1 overlay
         {false, GREEN, 90, 32, ""}   // 4 lines at the bottom for rotary encoder
 };
 
-Adafruit_ST7735 *tft = NULL; // For instance of display driver
+St7735Display st7735Display;
+Adafruit_ST7735 *tft = NULL;
 
 // Various macro's to mimic the ST7735 version of display functions
 #define dsp_setRotation() tft->setRotation(1)                     // Use landscape format (3 for upside down)
@@ -47,20 +49,13 @@ Adafruit_ST7735 *tft = NULL; // For instance of display driver
 #define dsp_update()                                              // Updates to the physical screen
 #define dsp_isUseSPI() true                                       // Does use SPI
 
+#include "dsp_common.h"
+
 bool dsp_begin() {
-  tft = new Adafruit_ST7735(ini_block.tft_cs_pin, ini_block.tft_dc_pin,
-                            -1); // Create an instant for TFT
-  // Uncomment one of the following initR lines for ST7735R displays
-  // tft->initR ( INITR_GREENTAB ) ;                               // Init TFT
-  // interface tft->initR ( INITR_REDTAB ) ;                                 //
-  // Init TFT interface
-  tft->initR(INITR_BLACKTAB); // Init TFT interface
-  // tft->initR ( INITR_144GREENTAB ) ;                            // Init TFT
-  // interface tft->initR ( INITR_MINI160x80 ) ;                             //
-  // Init TFT interface tft->initR ( INITR_BLACKTAB ) ; // Init TFT interface
-  // (160x128)
-  //  Uncomment the next line for ST7735B displays
-  // tft_initB() ;
+  if (!st7735Display.begin()) {
+    return false;
+  }
+  tft = st7735Display.panel();
   return (tft != NULL);
 }
 
@@ -72,28 +67,7 @@ bool dsp_begin() {
 // No action if bat0/bat100 not defined in the preferences. *
 //**************************************************************************************************
 void displayBatteryChargeOnTFT() {
-  if (tft) {
-    if (ini_block.bat0 < ini_block.bat100) // Levels set in preferences?
-    {
-      static uint16_t oldpos = 0; // Previous charge level
-      uint16_t ypos;              // Position on screen
-      uint16_t v;                 // Constrainted ADC value
-      uint16_t newpos;            // Current setting
-
-      v = constrain(adcval, ini_block.bat0, // Prevent out of scale
-                    ini_block.bat100);
-      newpos = map(v, ini_block.bat0, // Compute length of green bar
-                   ini_block.bat100, 0, dsp_getwidth());
-      if (newpos != oldpos) // Value changed?
-      {
-        oldpos = newpos;                         // Remember for next compare
-        ypos = tftdata[1].y - 5;                 // Just before 1st divider
-        dsp_fillRect(0, ypos, newpos, 2, GREEN); // Paint green part
-        dsp_fillRect(newpos, ypos, dsp_getwidth() - newpos, 2,
-                     RED); // Paint red part
-      }
-    }
-  }
+  dspCommonBatteryBar(tftdata, dsp_getwidth(), tft != nullptr);
 }
 
 //**************************************************************************************************
@@ -104,19 +78,7 @@ void displayBatteryChargeOnTFT() {
 //**************************************************************************************************
 void displayVolumeOnTFT() {
   if (tft) {
-    static uint8_t oldvol = 0; // Previous volume
-    uint8_t newvol;            // Current setting
-    uint16_t pos;              // Positon of volume indicator
-
-    newvol = vs1053player->getVolume(); // Get current volume setting
-    if (newvol != oldvol)               // Volume changed?
-    {
-      oldvol = newvol;                                   // Remember for next compare
-      pos = map(newvol, 0, 100, 0, dsp_getwidth());      // Compute position on TFT
-      dsp_fillRect(0, dsp_getheight() - 2, pos, 2, RED); // Paint red part
-      dsp_fillRect(pos, dsp_getheight() - 2, dsp_getwidth() - pos, 2,
-                   GREEN); // Paint green part
-    }
+    dspCommonVolumeBar(dsp_getwidth(), dsp_getheight(), getOutputVolume(), true);
   }
 }
 

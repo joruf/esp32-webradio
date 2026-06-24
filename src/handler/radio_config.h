@@ -415,10 +415,17 @@ bool applyRadioConfig(const String &json, bool maskWifiPasswords) {
   }
 
   JsonDocument doc;
-  if (deserializeJson(doc, json)) {
-    dbgprint("applyRadioConfig: parse failed");
+  DeserializationError parseError = deserializeJson(doc, json);
+  if (parseError) {
+    dbgprint("applyRadioConfig: parse failed: %s", parseError.c_str());
     return false;
   }
+  if (doc.overflowed()) {
+    dbgprint("applyRadioConfig: JSON document overflow");
+    return false;
+  }
+
+  doc.remove("wifi_signals");
 
   uint16_t i;
   char key[16];
@@ -551,6 +558,10 @@ bool applyRadioConfig(const String &json, bool maskWifiPasswords) {
       dbgprint("applyRadioConfig: alarm save failed");
       return false;
     }
+    JsonDocument alarmsDoc;
+    if (!deserializeJson(alarmsDoc, ini_block.alrm_config)) {
+      doc["alarms"].set(alarmsDoc["alarms"]);
+    }
   }
 
   applyFeaturesFromDoc(doc);
@@ -565,7 +576,6 @@ bool applyRadioConfig(const String &json, bool maskWifiPasswords) {
     return false;
   }
 
-  ini_block.alrm_config = alarmsJson.length() > 0 ? alarmsJson : ini_block.alrm_config;
   applyClockConfiguration(restartNtp);
   return true;
 }

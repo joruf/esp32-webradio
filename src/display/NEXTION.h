@@ -125,7 +125,7 @@ void displayVolumeOnTFT() {
   uint8_t newvol;            // Current setting
   uint16_t pos;              // Positon of volume indicator
 
-  newvol = vs1053player->getVolume(); // Get current volume setting
+  newvol = getOutputVolume(); // Get current volume setting
   if (newvol != oldvol)               // Volume changed?
   {
     oldvol = newvol; // Remember for next compare

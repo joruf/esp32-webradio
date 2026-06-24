@@ -5,7 +5,7 @@ const char diagnostics_html[] PROGMEM = R"=====(
 	<head>
 		<meta http-equiv="content-type" content="text/html; charset=UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<link rel="stylesheet" type="text/css" href="index.css" />
+		<link rel="stylesheet" type="text/css" href="app.css" />
 		<title>Webradio - Diagnostics</title>
 	</head>
 	<body>
@@ -22,7 +22,6 @@ const char diagnostics_html[] PROGMEM = R"=====(
 					<a href="maintenance.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#128295;</span><span class="nav-label">MAINTENANCE</span></span></a>
 					<a href="about.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#8505;</span><span class="nav-label">ABOUT</span></span></a>
 				</div>
-				<input id="command_log" type="text" style="width:100%" placeholder="Waiting for a command...." disabled><br>
 			</div>
 		</nav>
 		<div id="body" class="container">
@@ -36,7 +35,7 @@ const char diagnostics_html[] PROGMEM = R"=====(
 				</div>
 			</div>
 		</div>
-		<script src="interface.js"></script>
+		<script src="app.js"></script>
 	</body>
 </html>
 )=====";

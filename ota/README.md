@@ -11,14 +11,14 @@ This folder holds OTA metadata and release binaries for the ESP32 Webradio on Gi
 
 ## Repository
 
-[https://github.com/joruf/ESP32-Webradio](https://github.com/joruf/ESP32-Webradio)
+[https://github.com/joruf/esp32-webradio](https://github.com/joruf/esp32-webradio)
 
 ## Default URLs (public GitHub repo)
 
 | Resource | URL |
 |----------|-----|
-| Version manifest | `https://raw.githubusercontent.com/joruf/ESP32-Webradio/main/ota/version.json` |
-| Firmware binary | `https://raw.githubusercontent.com/joruf/ESP32-Webradio/main/ota/releases/esp32_webradio_v2.19.bin` |
+| Version manifest | `https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/version.json` |
+| Firmware binary | `https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.19.bin` |
 
 The radio stores the manifest URL in `features.ota_check_url` (OTA Update page).
 
@@ -28,7 +28,7 @@ The radio stores the manifest URL in `features.ota_check_url` (OTA Update page).
 {
   "version": "v2.19",
   "released": "2026-06-24",
-  "bin_url": "https://raw.githubusercontent.com/joruf/ESP32-Webradio/main/ota/releases/esp32_webradio_v2.19.bin",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.19.bin",
   "notes": "Release notes for the latest build",
   "history": [
     {

@@ -335,7 +335,9 @@ bool connectToWebradioServer() {
  * @brief Process QDATA chunk type - send data to VS1053.
  */
 static void processQDataChunk() {
-  claimSPI("chunk");
+  if (!claimSPI("chunk")) {
+    return;
+  }
   vs1053player->playChunk(inchunk.buf, sizeof(inchunk.buf));
   releaseSPI();
   totalcount += sizeof(inchunk.buf);
@@ -345,7 +347,9 @@ static void processQDataChunk() {
  * @brief Process QSTARTSONG chunk type - start the player.
  */
 static void processQStartSong() {
-  claimSPI("startsong");
+  if (!claimSPI("startsong")) {
+    return;
+  }
   vs1053player->startSong();
   releaseSPI();
 }
@@ -354,7 +358,9 @@ static void processQStartSong() {
  * @brief Process QSTOPSONG chunk type - stop the player.
  */
 static void processQStopSong() {
-  claimSPI("stopsong");
+  if (!claimSPI("stopsong")) {
+    return;
+  }
   vs1053player->setVolume(0);
   vs1053player->stopSong();
   releaseSPI();
@@ -398,8 +404,10 @@ void playStreamFromQueue(void *parameter) {
  * @brief Handle TFT update with SPI bus management.
  */
 static void handleTftUpdate() {
+  bool spiClaimed = false;
+
   if (dsp_isUseSPI()) {
-    claimSPI("hspectft");
+    spiClaimed = claimSPI("hspectft");
   }
 
   if (tft) {
@@ -407,7 +415,7 @@ static void handleTftUpdate() {
     dsp_update();
   }
 
-  if (dsp_isUseSPI()) {
+  if (spiClaimed) {
     releaseSPI();
   }
 }
@@ -430,7 +438,13 @@ static void handleTimeAndAlarmUpdate() {
 static void handleVs1053VolumeAndTone() {
   updateVolumeFade();
 
-  claimSPI("hspec");
+  if (!vs1053Available || !vs1053player) {
+    return;
+  }
+
+  if (!claimSPI("hspec")) {
+    return;
+  }
   vs1053player->setVolume(getOutputVolume());
 
   if (reqtone) {

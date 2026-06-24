@@ -94,12 +94,12 @@ void handleWebpage(const String &pagename) {
     } else if (pagename.indexOf("diagnostics.html") >= 0) {
       p = diagnostics_html;
       l = sizeof(diagnostics_html) - 1;
-    } else if (pagename.indexOf("index.css") >= 0) {
-      p = index_css;
-      l = sizeof(index_css) - 1;
-    } else if (pagename.indexOf("interface.js") >= 0) {
-      p = interface_js;
-      l = sizeof(interface_js) - 1;
+    } else if (pagename.indexOf("app.css") >= 0 || pagename.indexOf("index.css") >= 0) {
+      p = app_css;
+      l = sizeof(app_css) - 1;
+    } else if (pagename.indexOf("app.js") >= 0 || pagename.indexOf("interface.js") >= 0) {
+      p = app_js;
+      l = sizeof(app_js) - 1;
     } else if (pagename.indexOf("ota/version.json") >= 0) {
       p = ota_version_embedded_json;
       l = sizeof(ota_version_embedded_json) - 1;
@@ -261,7 +261,7 @@ const char *analyzeCmd(const char *par, const char *val) {
   {
     // Volume may be of the form "upvolume", "downvolume" or "volume" for
     // relative or absolute setting
-    oldvol = vs1053player->getVolume(); // Get current volume
+    oldvol = getVolume(); // Get current volume
     if (relative)                       // + relative setting?
     {
       adjustVolume(ivalue);
@@ -303,9 +303,9 @@ const char *analyzeCmd(const char *par, const char *val) {
       dbgprint("Snooze off");
     }
   } else if (argument.indexOf("checkupdate") >= 0) {
-    otaCheckForUpdate(true);
-    if (otaUpdateAvailable) {
-      sprintf(reply, "Update available: %s", otaLatestVersion.c_str());
+    otaChecker.check(true);
+    if (otaChecker.isUpdateAvailable()) {
+      sprintf(reply, "Update available: %s", otaChecker.latestVersion().c_str());
     } else {
       strcpy(reply, "Firmware is up to date");
     }
@@ -387,7 +387,7 @@ const char *analyzeCmd(const char *par, const char *val) {
     resetreq = true;                        // Reset all
   } else if (argument.startsWith("update")) // Update request
   {
-    otaCheckForUpdate(true);
+    otaChecker.check(true);
     updatereq = true;
   } else if (argument == "test") // Test command
   {
@@ -452,7 +452,9 @@ const char *analyzeCmd(const char *par, const char *val) {
     sprintf(reply, "Parameter for bass/treble %s set to %d", argument.c_str(), ivalue);
   } else if (argument == "rate") // Rate command?
   {
-    vs1053player->AdjustRate(ivalue); // adjust
+    if (vs1053Available && vs1053player) {
+      vs1053player->AdjustRate(ivalue); // adjust
+    }
   }
 
   else if (argument == "debug") // debug on/off request?

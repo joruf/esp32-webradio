@@ -49,17 +49,17 @@ esp_err_t nvsEraseAllCommitted() {
  * @return String The value associated with the key, or empty string on error
  */
 String nvsGetValue(const char *key) {
-  static char nvs_buf[NVSBUFSIZE]; // Buffer for contents
-  size_t len = NVSBUFSIZE;         // Max length of the string, later real length
+  static char nvsValueBuffer[NVSBUFSIZE];
+  size_t len = NVSBUFSIZE;
 
-  nvsOpen();         // Be sure to open nvs
-  nvs_buf[0] = '\0'; // Return empty string on error
-  nvserr = nvs_get_str(nvshandle, key, nvs_buf, &len);
+  nvsOpen();
+  nvsValueBuffer[0] = '\0';
+  nvserr = nvs_get_str(nvshandle, key, nvsValueBuffer, &len);
   if (nvserr) {
     dbgprint("nvs_get_str failed %X for key %s, keylen is %d, len is %d!", nvserr, key, strlen(key), len);
-    dbgprint("Contents: %s", nvs_buf);
+    dbgprint("Contents: %s", nvsValueBuffer);
   }
-  return String(nvs_buf);
+  return String(nvsValueBuffer);
 }
 
 /**
@@ -73,8 +73,8 @@ String nvsGetValue(const char *key) {
  * @return esp_err_t ESP_OK on success, otherwise error code
  */
 esp_err_t nvsAddValue(const char *key, String val) {
-  String curcont;    // Current contents
-  bool wflag = true; // Assume update or new key
+  String currentValue;
+  bool needsWrite = true;
 
   // dbgprint("Setstring for %s: %s", key, val.c_str());
   if (val.length() >= NVSBUFSIZE) { // Limit length of string to store
@@ -83,11 +83,11 @@ esp_err_t nvsAddValue(const char *key, String val) {
   }
 
   if (nvsKeyExists(key)) {      // Already in nvs?
-    curcont = nvsGetValue(key); // Read current value
-    wflag = (curcont != val);   // Value change?
+    currentValue = nvsGetValue(key);
+    needsWrite = (currentValue != val);
   }
 
-  if (wflag) { // Update or new?
+  if (needsWrite) { // Update or new?
     dbgprint("nvsAddValue update value");
     nvserr = nvs_set_str(nvshandle, key, val.c_str()); // Store key and value
     if (nvserr) {

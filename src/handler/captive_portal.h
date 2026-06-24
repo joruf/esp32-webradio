@@ -9,70 +9,99 @@
 #include <DNSServer.h>
 #include <WiFi.h>
 
-static DNSServer captiveDns;
-static bool captivePortalActive = false;
-
 /**
- * @brief Stop captive DNS after STA connection succeeds.
+ * @brief Captive DNS portal for WiFi access-point provisioning.
  */
-void captivePortalStop(void) {
-  if (!captivePortalActive) {
-    return;
-  }
-  captiveDns.stop();
-  captivePortalActive = false;
-}
-
-/**
- * @brief Start captive DNS when running as access point.
- */
-void captivePortalBegin(void) {
-  if (WiFi.getMode() != WIFI_AP && WiFi.getMode() != WIFI_AP_STA) {
-    captivePortalStop();
-    return;
+class CaptivePortal {
+public:
+  /**
+   * @brief Stop captive DNS after STA connection succeeds.
+   */
+  void stop(void) {
+    if (!active_) {
+      return;
+    }
+    dns_.stop();
+    active_ = false;
   }
 
-  if (captivePortalActive) {
-    return;
+  /**
+   * @brief Start captive DNS when running as access point.
+   */
+  void begin(void) {
+    if (WiFi.getMode() != WIFI_AP && WiFi.getMode() != WIFI_AP_STA) {
+      stop();
+      return;
+    }
+
+    if (active_) {
+      return;
+    }
+
+    dns_.start(53, "*", WiFi.softAPIP());
+    active_ = true;
+    dbgprint("Captive portal DNS started on %s", WiFi.softAPIP().toString().c_str());
   }
 
-  captiveDns.start(53, "*", WiFi.softAPIP());
-  captivePortalActive = true;
-  dbgprint("Captive portal DNS started on %s", WiFi.softAPIP().toString().c_str());
-}
-
-/**
- * @brief Process captive DNS requests (call from main loop).
- */
-void captivePortalLoop(void) {
-  if (captivePortalActive) {
-    captiveDns.processNextRequest();
+  /**
+   * @brief Process captive DNS requests (call from main loop).
+   */
+  void loop(void) {
+    if (active_) {
+      dns_.processNextRequest();
+    }
   }
-}
 
-/**
- * @brief Return true if the HTTP request should be redirected to the setup page.
- *
- * @param host Host header value
- * @param path Request path
- * @return bool
- */
-bool captivePortalShouldRedirect(const String &host, const String &path) {
-  if (!captivePortalActive) {
+  /**
+   * @brief Return true if the HTTP request should be redirected to the setup page.
+   *
+   * @param host Host header value
+   * @param path Request path
+   * @return bool
+   */
+  bool shouldRedirect(const String &host, const String &path) const {
+    if (!active_) {
+      return false;
+    }
+
+    if (path.indexOf("generate_204") >= 0 || path.indexOf("gen_204") >= 0 ||
+        path.indexOf("hotspot-detect") >= 0 || path.indexOf("connecttest") >= 0 ||
+        path.indexOf("ncsi") >= 0) {
+      return true;
+    }
+
+    if (host.length() > 0 && host != "192.168.4.1" && host.indexOf("esp32") < 0) {
+      return true;
+    }
+
     return false;
   }
 
-  if (path.indexOf("generate_204") >= 0 || path.indexOf("gen_204") >= 0 ||
-      path.indexOf("hotspot-detect") >= 0 || path.indexOf("connecttest") >= 0 ||
-      path.indexOf("ncsi") >= 0) {
-    return true;
+  bool isActive(void) const {
+    return active_;
   }
 
-  if (host.length() > 0 && host != "192.168.4.1" && host.indexOf("esp32") < 0) {
-    return true;
-  }
+private:
+  DNSServer dns_;
+  bool active_ = false;
+};
 
-  return false;
+CaptivePortal captivePortal;
+
+inline void captivePortalStop(void) {
+  captivePortal.stop();
+}
+
+inline void captivePortalBegin(void) {
+  captivePortal.begin();
+}
+
+inline void captivePortalLoop(void) {
+  captivePortal.loop();
+}
+
+inline bool captivePortalShouldRedirect(const String &host, const String &path) {
+  return captivePortal.shouldRedirect(host, path);
 }
 
 #endif

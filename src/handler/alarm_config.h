@@ -353,15 +353,16 @@ bool applyAlarmConfig(const String &json) {
   }
 
   for (uint8_t i = 0; i < alarm_schedule.count; i++) {
-    const AlarmEntry &entry = alarm_schedule.entries[i];
+    AlarmEntry &entry = alarm_schedule.entries[i];
     if (entry.enabled && entry.days_mask == 0) {
-      dbgprint("Alarm %d enabled without weekdays", entry.id);
-      return false;
+      dbgprint("Alarm %d enabled without weekdays, auto-disabled", entry.id);
+      entry.enabled = false;
     }
   }
 
-  ini_block.alrm_config = json;
-  if (nvsSetAlarmConfig(json) != ESP_OK) {
+  String normalizedJson = serializeAlarmConfig();
+  ini_block.alrm_config = normalizedJson;
+  if (nvsSetAlarmConfig(normalizedJson) != ESP_OK) {
     return false;
   }
 

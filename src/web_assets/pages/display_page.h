@@ -8,7 +8,7 @@ const char display_html[] PROGMEM = R"=====(
 		<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-		<link rel="stylesheet" type="text/css" href="index.css" />
+		<link rel="stylesheet" type="text/css" href="app.css" />
 
 		<title>Webradio - Display and behaviour</title>
 	</head>
@@ -30,7 +30,6 @@ const char display_html[] PROGMEM = R"=====(
 						<a href="about.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#8505;</span><span class="nav-label">ABOUT</span></span></a>
 				</div>
 
-				<input id="command_log" type="text" style="width:100%" placeholder="Waiting for a command...." disabled><br>
 			</div>
 		</nav>
 
@@ -40,7 +39,6 @@ const char display_html[] PROGMEM = R"=====(
 			<div id="display-settings" class="row panel panel-default">
 				<div class="panel-heading">Options</div>
 				<div class="panel-body">
-					<p class="config-help">Changes are saved automatically. WiFi, presets, and other settings remain on the <a href="config.html">Configuration</a> page.</p>
 					<p class="config-help">Dark mode switches on automatically between the configured hours. VU meter and stream watchdog can be disabled here.</p>
 					<div class="form-group">
 						<label for="feat-dark-start">Dark mode from (hour 0-23)</label>
@@ -52,7 +50,7 @@ const char display_html[] PROGMEM = R"=====(
 					</div>
 					<div class="form-group">
 						<label for="feat-alarm-fade">Alarm volume fade (seconds)</label>
-						<input type="number" class="form-control" id="feat-alarm-fade" min="5" max="600" value="90">
+						<input type="number" class="form-control" id="feat-alarm-fade" min="5" max="600" value="15">
 					</div>
 					<div class="checkbox">
 						<label><input type="checkbox" id="feat-vu-meter" checked> VU meter on TFT</label>
@@ -60,11 +58,12 @@ const char display_html[] PROGMEM = R"=====(
 					<div class="checkbox">
 						<label><input type="checkbox" id="feat-watchdog" checked> Stream watchdog (auto-reconnect)</label>
 					</div>
+					<button type="button" id="display-settings-save" class="btn btn-success"><span class="btn-icon" aria-hidden="true">&#128190;</span> Save settings</button>
 				</div>
 			</div>
 		</div>
 
-		<script src="interface.js"></script>
+		<script src="app.js"></script>
 	</body>
 </html>
 

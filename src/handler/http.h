@@ -13,13 +13,13 @@ void saveDefaultConfig();
 #include "captive_portal.h"
 
 static String http_host_header = "";
-static uint8_t rinbyt_buf[1024]; // HTTP input buffer shared with body reader
-static uint16_t rinbyt_i = 0;    // Read position in rinbyt_buf
-static uint16_t rinbyt_len = 0;  // Number of valid bytes in rinbyt_buf
+static uint8_t httpReadBuf[1024]; // HTTP input buffer shared with body reader
+static uint16_t httpReadPos = 0;    // Read position in httpReadBuf
+static uint16_t httpReadLen = 0;  // Number of valid bytes in httpReadBuf
 
-static void rinbytResetBuffer() {
-  rinbyt_i = 0;
-  rinbyt_len = 0;
+static void httpReadResetBuffer() {
+  httpReadPos = 0;
+  httpReadLen = 0;
 }
 
 static void resetHttpRequestState() {
@@ -28,7 +28,7 @@ static void resetHttpRequestState() {
   http_post_content_length = 0;
   http_response_flag = false;
   http_host_header = "";
-  rinbytResetBuffer();
+  httpReadResetBuffer();
 }
 
 /**
@@ -44,9 +44,6 @@ void recoverHttpServerState() {
  * @brief Close the active HTTP client connection and clear request state.
  */
 static void closeHttpClient() {
-  if (sseStreamActive) {
-    return;
-  }
   if (cmdclient.connected()) {
     cmdclient.flush();
     cmdclient.stop();
@@ -83,10 +80,11 @@ void fillkeylist() {
   uint32_t offset = 0;       // Offset in nvs partition
   uint16_t i;                // Index in Entry 0..125.
   uint8_t bm;                // Bitmap for an entry
-  uint16_t nvsinx = 0;       // Index in nvskey table
+  uint16_t nvsKeyIndex = 0;
+  bool keyListFull = false;
 
   keynames.clear(); // Clear the list
-  while (offset < nvs->size) {
+  while (offset < nvs->size && !keyListFull) {
     result = esp_partition_read(nvs, offset, &nvsbuf,
                                 sizeof(nvsbuf)); // Read 1 page in nvs partition
     if (result != ESP_OK) {
@@ -94,17 +92,20 @@ void fillkeylist() {
       break;
     }
     i = 0;
-    while (i < 126) {
+    while (i < 126 && !keyListFull) {
       bm = (nvsbuf.Bitmap[i / 4] >> ((i % 4) * 2)); // Get bitmap for this entry,
       bm &= 0x03;                                   // 2 bits for one entry
       if (bm == 2)                                  // Entry is active?
       {
         if (nvsbuf.Entry[i].Ns == namespace_ID) // Namespace right?
         {
-          strcpy(nvskeys[nvsinx], nvsbuf.Entry[i].Key); // save in table
-          if (++nvsinx == MAXKEYS) {
-            nvsinx--; // Prevent excessive index
+          if (nvsKeyIndex >= MAXKEYS - 1) {
+            dbgprint("NVS key list full (%d keys)", MAXKEYS);
+            keyListFull = true;
+            break;
           }
+          strcpy(nvskeys[nvsKeyIndex], nvsbuf.Entry[i].Key); // save in table
+          nvsKeyIndex++;
         }
         i += nvsbuf.Entry[i].Span; // Next entry
       } else {
@@ -113,9 +114,9 @@ void fillkeylist() {
     }
     offset += sizeof(nvs_page); // Prepare to read next page in nvs
   }
-  nvskeys[nvsinx][0] = '\0'; // Empty key at the end
-  dbgprint("Read %d keys from NVS", nvsinx);
-  bubbleSortKeys(nvsinx); // Sort the keys
+  nvskeys[nvsKeyIndex][0] = '\0'; // Empty key at the end
+  dbgprint("Read %d keys from NVS", nvsKeyIndex);
+  bubbleSortKeys(nvsKeyIndex); // Sort the keys
 }
 
 /**
@@ -191,18 +192,18 @@ String getradiostatus() {
  * @param maxIdleRetries Max idle polls before returning an error
  * @return uint8_t The next byte read, or '\n' on error
  */
-static bool rinbytTakeBuffered(uint8_t *out) {
-  if (rinbyt_i < rinbyt_len) {
-    *out = rinbyt_buf[rinbyt_i++];
+static bool httpReadTakeBuffered(uint8_t *out) {
+  if (httpReadPos < httpReadLen) {
+    *out = httpReadBuf[httpReadPos++];
     return true;
   }
   return false;
 }
 
-uint8_t rinbyt(bool forcestart, uint16_t maxIdleRetries = 3) {
-  uint8_t *buf = rinbyt_buf;
-  uint16_t &i = rinbyt_i;
-  uint16_t &len = rinbyt_len;
+uint8_t httpReadByte(bool forcestart, uint16_t maxIdleRetries = 3) {
+  uint8_t *buf = httpReadBuf;
+  uint16_t &i = httpReadPos;
+  uint16_t &len = httpReadLen;
   uint16_t tlen;            // Number of available bytes
   uint16_t trycount = 0;    // Limit max. time to read
 
@@ -266,10 +267,10 @@ uint8_t rinbyt(bool forcestart, uint16_t maxIdleRetries = 3) {
  * @param maxLen Maximum accepted body size
  * @return String Request body
  */
-static int httpReadByte(uint32_t deadline) {
+static int httpReadPostByte(uint32_t deadline) {
   uint8_t b;
 
-  if (rinbytTakeBuffered(&b)) {
+  if (httpReadTakeBuffered(&b)) {
     return (int)b;
   }
   while (cmdclient.connected() && millis() < deadline) {
@@ -292,7 +293,7 @@ static String readHttpPostBody(size_t maxLen) {
   if (targetLen > 0 && targetLen <= maxLen) {
     body.reserve(targetLen + 1);
     while (body.length() < targetLen) {
-      int b = httpReadByte(deadline);
+      int b = httpReadPostByte(deadline);
       if (b < 0) {
         break;
       }
@@ -301,7 +302,7 @@ static String readHttpPostBody(size_t maxLen) {
   } else if (targetLen == 0) {
   } else {
     while (body.length() < maxLen - 1) {
-      int b = httpReadByte(deadline);
+      int b = httpReadPostByte(deadline);
       if (b < 0) {
         break;
       }
@@ -338,7 +339,7 @@ void writeprefs() {
 
   nvsClear(); // Remove all preferences
   while (true) {
-    c = rinbyt(false); // Get next inputcharacter
+    c = httpReadByte(false); // Get next inputcharacter
     if (c == '\n')     // Newline?
     {
       if (inputstr.length() == 0)
@@ -638,7 +639,7 @@ void handlehttpreply() {
  * parameters, and extracts the command or filename for further processing.
  */
 void handlehttp() {
-  bool first = true;       // First call to rinbyt()
+  bool first = true;       // First call to httpReadByte()
   char c;                  // Next character from http input
   int inx0, inx;           // Pos. of search string in currenLine
   String currentLine = ""; // Build up to complete line
@@ -656,7 +657,7 @@ void handlehttp() {
   // dbgprint ( "handlehttp started" ) ;
   while (millis() < deadline) // Loop till command/file seen
   {
-    c = rinbyt(first); // Get a byte
+    c = httpReadByte(first); // Get a byte
     first = false;     // No more first call
     if (!cmdclient.connected()) {
       break;
@@ -745,8 +746,8 @@ void handlehttp() {
   }
 
   if (http_getcmd.startsWith("checkupdate")) {
-    otaCheckForUpdate(true);
-    sendHttpJsonResponse(buildOtaCheckJson());
+    otaChecker.check(true);
+    sendHttpJsonResponse(otaChecker.buildCheckJson());
     return;
   }
 

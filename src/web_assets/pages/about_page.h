@@ -4,14 +4,13 @@
 // BASE64 Glyphicons: https://andrew.hedges.name/experiments/glyphicons/
 /*
 <div class="panel panel-default">
-	<div class="panel-heading">Webradio Control</div>
-	<div class="panel-body">
-	</div>
+  <div class="panel-heading">Webradio Control</div>
+  <div class="panel-body">
+  </div>
 </div>
-					<li><a href="mp3play.html"><span class="btn btn-primary"><img class="icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABo...............==" /> MP3 Player</span></a></li>
  */
 
-const char index_html[] PROGMEM = R"=====(
+const char about_html[] PROGMEM = R"=====(
 <!DOCTYPE html>
 <html prefix="og: http://purl.org/dc/elements/1.1/" lang="en-EN">
 	<head>
@@ -22,9 +21,9 @@ const char index_html[] PROGMEM = R"=====(
 		<link rel="icon" href="favicon.ico" type="image/png">
 		-->
 
-		<link rel="stylesheet" type="text/css" href="index.css" />
+		<link rel="stylesheet" type="text/css" href="app.css" />
 
-		<title>Webradio</title>
+		<title>Webradio - About</title>
 	</head>
 	
 	<body itemscope itemtype="http://schema.org/WebPage">	
@@ -44,77 +43,76 @@ const char index_html[] PROGMEM = R"=====(
 						<a href="maintenance.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#128295;</span><span class="nav-label">MAINTENANCE</span></span></a>
 						<a href="about.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#8505;</span><span class="nav-label">ABOUT</span></span></a>
 				</div>
-
-				<input id="command_log" type="text" style="width:100%" placeholder="Waiting for a command...." disabled><br>
 			</div>
 		</nav>
-			
+		
+	
 		<div id="body" class="container">
-			<h1>Webradio</h1>
-	
+			<h1>About</h1>
+
 			<div class="row panel panel-default">
-				<div class="panel-heading">
-					Metadata
-					<small>
-						<span id="datelabel">DD.MM.YYYY</span>
-					</small>
-				</div>
+				<div class="panel-heading">Firmware</div>
 				<div class="panel-body">
-					<span id="statlabel" style="color: red;">Lade Sender...</span> |
-					<a id="youtubelink" href="#" target="_blank" style="color: blue; text-decoration: none;">
-							<span id="songlabel">Lade Titel...</span>
-					</a>
-					<div id="title-history" class="title-history-table" aria-live="polite">
-						<div class="title-history-empty">No songs recognized yet.</div>
-					</div>
+					<p class="config-help">Installed version, release information, and over-the-air updates are on a dedicated page.</p>
+					<a href="ota.html" class="btn btn-default"><span class="btn-icon" aria-hidden="true">&#11015;</span> Open OTA Update</a>
 				</div>
 			</div>
 
-			<div class="row panel panel-default">
-				<div class="panel-heading">Webradio Control</div>
+			<p class="lead">
+				This is a high-performance ESP32-based web radio featuring an integrated alarm clock and sleep functionality.
+			</p>
 
-				<div class="panel-body webradio-control-body">
-					<div class="webradio-control-toolbar">
-						<label for="index-volume" class="webradio-control-label">Volume</label>
-						<span class="webradio-volume-value"><span id="index-volume-value">0</span>%</span>
-						<input type="range" class="form-control webradio-control-slider" id="index-volume" min="0" max="100" step="1">
-						<div class="webradio-playback-actions">
-							<button id="play" type="button" class="btn btn-success"><span class="btn-icon" aria-hidden="true">&#9654;</span> Play</button>
-							<button id="stop" type="button" class="btn btn-danger"><span class="btn-icon" aria-hidden="true">&#9209;</span> Stop</button>
-						</div>
-					</div>
+			<div class="row">
+				<div class="col-md-6">
+					<h3>Core Features</h3>
+					<ul>
+						<li><strong>Web Radio & Streaming:</strong> Plays high-quality audio streams with full metadata (Artist & Track) display.</li>
+						<li><strong>Alarm & Sleep Timer:</strong> Integrated wake-up functionality and a customizable sleep timer for nightly use.</li>
+						<li><strong>Smart Connectivity:</strong> Stores multiple WiFi profiles and automatically connects to the best available network.</li>
+						<li><strong>Time Synchronization:</strong> Supports custom NTP servers (e.g., <code>pool.ntp.org</code>) for precise timekeeping.</li>
+					</ul>
+				</div>
+				<div class="col-md-6">
+					<h3>Smart Display & Audio</h3>
+					<ul>
+						<li><strong>Auto-Display Control:</strong> The screen activates instantly upon interaction (volume, station change) and features a 5-minute auto-dim/power-off function.</li>
+						<li><strong>Advanced DSP:</strong> Full control over audio characteristics:
+							<ul>
+								<li>Treble Gain & Frequency tuning</li>
+								<li>Bass Gain & Frequency enhancement</li>
+							</ul>
+						</li>
+					</ul>
 				</div>
 			</div>
 
+			<hr>
+
 			<div class="row panel panel-default">
-				<div class="panel-heading">Radio Channel List<br /><small>Click on a radio station to change the channel or insert a new stream</small></div>
+				<div class="panel-heading">Source code</div>
 				<div class="panel-body">
-
-					<div class="input-group">
-						<span class="input-group-btn">
-							<button id="setstat" type="button" class="btn btn-regular"><span class="btn-icon" aria-hidden="true">&#9654;</span> Play Stream</button>
-						</span>
-						<input id="station" class="form-control" placeholder="Insert a radio stream">
-					</div>
-					<br /><br />
-					
-					<select id="preset" style="width: 100%" size="10">
-						<option value="-1">-- Select --</option>
-					</select>
+					<p class="config-help">Firmware source, documentation, and OTA release files are available on GitHub.</p>
+					<p>
+						<a href="https://github.com/joruf/esp32-webradio" target="_blank" rel="noopener" class="btn btn-default"><span class="btn-icon" aria-hidden="true">&#128279;</span> github.com/joruf/esp32-webradio</a>
+					</p>
+					<p class="config-help">Download or clone the repository:</p>
+					<p><code>git clone https://github.com/joruf/esp32-webradio.git</code></p>
 				</div>
 			</div>
 
-			<div class="row panel panel-default">
-				<div class="panel-heading">Display</div>
-				<div class="panel-body webradio-display-body">
-					<button id="backlight_on" type="button" class="btn btn-warning"><span class="btn-icon" aria-hidden="true">&#9728;</span> Display On</button>
-					<button id="backlight_off" type="button" class="btn btn-regular"><span class="btn-icon" aria-hidden="true">&#9790;</span> Display Off</button>
+			<hr>
+			
+			<div class="row">
+				<div class="col-xs-12 text-center">
+					<p>
+						Developed by <strong>Loresoft</strong><br>
+						<a href="https://www.loresoft.de" target="_blank" class="btn btn-default"><span class="btn-icon" aria-hidden="true">&#127760;</span> Visit Loresoft</a>
+					</p>
 				</div>
 			</div>
-
 		</div>
-	
-		<script src="interface.js"></script>
+
+		<script src="app.js"></script>
 	</body>
 </html>
 

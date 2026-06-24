@@ -21,7 +21,7 @@ const char firmware_html[] PROGMEM = R"=====(
 		<link rel="icon" href="favicon.ico" type="image/png">
 		-->
 
-		<link rel="stylesheet" type="text/css" href="index.css" />
+		<link rel="stylesheet" type="text/css" href="app.css" />
 
 		<title>Webradio - Firmware Upgrade</title>
 	</head>
@@ -69,7 +69,7 @@ const char firmware_html[] PROGMEM = R"=====(
 		<footer class="navbar navbar-default navbar-fixed-bottom">
 		</footer>
 
-		<script src="interface.js"></script>
+		<script src="app.js"></script>
 	</body>
 </html>
 

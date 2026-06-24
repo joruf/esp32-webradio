@@ -8,65 +8,86 @@
 
 #include "features_config.h"
 
-static uint32_t streamLastDataMs = 0;
-static uint32_t streamStallMs = 0;
-static uint8_t streamReconnectAttempts = 0;
-
 /**
- * @brief Notify the watchdog that fresh stream data arrived.
- *
- * @param bytes Number of bytes read from the stream
+ * @brief Detects stalled network streams and triggers reconnect.
  */
-void streamWatchdogFeed(uint16_t bytes) {
-  if (bytes > 0) {
-    streamLastDataMs = millis();
-    streamStallMs = 0;
-    streamReconnectAttempts = 0;
+class StreamWatchdog {
+public:
+  /**
+   * @brief Notify the watchdog that fresh stream data arrived.
+   *
+   * @param bytes Number of bytes read from the stream
+   */
+  inline void feed(uint16_t bytes) {
+    if (bytes > 0) {
+      lastDataMs_ = millis();
+      stallMs_ = 0;
+      reconnectAttempts_ = 0;
+    }
   }
+
+  /**
+   * @brief Milliseconds since the last stream data chunk.
+   *
+   * @return uint32_t Stall duration in ms
+   */
+  uint32_t stallMs(void) const {
+    if (lastDataMs_ == 0 || datamode == STOPPED) {
+      return 0;
+    }
+    return millis() - lastDataMs_;
+  }
+
+  /**
+   * @brief Poll stream health and reconnect when stalled.
+   */
+  void poll(void) {
+    if (!features.stream_watchdog || localfile || datamode == STOPPED) {
+      lastDataMs_ = 0;
+      return;
+    }
+
+    if (lastDataMs_ == 0) {
+      lastDataMs_ = millis();
+      return;
+    }
+
+    stallMs_ = millis() - lastDataMs_;
+    if (stallMs_ < 30000) {
+      return;
+    }
+
+    if (reconnectAttempts_ >= 5) {
+      return;
+    }
+
+    reconnectAttempts_++;
+    dbgprint("Stream watchdog: reconnect attempt %d after %lu ms stall", reconnectAttempts_,
+             (unsigned long)stallMs_);
+    lastDataMs_ = millis();
+    stop_mp3client();
+    datamode = STOPREQD;
+    hostreq = true;
+  }
+
+private:
+  uint32_t lastDataMs_ = 0;
+  uint32_t stallMs_ = 0;
+  uint8_t reconnectAttempts_ = 0;
+};
+
+StreamWatchdog streamWatchdog;
+
+inline void streamWatchdogFeed(uint16_t bytes) {
+  streamWatchdog.feed(bytes);
 }
 
-/**
- * @brief Milliseconds since the last stream data chunk.
- *
- * @return uint32_t Stall duration in ms
- */
-uint32_t getStreamStallMs(void) {
-  if (streamLastDataMs == 0 || datamode == STOPPED) {
-    return 0;
-  }
-  return millis() - streamLastDataMs;
+inline uint32_t getStreamStallMs(void) {
+  return streamWatchdog.stallMs();
 }
 
-/**
- * @brief Poll stream health and reconnect when stalled.
- */
-void streamWatchdogPoll(void) {
-  if (!features.stream_watchdog || localfile || datamode == STOPPED) {
-    streamLastDataMs = 0;
-    return;
-  }
-
-  if (streamLastDataMs == 0) {
-    streamLastDataMs = millis();
-    return;
-  }
-
-  streamStallMs = millis() - streamLastDataMs;
-  if (streamStallMs < 30000) {
-    return;
-  }
-
-  if (streamReconnectAttempts >= 5) {
-    return;
-  }
-
-  streamReconnectAttempts++;
-  dbgprint("Stream watchdog: reconnect attempt %d after %lu ms stall", streamReconnectAttempts,
-           (unsigned long)streamStallMs);
-  streamLastDataMs = millis();
-  stop_mp3client();
-  datamode = STOPREQD;
-  hostreq = true;
+inline void streamWatchdogPoll(void) {
+  streamWatchdog.poll();
 }
 
 #endif

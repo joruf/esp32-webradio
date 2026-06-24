@@ -61,8 +61,8 @@ static String buildDiagnosticsJson(void) {
   json += "\"preset\":" + String(ini_block.newpreset) + ",";
   json += "\"volume\":" + String(ini_block.reqvol) + ",";
   json += "\"ota_check_url\":\"" + jsonEscapeString(features.ota_check_url.c_str()) + "\",";
-  json += "\"ota_update_available\":" + String(otaUpdateAvailable ? "true" : "false") + ",";
-  json += "\"ota_latest_version\":\"" + jsonEscapeString(otaLatestVersion.c_str()) + "\"";
+  json += "\"ota_update_available\":" + String(otaChecker.isUpdateAvailable() ? "true" : "false") + ",";
+  json += "\"ota_latest_version\":\"" + jsonEscapeString(otaChecker.latestVersion().c_str()) + "\"";
   json += "}";
   return json;
 }

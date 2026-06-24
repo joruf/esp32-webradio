@@ -92,6 +92,7 @@ public:
   {                                // higher is louder.
     return curvol;
   }
+  bool isReady() const { return okay; }
   void printDetails(const char *header); // Print config details to serial output
   void softReset();                      // Do a soft reset
   bool testComm(const char *header);     // Test communication with module
@@ -276,14 +277,20 @@ void VS1053::setVolume(uint8_t vol) {
 
   if (vol != curvol) {
     curvol = vol;                         // Save for later use
+    output_enable(vol != 0);              // Enable/disable amplifier through shutdown pin(s)
+    if (!okay) {
+      return;
+    }
     value = map(vol, 0, 100, 0xF8, 0x00); // 0..100% to one channel
     value = (value << 8) | value;
     write_register(SCI_VOL, value); // Volume left and right
-    output_enable(vol != 0);        // Enable/disable amplifier through shutdown pin(s)
   }
 }
 
 void VS1053::setTone(uint8_t *rtone) { // Set bass/treble (4 nibbles)
+  if (!okay) {
+    return;
+  }
   // Set tone characteristics.  See documentation for the 4 nibbles.
   uint16_t value = 0; // Value to send to SCI_BASS
   int i;              // Loop control
@@ -295,6 +302,9 @@ void VS1053::setTone(uint8_t *rtone) { // Set bass/treble (4 nibbles)
 }
 
 void VS1053::startSong() {
+  if (!okay) {
+    return;
+  }
   sdi_send_fillers(10);
   output_enable(true); // Enable amplifier through shutdown pin(s)
 }
@@ -304,6 +314,9 @@ bool VS1053::playChunk(uint8_t *data, size_t len) {
 }
 
 void VS1053::stopSong() {
+  if (!okay) {
+    return;
+  }
   uint16_t modereg; // Read from mode register
   int i;            // Loop control
 
@@ -358,6 +371,9 @@ void VS1053::output_enable(bool ena) { // Enable amplifier through shutdown pin(
 }
 
 void VS1053::AdjustRate(long ppm2) { // Fine tune the data rate
+  if (!okay) {
+    return;
+  }
   write_register(SCI_WRAMADDR, 0x1e07);
   write_register(SCI_WRAM, ppm2);
   write_register(SCI_WRAM, ppm2 >> 16);

@@ -125,11 +125,15 @@ String getSDfilename(String nodeID) {
     if (inx >= 0) {
       nodeID = nodeID.substring(inx + 1); // Remove sequence in this level from nodeID
     }
-    claimSPI("sdopen"); // Claim SPI bus
+    if (!claimSPI("sdopen")) {
+      return String("");
+    }
     root = SD.open(p);  // Open the directory (this level)
     releaseSPI();       // Release SPI bus
     for (i = 1; i <= n; i++) {
-      claimSPI("sdopenxt");       // Claim SPI bus
+      if (!claimSPI("sdopenxt")) {
+        return String("");
+      }
       file = root.openNextFile(); // Get next directory entry
       releaseSPI();               // Release SPI bus
       delay(10);                  // Allow playStreamFromQueue
@@ -149,7 +153,7 @@ String getSDfilename(String nodeID) {
 // node-array is the sequence number of the file/directory in that          *
 // subdirectory. * A node ID is a string like "2,1,4,0", which means the 4th
 // file in the first directory           * of the second directory. * The list
-// will be send to the webinterface if parameter "send"is true. *
+// will be sent to the web UI if parameter "send" is true. *
 //**************************************************************************************************
 int listsdtracks(const char *dirname, int level = 0, bool send = true) {
   const uint16_t SD_MAXDEPTH = 4;           // Maximum depts.  Note: see mp3play_html.
@@ -180,7 +184,9 @@ int listsdtracks(const char *dirname, int level = 0, bool send = true) {
   // dbgprint ( "SD directory is %s", dirname ) ;        // Show current
   // directory
   ldirname = strlen(dirname);       // Length of dirname to remove from filename
-  claimSPI("sdopen2");              // Claim SPI bus
+  if (!claimSPI("sdopen2")) {
+    return fcount;
+  }
   root = SD.open(dirname);          // Open the current directory level
   releaseSPI();                     // Release SPI bus
   if (!root || !root.isDirectory()) // Success?
@@ -191,7 +197,9 @@ int listsdtracks(const char *dirname, int level = 0, bool send = true) {
   }
   while (true) // Find all mp3 files
   {
-    claimSPI("opennextf");      // Claim SPI bus
+    if (!claimSPI("opennextf")) {
+      break;
+    }
     file = root.openNextFile(); // Try to open next
     releaseSPI();               // Release SPI bus
     if (!file) {
@@ -224,7 +232,7 @@ int listsdtracks(const char *dirname, int level = 0, bool send = true) {
           }
           tmpstr += String(SD_node[i]); // Add sequence number
         }
-        if (send) // Need to add to string for webinterface?
+        if (send) // Need to add to string for web UI?
         {
           SD_outbuf += tmpstr +                // Form line for mp3play_html page
                        utf8ascii(file.name() + // Filename starts after directoryname
@@ -366,7 +374,9 @@ bool connecttofile() {
   showTextOnTFT(0, "ESP32 MP3 Player"); // Set screen segment top line
   showTimeOnTFT("");                    // Clear time on TFT screen
   path = host.substring(9);             // Path, skip the "localhost" part
-  claimSPI("sdopen3");                  // Claim SPI bus
+  if (!claimSPI("sdopen3")) {
+    return false;
+  }
   handle_ID3(path);                     // See if there are ID3 tags in this file
   mp3filelength = mp3file.available();  // Get length
   releaseSPI();                         // Release SPI bus

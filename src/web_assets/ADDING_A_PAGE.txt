@@ -1,0 +1,8 @@
+1. Add a new page header under src/web_assets/pages/, e.g. myfeature_page.h
+   - PROGMEM symbol: myfeature_html
+   - HTTP URL remains myfeature.html in the HTML nav links
+2. Register the include in src/web_assets/web_assets.h
+3. Add routing in src/handler/interface.h (handleWebpage else-if branch)
+
+For styles/scripts use src/web_assets/styles/ and src/web_assets/scripts/.
+HTTP paths: app.css, app.js

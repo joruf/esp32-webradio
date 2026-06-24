@@ -17,72 +17,103 @@ struct FeatureSettings {
   String ota_check_url;
 };
 
-FeatureSettings features;
+/**
+ * @brief Runtime feature flags loaded from radio configuration JSON.
+ */
+class FeaturesConfig {
+public:
+  FeatureSettings data;
 
-static void setFeatureDefaults(void) {
-  features.dark_start = 20;
-  features.dark_end = 7;
-  features.vu_meter = true;
-  features.stream_watchdog = true;
-  features.alarm_fade_sec = 90;
-  features.ota_check_url = "https://raw.githubusercontent.com/joruf/ESP32-Webradio/main/ota/version.json";
+  /**
+   * @brief Reset all feature fields to firmware defaults.
+   */
+  void setDefaults(void) {
+    data.dark_start = 20;
+    data.dark_end = 7;
+    data.vu_meter = true;
+    data.stream_watchdog = true;
+    data.alarm_fade_sec = 15;
+    data.ota_check_url = "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/version.json";
+  }
+
+  /**
+   * @brief Apply the optional "features" object from radio configuration JSON.
+   *
+   * @param doc Parsed radio configuration document
+   */
+  void applyFrom(JsonDocument &doc) {
+    if (!doc["features"].is<JsonObject>()) {
+      return;
+    }
+
+    JsonObject feat = doc["features"].as<JsonObject>();
+    data.dark_start = constrain((int)(feat["dark_start"] | data.dark_start), 0, 23);
+    data.dark_end = constrain((int)(feat["dark_end"] | data.dark_end), 0, 23);
+    data.vu_meter = feat["vu_meter"] | data.vu_meter;
+    data.stream_watchdog = feat["stream_watchdog"] | data.stream_watchdog;
+    data.alarm_fade_sec = constrain((int)(feat["alarm_fade_sec"] | data.alarm_fade_sec), 5, 600);
+    const char *url = feat["ota_check_url"] | nullptr;
+    if (url && strlen(url) > 0) {
+      data.ota_check_url = String(url);
+    }
+  }
+
+  /**
+   * @brief Append feature settings to a radio configuration JSON document.
+   *
+   * @param doc Target document
+   */
+  void appendTo(JsonDocument &doc) {
+    JsonObject feat = doc["features"].to<JsonObject>();
+    feat["dark_start"] = data.dark_start;
+    feat["dark_end"] = data.dark_end;
+    feat["vu_meter"] = data.vu_meter;
+    feat["stream_watchdog"] = data.stream_watchdog;
+    feat["alarm_fade_sec"] = data.alarm_fade_sec;
+    feat["ota_check_url"] = data.ota_check_url;
+  }
+
+  /**
+   * @brief Return true if local time is inside the configured dark-mode window.
+   *
+   * @return bool
+   */
+  bool isDarkModeActive(void) const {
+    if (!timeinfo.tm_year) {
+      return false;
+    }
+
+    const int hour = timeinfo.tm_hour;
+    if (data.dark_start == data.dark_end) {
+      return false;
+    }
+
+    if (data.dark_start < data.dark_end) {
+      return hour >= data.dark_start && hour < data.dark_end;
+    }
+
+    return hour >= data.dark_start || hour < data.dark_end;
+  }
+};
+
+FeaturesConfig featuresConfig;
+
+#define features (featuresConfig.data)
+
+inline void setFeatureDefaults(void) {
+  featuresConfig.setDefaults();
 }
 
-/**
- * @brief Apply the optional "features" object from radio configuration JSON.
- *
- * @param doc Parsed radio configuration document
- */
-static void applyFeaturesFromDoc(JsonDocument &doc) {
-  if (!doc["features"].is<JsonObject>()) {
-    return;
-  }
-
-  JsonObject feat = doc["features"].as<JsonObject>();
-  features.dark_start = constrain((int)(feat["dark_start"] | features.dark_start), 0, 23);
-  features.dark_end = constrain((int)(feat["dark_end"] | features.dark_end), 0, 23);
-  features.vu_meter = feat["vu_meter"] | features.vu_meter;
-  features.stream_watchdog = feat["stream_watchdog"] | features.stream_watchdog;
-  features.alarm_fade_sec = constrain((int)(feat["alarm_fade_sec"] | features.alarm_fade_sec), 5, 600);
-  const char *url = feat["ota_check_url"] | nullptr;
-  if (url && strlen(url) > 0) {
-    features.ota_check_url = String(url);
-  }
+inline void applyFeaturesFromDoc(JsonDocument &doc) {
+  featuresConfig.applyFrom(doc);
 }
 
-/**
- * @brief Append feature settings to a radio configuration JSON document.
- *
- * @param doc Target document
- */
-static void appendFeaturesToDoc(JsonDocument &doc) {
-  JsonObject feat = doc["features"].to<JsonObject>();
-  feat["dark_start"] = features.dark_start;
-  feat["dark_end"] = features.dark_end;
-  feat["vu_meter"] = features.vu_meter;
-  feat["stream_watchdog"] = features.stream_watchdog;
-  feat["alarm_fade_sec"] = features.alarm_fade_sec;
-  feat["ota_check_url"] = features.ota_check_url;
+inline void appendFeaturesToDoc(JsonDocument &doc) {
+  featuresConfig.appendTo(doc);
 }
 
-/**
- * @brief Return true if local time is inside the configured dark-mode window.
- */
-bool isDarkModeActive(void) {
-  if (!timeinfo.tm_year) {
-    return false;
-  }
-
-  const int hour = timeinfo.tm_hour;
-  if (features.dark_start == features.dark_end) {
-    return false;
-  }
-
-  if (features.dark_start < features.dark_end) {
-    return hour >= features.dark_start && hour < features.dark_end;
-  }
-
-  return hour >= features.dark_start || hour < features.dark_end;
+inline bool isDarkModeActive(void) {
+  return featuresConfig.isDarkModeActive();
 }
 
 #endif

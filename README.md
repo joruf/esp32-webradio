@@ -29,8 +29,11 @@ ESP32_Webradio/
 │  │  ├─ time.h                    # NTP synchronisation
 │  │  ├─ volume.h                  # Mute / volume management
 │  │  └─ vs1053.h                  # VS1053 driver
-│  ├─ webinterface/                # Embedded web files (PROGMEM)
-│  │  ├─ *.html.h, *.css.h, *.js.h
+│  ├─ web_assets/                  # Embedded web UI (PROGMEM)
+│  │  ├─ pages/                    # HTML views (*_page.h → *_html)
+│  │  ├─ styles/                   # CSS (app.css.h)
+│  │  ├─ scripts/                  # JavaScript (app.js.h)
+│  │  └─ web_assets.h              # Umbrella include
 │  └─ display/                     # Display drivers
 │     ├─ BlueTFT.h, ILI9341.h, ...
 ├─ platformio.ini
@@ -115,8 +118,8 @@ You can change all pins in the web interface – the settings are saved in NVS.
 - Clone the repository:
 
 ```Bash
-cd ESP32-Webradio
-git clone https://github.com/joruf/ESP32-Webradio.git
+cd esp32-webradio
+git clone https://github.com/joruf/esp32-webradio.git
 ```
 
 - Open in VS Code: Ensure the PlatformIO extension is installed.

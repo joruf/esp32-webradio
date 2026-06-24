@@ -1,31 +1,20 @@
-// index.html file in raw data format for PROGMEM
-// NOTE: We have to try to save load requests on startup, otherwise the CPU could hang
+// scheduler.html file in raw data format for PROGMEM
 // "=====( CONTENT )====="; Equal chars required as terminating char
-// BASE64 Glyphicons: https://andrew.hedges.name/experiments/glyphicons/
-/*
-<div class="panel panel-default">
-	<div class="panel-heading">Webradio Control</div>
-	<div class="panel-body">
-	</div>
-</div>
- */
 
-const char mp3play_html[] PROGMEM = R"=====(
+const char scheduler_html[] PROGMEM = R"=====(
 <!DOCTYPE html>
 <html prefix="og: http://purl.org/dc/elements/1.1/" lang="en-EN">
 	<head>
 		<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
-		<!--
-		<link rel="icon" href="favicon.ico" type="image/x-icon">
-		<link rel="icon" href="favicon.ico" type="image/png">
-		-->
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-		<link rel="stylesheet" type="text/css" href="index.css" />
+		<link rel="stylesheet" type="text/css" href="app.css" />
 
-		<title>Webradio - MP3 Player</title>
+		<title>Webradio - Scheduler</title>
 	</head>
-	
+
 	<body itemscope itemtype="http://schema.org/WebPage">
+
 		<nav class="navbar navbar-default navbar-static-top">
 			<div id="body" class="container">
 				<div class="navbarDistance">
@@ -41,45 +30,48 @@ const char mp3play_html[] PROGMEM = R"=====(
 						<a href="maintenance.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#128295;</span><span class="nav-label">MAINTENANCE</span></span></a>
 						<a href="about.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#8505;</span><span class="nav-label">ABOUT</span></span></a>
 				</div>
+
 			</div>
 		</nav>
 
 		<div id="body" class="container">
-			<h1>MP3 Player</h1>	
-	
-			<div class="panel panel-default">
-				<div class="panel-heading">MP3 File List<br /><small>Click on a MP3 files to play it</small></div>
-				<div class="panel-body">
+			<h1>Scheduler</h1>
 
+			<div class="row panel panel-default">
+				<div class="panel-heading">Snooze Timer</div>
+				<div class="panel-body">
+					<p class="config-help">Snooze stops playback after the selected duration.</p>
 					<div class="row">
-						<div class="col-xs-12 col-sm-2">
-							<div>
-								<button id="downpreset" class="btn btn-regular" onclick="httpGet('downpreset=1', true)"><span class="btn-icon" aria-hidden="true">&#9664;</span> PREVIOUS FILE</button>
-							</div>
-							<div>
-								<button id="uppreset" class="btn btn-regular" onclick="httpGet('uppreset=1', true)"><span class="btn-icon" aria-hidden="true">&#9654;</span> NEXT FILE</button>
-							</div>
-							<div>
-								<button id="mp3track" class="btn btn-regular" onclick="httpGet('mp3track=0', true)"><span class="btn-icon" aria-hidden="true">&#128256;</span> RANDOM FILE</button>
-							</div>
-						</div>
-						<div class="col-xs-12 col-sm-10">
-							<label for="seltrack">MP3 files on SD card</label><br />
-							<select id="seltrack" class="select selectw" size="16">
-								<option value="-1">Select a track here</option>
+						<div class="form-group col-xs-12 col-sm-6 col-md-3 col-lg-3">
+							<select class="form-control" id="snooze">
+								<option value="0">Off</option>
+								<option value="1">1 minute</option>
+								<option value="5">5 minutes</option>
+								<option value="10">10 minutes</option>
+								<option value="15">15 minutes</option>
+								<option value="20">20 minutes</option>
+								<option value="25">25 minutes</option>
+								<option value="30">30 minutes</option>
+								<option value="45">45 minutes</option>
+								<option value="60">60 minutes</option>
 							</select>
 						</div>
 					</div>
-					
 				</div>
 			</div>
-		</div>	
-	
-		<footer class="navbar navbar-default navbar-fixed-bottom">
-			<input id="command_log" type="text" style="width:100%" placeholder="Waiting for a command...." disabled><br>
-		</footer>
-	
-		<script src="interface.js"></script>
+
+			<div class="row panel panel-default">
+				<div class="panel-heading">Alarm Schedules</div>
+				<div class="panel-body">
+					<p class="alarm-help">Configure alarm schedules below. Each alarm needs at least one weekday. Enter start and shut-off as <strong>hh:mm</strong> (click hours or minutes to edit each pair). Use <strong>Save Alarm</strong> or <strong>Remove Alarm</strong> to store changes; the result appears in the command log above.</p>
+					<div id="alarm-list"></div>
+					<button type="button" id="add-alarm" class="btn btn-primary"><span class="btn-icon" aria-hidden="true">&#10133;</span> Add Alarm</button>
+				</div>
+			</div>
+		</div>
+
+		<script src="app.js"></script>
 	</body>
 </html>
+
 )=====";

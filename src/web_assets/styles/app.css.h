@@ -1,6 +1,6 @@
 // radio.css file in raw data format for PROGMEM
 //
-const char index_css[] PROGMEM = R"=====(
+const char app_css[] PROGMEM = R"=====(
 	/*!
 	 * Bootstrap v3.3.7 (http://getbootstrap.com)
 	 */
@@ -221,4 +221,105 @@ const char index_css[] PROGMEM = R"=====(
 		overflow: auto;
 		font-size: 0.85em;
 	}
+	.sound-page { padding-bottom: 24px; }
+	.sound-page-header { margin: 8px 0 20px 0; }
+	.sound-page-header h1 { margin: 0 0 6px 0; font-size: 1.75em; font-weight: 600; letter-spacing: -0.02em; }
+	.sound-page-lead { margin: 0; color: #666; font-size: 0.95em; line-height: 1.45; max-width: 42em; }
+	.sound-studio { display: flex; flex-direction: column; gap: 18px; }
+	.sound-card { margin-bottom: 0; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06); }
+	.sound-card-heading { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+	.sound-card-icon { font-size: 1.35em; line-height: 1; opacity: 0.85; flex-shrink: 0; }
+	.sound-card-heading-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+	.sound-card-heading-text strong { font-size: 1.05em; }
+	.sound-card-sub { font-size: 0.8em; font-weight: normal; color: #777; line-height: 1.3; }
+	.sound-master-toolbar { display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: auto auto; gap: 8px 14px; align-items: center; }
+	.sound-master-label { margin: 0; font-weight: 600; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.04em; color: #555; grid-column: 1; grid-row: 1; }
+	.sound-master-value { grid-column: 3; grid-row: 1; font-size: 1.5em; font-weight: 700; font-variant-numeric: tabular-nums; color: #337ab7; line-height: 1; }
+	.sound-master-value small { font-size: 0.55em; font-weight: 600; margin-left: 1px; color: #888; }
+	.sound-master-meter { grid-column: 1 / -1; grid-row: 2; height: 6px; border-radius: 999px; background: #e8e8e8; overflow: hidden; }
+	.sound-master-meter-fill { display: block; height: 100%; width: 0%; border-radius: inherit; background: linear-gradient(90deg, #5b9bd5, #337ab7); transition: width 0.12s ease-out; }
+	.sound-master-slider { grid-column: 1 / -1; grid-row: 3; width: 100%; margin: 0; accent-color: #337ab7; }
+	.sound-eq-layout { display: flex; flex-direction: column; gap: 20px; }
+	.sound-eq-visual { padding: 12px 14px 8px; border: 1px solid #e8e8e8; border-radius: 6px; background: linear-gradient(180deg, #fafbfc 0%, #f4f6f8 100%); }
+	.sound-eq-svg { display: block; width: 100%; height: 88px; }
+	.sound-eq-grid-line { stroke: #ccc; stroke-width: 1; stroke-dasharray: 4 4; }
+	.sound-eq-curve { fill: none; stroke: #337ab7; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+	.sound-eq-curve-fill { fill: url(#sound-eq-fill); stroke: none; }
+	.sound-eq-axis { display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.7em; text-transform: uppercase; letter-spacing: 0.06em; color: #999; }
+	.sound-band-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+	.sound-band { padding: 16px; border: 1px solid #e5e5e5; border-radius: 6px; background: #fff; }
+	.sound-band-treble { border-top: 3px solid #5b9bd5; }
+	.sound-band-bass { border-top: 3px solid #8b6b4a; }
+	.sound-band-header { margin-bottom: 14px; }
+	.sound-band-tag { display: inline-block; font-size: 0.68em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #888; margin-bottom: 4px; }
+	.sound-band-title { margin: 0 0 6px 0; font-size: 1.15em; font-weight: 600; }
+	.sound-band-summary { margin: 0; font-size: 0.88em; color: #337ab7; font-weight: 600; font-variant-numeric: tabular-nums; }
+	.sound-band-bass .sound-band-summary { color: #8b6b4a; }
+	.sound-param { margin-bottom: 12px; }
+	.sound-param:last-child { margin-bottom: 0; }
+	.sound-param label { display: block; margin: 0 0 5px 0; font-size: 0.78em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #666; }
+	.sound-select { font-size: 0.95em; height: auto; padding: 8px 10px; border-radius: 4px; }
+	.sound-eq-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; padding-top: 14px; border-top: 1px solid #eee; }
+	.sound-eq-hint { margin: 0; flex: 1 1 200px; font-size: 0.85em; color: #777; line-height: 1.4; }
+	.sound-eq-footer .btn { width: auto; flex-shrink: 0; }
+	@media (min-width: 768px) {
+		.sound-band-grid { grid-template-columns: 1fr 1fr; gap: 16px; }
+		.sound-master-toolbar { grid-template-columns: auto 1fr auto auto; grid-template-rows: auto; }
+		.sound-master-label { grid-column: 1; grid-row: 1; }
+		.sound-master-meter { grid-column: 2; grid-row: 1; }
+		.sound-master-value { grid-column: 3; grid-row: 1; }
+		.sound-master-slider { grid-column: 4; grid-row: 1; min-width: 200px; max-width: 280px; }
+	}
+	body.theme-dark .sound-page-lead,
+	body.theme-dark .sound-card-sub,
+	body.theme-dark .sound-eq-hint,
+	body.theme-dark .sound-band-tag,
+	body.theme-dark .sound-param label,
+	body.theme-dark .sound-eq-axis { color: #aaa; }
+	body.theme-dark .sound-eq-visual { background: linear-gradient(180deg, #252525 0%, #1c1c1c 100%); border-color: #444; }
+	body.theme-dark .sound-band { background: #222; border-color: #444; }
+	body.theme-dark .sound-master-meter { background: #333; }
+	body.theme-dark .sound-eq-footer { border-top-color: #444; }
+	body.theme-dark .sound-eq-grid-line { stroke: #555; }
+	body.theme-dark .sound-band-summary { color: #7eb8e8; }
+	body.theme-dark .sound-band-bass .sound-band-summary { color: #c9a67a; }
+	body.theme-dark .sound-master-value { color: #7eb8e8; }
+
+	.notification-stack {
+		position: fixed;
+		right: 16px;
+		bottom: 16px;
+		z-index: 10050;
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		max-width: min(420px, calc(100vw - 32px));
+		pointer-events: none;
+	}
+	.notification-toast {
+		pointer-events: auto;
+		padding: 12px 16px;
+		border-radius: 6px;
+		font-size: 14px;
+		line-height: 1.45;
+		color: #fff;
+		background: #444;
+		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
+		opacity: 0;
+		transform: translateY(10px);
+		transition: opacity 0.28s ease, transform 0.28s ease;
+		word-break: break-word;
+	}
+	.notification-toast.is-visible {
+		opacity: 1;
+		transform: translateY(0);
+	}
+	.notification-toast.is-hiding {
+		opacity: 0;
+		transform: translateY(-6px);
+	}
+	.notification-toast-info { background: #337ab7; }
+	.notification-toast-success { background: #3c763d; }
+	.notification-toast-error { background: #a94442; }
+	body.theme-dark .notification-toast { box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45); }
 )=====" ;

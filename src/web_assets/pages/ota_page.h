@@ -8,7 +8,7 @@ const char ota_html[] PROGMEM = R"=====(
 		<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-		<link rel="stylesheet" type="text/css" href="index.css" />
+		<link rel="stylesheet" type="text/css" href="app.css" />
 
 		<title>Webradio - OTA Update</title>
 	</head>
@@ -30,7 +30,6 @@ const char ota_html[] PROGMEM = R"=====(
 						<a href="about.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#8505;</span><span class="nav-label">ABOUT</span></span></a>
 				</div>
 
-				<input id="command_log" type="text" style="width:100%" placeholder="Waiting for a command...." disabled><br>
 			</div>
 		</nav>
 
@@ -72,18 +71,18 @@ const char ota_html[] PROGMEM = R"=====(
 				<div class="panel-heading">Update source</div>
 				<div class="panel-body">
 					<p class="config-help">OTA metadata and firmware releases are hosted on GitHub:
-						<a href="https://github.com/joruf/ESP32-Webradio" target="_blank" rel="noopener">github.com/joruf/ESP32-Webradio</a>
+						<a href="https://github.com/joruf/esp32-webradio" target="_blank" rel="noopener">github.com/joruf/esp32-webradio</a>
 						(folder <code>ota/</code>).</p>
 					<p class="config-help">JSON manifest URL below (<code>raw.githubusercontent.com</code>). Saved automatically when you leave the field. If GitHub is unreachable, the radio uses its built-in manifest (<code>/ota/version.json</code> on this device).</p>
 					<div class="form-group">
 						<label for="feat-ota-url">OTA version check URL</label>
-						<input type="text" class="form-control" id="feat-ota-url" value="https://raw.githubusercontent.com/joruf/ESP32-Webradio/main/ota/version.json">
+						<input type="text" class="form-control" id="feat-ota-url" value="https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/version.json">
 					</div>
 				</div>
 			</div>
 		</div>
 
-		<script src="interface.js"></script>
+		<script src="app.js"></script>
 	</body>
 </html>
 

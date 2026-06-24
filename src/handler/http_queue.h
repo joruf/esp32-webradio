@@ -8,13 +8,14 @@
 
 #include "live_status.h"
 
-#define HTTP_PENDING_MAX 4
+#define HTTP_PENDING_MAX 8
 
 bool sseStreamActive = false;
 uint32_t sseLastPushMs = 0;
 
 static WiFiClient httpPending[HTTP_PENDING_MAX];
 static uint8_t httpPendingCount = 0;
+static WiFiClient sseClient;
 
 /**
  * @brief Accept pending HTTP clients while the active slot is busy.
@@ -30,7 +31,7 @@ static void httpAcceptPending(WiFiServer &server, WiFiClient &cmdclient, bool re
       break;
     }
 
-    if (!sseStreamActive && !cmdclient.connected() && !responseFlag) {
+    if (!cmdclient.connected() && !responseFlag) {
       cmdclient = incoming;
       continue;
     }
@@ -51,9 +52,6 @@ static void httpAcceptPending(WiFiServer &server, WiFiClient &cmdclient, bool re
  */
 static void httpPromotePending(WiFiClient &cmdclient, bool &responseFlag) {
   if (cmdclient.connected() || responseFlag || httpPendingCount == 0) {
-    return;
-  }
-  if (sseStreamActive) {
     return;
   }
 
@@ -81,21 +79,28 @@ static void httpBeginSse(WiFiClient &client) {
 /**
  * @brief Attach the current client as the active SSE stream.
  *
- * @param client Connected HTTP client
+ * Transfers the connection to a dedicated SSE client so the main HTTP slot
+ * remains available for API requests.
+ *
+ * @param client Connected HTTP client (released after transfer)
  */
 static void httpAttachSseClient(WiFiClient &client) {
-  httpBeginSse(client);
+  if (sseStreamActive && sseClient.connected()) {
+    sseClient.stop();
+  }
+
+  sseClient = client;
+  client = WiFiClient();
+  httpBeginSse(sseClient);
   sseStreamActive = true;
   sseLastPushMs = 0;
 }
 
 /**
  * @brief Push a live JSON event to the active SSE client.
- *
- * @param client Connected HTTP client used for SSE
  */
-static void httpServiceSse(WiFiClient &client) {
-  if (!sseStreamActive || !client.connected()) {
+static void httpServiceSse() {
+  if (!sseStreamActive || !sseClient.connected()) {
     if (sseStreamActive) {
       sseStreamActive = false;
     }
@@ -108,10 +113,10 @@ static void httpServiceSse(WiFiClient &client) {
 
   sseLastPushMs = millis();
   String payload = buildLiveStatusJson();
-  client.print("data: ");
-  client.print(payload);
-  client.print("\n\n");
-  client.flush();
+  sseClient.print("data: ");
+  sseClient.print(payload);
+  sseClient.print("\n\n");
+  sseClient.flush();
 }
 
 #endif

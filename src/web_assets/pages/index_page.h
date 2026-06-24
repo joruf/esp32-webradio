@@ -8,9 +8,10 @@
 	<div class="panel-body">
 	</div>
 </div>
+					<li><a href="mp3play.html"><span class="btn btn-primary"><img class="icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABo...............==" /> MP3 Player</span></a></li>
  */
 
-const char sound_html[] PROGMEM = R"=====(
+const char index_html[] PROGMEM = R"=====(
 <!DOCTYPE html>
 <html prefix="og: http://purl.org/dc/elements/1.1/" lang="en-EN">
 	<head>
@@ -21,12 +22,13 @@ const char sound_html[] PROGMEM = R"=====(
 		<link rel="icon" href="favicon.ico" type="image/png">
 		-->
 
-		<link rel="stylesheet" type="text/css" href="index.css" />
+		<link rel="stylesheet" type="text/css" href="app.css" />
 
-		<title>Webradio - Sound Settings</title>
+		<title>Webradio</title>
 	</head>
 	
 	<body itemscope itemtype="http://schema.org/WebPage">	
+
 		<nav class="navbar navbar-default navbar-static-top">
 			<div id="body" class="container">
 				<div class="navbarDistance">
@@ -42,43 +44,76 @@ const char sound_html[] PROGMEM = R"=====(
 						<a href="maintenance.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#128295;</span><span class="nav-label">MAINTENANCE</span></span></a>
 						<a href="about.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#8505;</span><span class="nav-label">ABOUT</span></span></a>
 				</div>
+
 			</div>
 		</nav>
-	
+			
 		<div id="body" class="container">
-			<h1>Sound Settings</h1>
-
-			<div id="sound-settings" class="row panel panel-default">
-				<div class="panel-heading">Audio</div>
+			<h1>Webradio</h1>
+	
+			<div class="row panel panel-default">
+				<div class="panel-heading">
+					Metadata
+					<small>
+						<span id="datelabel">DD.MM.YYYY</span>
+					</small>
+				</div>
 				<div class="panel-body">
-					<p class="config-help">Select boxes send their value to the device immediately on change. Volume is adjusted on the <a href="index.html">Webradio</a> page.</p>
-					<div class="row">
-						<div class="form-group col-xs-6 col-sm-3">
-							<label for="tone-ha">Treble amplitude</label>
-							<select class="form-control" id="tone-ha"></select>
-						</div>
-						<div class="form-group col-xs-6 col-sm-3">
-							<label for="tone-hf">Treble frequency</label>
-							<select class="form-control" id="tone-hf"></select>
-						</div>
-						<div class="form-group col-xs-6 col-sm-3">
-							<label for="tone-la">Bass amplitude</label>
-							<select class="form-control" id="tone-la"></select>
-						</div>
-						<div class="form-group col-xs-6 col-sm-3">
-							<label for="tone-lf">Bass frequency</label>
-							<select class="form-control" id="tone-lf"></select>
+					<span id="statlabel" style="color: red;">Lade Sender...</span> |
+					<a id="youtubelink" href="#" target="_blank" style="color: blue; text-decoration: none;">
+							<span id="songlabel">Lade Titel...</span>
+					</a>
+					<div id="title-history" class="title-history-table" aria-live="polite">
+						<div class="title-history-empty">No songs recognized yet.</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="row panel panel-default">
+				<div class="panel-heading">Webradio Control</div>
+
+				<div class="panel-body webradio-control-body">
+					<div class="webradio-control-toolbar">
+						<label for="index-volume" class="webradio-control-label">Volume</label>
+						<span class="webradio-volume-value"><span id="index-volume-value">0</span>%</span>
+						<input type="range" class="form-control webradio-control-slider" id="index-volume" min="0" max="100" step="1">
+						<div class="webradio-playback-actions">
+							<button id="play" type="button" class="btn btn-success"><span class="btn-icon" aria-hidden="true">&#9654;</span> Play</button>
+							<button id="stop" type="button" class="btn btn-danger"><span class="btn-icon" aria-hidden="true">&#9209;</span> Stop</button>
 						</div>
 					</div>
 				</div>
 			</div>
-		</div>	
-	
-		<footer class="navbar navbar-default navbar-fixed-bottom">
-			<input id="command_log" type="text" style="width:100%" placeholder="Waiting for a command...." disabled><br>
-		</footer>
 
-		<script src="interface.js"></script>
+			<div class="row panel panel-default">
+				<div class="panel-heading">Radio Channel List<br /><small>Click on a radio station to change the channel or insert a new stream</small></div>
+				<div class="panel-body">
+
+					<div class="input-group">
+						<span class="input-group-btn">
+							<button id="setstat" type="button" class="btn btn-regular"><span class="btn-icon" aria-hidden="true">&#9654;</span> Play Stream</button>
+						</span>
+						<input id="station" class="form-control" placeholder="Insert a radio stream">
+					</div>
+					<br /><br />
+					
+					<select id="preset" style="width: 100%" size="10">
+						<option value="-1">-- Select --</option>
+					</select>
+				</div>
+			</div>
+
+			<div class="row panel panel-default">
+				<div class="panel-heading">Display</div>
+				<div class="panel-body webradio-display-body">
+					<button id="backlight_on" type="button" class="btn btn-warning"><span class="btn-icon" aria-hidden="true">&#9728;</span> Display On</button>
+					<button id="backlight_off" type="button" class="btn btn-regular"><span class="btn-icon" aria-hidden="true">&#9790;</span> Display Off</button>
+				</div>
+			</div>
+
+		</div>
+	
+		<script src="app.js"></script>
 	</body>
 </html>
 
