@@ -26,40 +26,40 @@ void utf8ascii(char *s);
 
 #if defined(BLUETFT)
 
-#define DSP_DASH_W 160U
-#define DSP_DASH_H 128U
-#define DSP_GUTTER_W 12U
-#define DSP_HEADER_H 15U
-#define DSP_CONTENT_X DSP_GUTTER_W
-#define DSP_CONTENT_W (DSP_DASH_W - (2U * DSP_GUTTER_W))
-#define DSP_BAR_TOP 16U
-#define DSP_BAR_HEIGHT 98U
-#define DSP_BAR_WIDTH 7U
-#define DSP_LEFT_BAR_X 2U
-#define DSP_VU_BAR_W 2U
-#define DSP_VU_GAP 2U
-#define DSP_VU_TREBLE_X (DSP_DASH_W - DSP_GUTTER_W + 2U)
-#define DSP_VU_BASS_X (DSP_VU_TREBLE_X + DSP_VU_BAR_W + DSP_VU_GAP)
+#  define DSP_DASH_W 160U
+#  define DSP_DASH_H 128U
+#  define DSP_GUTTER_W 12U
+#  define DSP_HEADER_H 15U
+#  define DSP_CONTENT_X DSP_GUTTER_W
+#  define DSP_CONTENT_W (DSP_DASH_W - (2U * DSP_GUTTER_W))
+#  define DSP_BAR_TOP 16U
+#  define DSP_BAR_HEIGHT 98U
+#  define DSP_BAR_WIDTH 7U
+#  define DSP_LEFT_BAR_X 2U
+#  define DSP_VU_BAR_W 2U
+#  define DSP_VU_GAP 2U
+#  define DSP_VU_TREBLE_X (DSP_DASH_W - DSP_GUTTER_W + 2U)
+#  define DSP_VU_BASS_X (DSP_VU_TREBLE_X + DSP_VU_BAR_W + DSP_VU_GAP)
 
-#define DSP_COL_HEADER_BG 0x1082U
-#define DSP_COL_LINE 0x39E7U
-#define DSP_COL_VOL 0x04DFU
-#define DSP_COL_VOL_BG 0x2104U
-#define DSP_COL_VU 0xFFE0U
-#define DSP_COL_VU_BASS 0x07FFU
-#define DSP_COL_VU_BG 0x3186U
-#define DSP_COL_WIFI 0x07E0U
-#define DSP_COL_WIFI_WEAK 0xFD20U
-#define DSP_COL_WIFI_OFF 0x7BEFU
-#define DSP_COL_LABEL 0xC618U
-#define DSP_FONT_W 6U
-#define DSP_TEXT_PAD 3U
-#define DSP_TEXT_X (DSP_CONTENT_X + DSP_TEXT_PAD)
-#define DSP_CHARS_PER_LINE ((DSP_CONTENT_W - DSP_TEXT_PAD - 1U) / DSP_FONT_W)
-#define DSP_STATION_Y 17U
-#define DSP_STATION_ROW_H 12U
-#define DSP_TITLE_Y (DSP_STATION_Y + DSP_STATION_ROW_H + 3U)
-#define DSP_TITLE_ROW_H 12U
+#  define DSP_COL_HEADER_BG 0x1082U
+#  define DSP_COL_LINE 0x39E7U
+#  define DSP_COL_VOL 0x04DFU
+#  define DSP_COL_VOL_BG 0x2104U
+#  define DSP_COL_VU 0xFFE0U
+#  define DSP_COL_VU_BASS 0x07FFU
+#  define DSP_COL_VU_BG 0x3186U
+#  define DSP_COL_WIFI 0x07E0U
+#  define DSP_COL_WIFI_WEAK 0xFD20U
+#  define DSP_COL_WIFI_OFF 0x7BEFU
+#  define DSP_COL_LABEL 0xC618U
+#  define DSP_FONT_W 6U
+#  define DSP_TEXT_PAD 3U
+#  define DSP_TEXT_X (DSP_CONTENT_X + DSP_TEXT_PAD)
+#  define DSP_CHARS_PER_LINE ((DSP_CONTENT_W - DSP_TEXT_PAD - 1U) / DSP_FONT_W)
+#  define DSP_STATION_Y 17U
+#  define DSP_STATION_ROW_H 12U
+#  define DSP_TITLE_Y (DSP_STATION_Y + DSP_STATION_ROW_H + 3U)
+#  define DSP_TITLE_ROW_H 12U
 
 static bool dspDashboardChromeReady = false;
 static char dspDashboardLastDate[14] = "";
@@ -79,10 +79,10 @@ static char dspDashboardLastStationKey[88] = "";
 static char dspDashboardLastTitle[150] = "";
 static char dspDashboardLastShortStatus[150] = "";
 
-#define DSP_DASH_COLOR_LEGACY WHITE
-#define DSP_DASH_COLOR_TITLE YELLOW
-#define DSP_DASH_COLOR_STATION CYAN
-#define DSP_DASH_COLOR_STATUS GREEN
+#  define DSP_DASH_COLOR_LEGACY WHITE
+#  define DSP_DASH_COLOR_TITLE YELLOW
+#  define DSP_DASH_COLOR_STATION CYAN
+#  define DSP_DASH_COLOR_STATUS GREEN
 
 static char dspDashStationText[150] = "";
 static char dspDashShortStatusText[150] = "";
@@ -91,24 +91,16 @@ static bool dspDashStationUpdateReq = false;
 static bool dspDashShortStatusUpdateReq = false;
 static bool dspDashLegacyUpdateReq = false;
 
-inline void dspDashboardInvalidateSnooze(void) {
-  dspDashboardLastSnoozeSec = -1;
-}
+inline void dspDashboardInvalidateSnooze(void) { dspDashboardLastSnoozeSec = -1; }
 
-inline void dspDashboardInvalidateStation(void) {
-  dspDashboardLastStationKey[0] = '\0';
-}
+inline void dspDashboardInvalidateStation(void) { dspDashboardLastStationKey[0] = '\0'; }
 
 /**
  * @brief Force the song title row to redraw on the next refresh.
  */
-inline void dspDashboardInvalidateTitle(void) {
-  dspDashboardLastTitle[0] = '\0';
-}
+inline void dspDashboardInvalidateTitle(void) { dspDashboardLastTitle[0] = '\0'; }
 
-inline void dspDashboardInvalidateShortStatus(void) {
-  dspDashboardLastShortStatus[0] = '\0';
-}
+inline void dspDashboardInvalidateShortStatus(void) { dspDashboardLastShortStatus[0] = '\0'; }
 
 /**
  * @brief Store station name and request a TFT redraw.
@@ -372,8 +364,7 @@ inline void dspDashboardDrawHeader(const char *timetxt) {
   dspDashboardSplitTimeText(timetxt, dateLine, sizeof(dateLine), timeLine, sizeof(timeLine));
   dateStr = dateLine[0] ? dateLine : "--";
   timeStr = timeLine[0] ? timeLine : "--:--";
-  snprintf(headerState, sizeof(headerState), "%s|%s|%c", dateStr, timeStr,
-           (datamode != STOPPED) ? 'P' : 'S');
+  snprintf(headerState, sizeof(headerState), "%s|%s|%c", dateStr, timeStr, (datamode != STOPPED) ? 'P' : 'S');
 
   if (strcmp(headerState, dspDashboardLastHeaderState) == 0) {
     return;
@@ -657,8 +648,7 @@ inline void dspDashboardUpdateSnooze(void) {
   dspDashboardLastSnoozeSec = sec;
 
   if (sec >= 3600) {
-    snprintf(line, sizeof(line), "Snooze %luh%02lum", (unsigned long)(sec / 3600),
-             (unsigned long)((sec % 3600) / 60));
+    snprintf(line, sizeof(line), "Snooze %luh%02lum", (unsigned long)(sec / 3600), (unsigned long)((sec % 3600) / 60));
   } else if (sec >= 60) {
     snprintf(line, sizeof(line), "Snooze %lum%02lus", (unsigned long)(sec / 60), (unsigned long)(sec % 60));
   } else {
@@ -762,7 +752,7 @@ inline void dspDashboardRefreshStationBitrate(void) {
  * @param title Title text
  * @param color Text color
  */
-inline void dspDashboardDrawTitle(const char *title, uint16_t color) {
+inline void dspDashboardDrawSongTitle(const char *title, uint16_t color) {
   char titleClip[DSP_CHARS_PER_LINE + 1];
   const uint16_t y = DSP_TITLE_Y;
 
@@ -816,7 +806,7 @@ inline void dspDashboardRefreshTitle(void) {
   icystreamtitle.toCharArray(buf, len + 1);
   utf8ascii(buf);
 
-  dspDashboardDrawTitle(buf, DSP_DASH_COLOR_TITLE);
+  dspDashboardDrawSongTitle(buf, DSP_DASH_COLOR_TITLE);
 }
 
 /**
