@@ -57,9 +57,6 @@ const char app_css[] PROGMEM = R"=====(
 	.config-row-drag-handle:active { cursor: grabbing; }
 	.config-row-dragging { opacity: 0.55; }
 	.config-row-drag-over { border-color: #337ab7; box-shadow: inset 0 0 0 2px #337ab7; }
-	.config-collapse-heading { cursor: pointer; user-select: none; }
-	.config-collapse-heading .config-collapse-icon { float: right; color: #777; font-size: 12px; }
-	.config-collapse-panel.hidden { display: none !important; }
 	.config-raw-json { font-family: monospace; font-size: 12px; margin-bottom: 10px; resize: vertical; min-height: 160px; }
 	.config-raw-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 	.config-raw-actions .btn { width: auto; }
@@ -242,7 +239,6 @@ const char app_css[] PROGMEM = R"=====(
 		border-color: #333;
 	}
 	body.theme-dark .config-row-drag-handle,
-	body.theme-dark .config-collapse-heading .config-collapse-icon,
 	body.theme-dark .alarm-help {
 		color: #999;
 	}
@@ -326,6 +322,8 @@ const char app_css[] PROGMEM = R"=====(
 	.sound-page-lead { margin: 0; color: #666; font-size: 0.95em; line-height: 1.45; max-width: 42em; }
 	.sound-studio { display: flex; flex-direction: column; gap: 18px; }
 	.sound-card { margin-bottom: 0; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06); }
+	.sound-card > .panel-heading { padding: 12px 16px; font-weight: 600; font-size: 1.02em; border-bottom: 1px solid rgba(0, 0, 0, 0.08); }
+	.sound-card > .panel-body { padding: 16px; }
 	.sound-card-heading { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
 	.sound-card-icon { font-size: 1.35em; line-height: 1; opacity: 0.85; flex-shrink: 0; }
 	.sound-card-heading-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }

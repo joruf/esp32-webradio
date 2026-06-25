@@ -27,29 +27,39 @@ const char firmware_html[] PROGMEM = R"=====(
 	</head>
 	
 	<body itemscope itemtype="http://schema.org/WebPage">	
-@include_nav@
-<div id="body" class="container">
-			<h1>Firmware Upgrade</h1>
-
-			<strong>Current Firmware: <span id="firmware">...</span></strong>
-
-			<p>
-				Here you can install the latest OTA firmware update.
-			</p>
-			<p>
-				After clicking the button the file will downloaded from the developer website.
-			</p>
-			<strong>
-				Please Note: Do not unplug you power supply!
-			</strong>
-			
-			<div>
-				<button class="btn btn-alert" onclick="httpGet('update')"><span class="btn-icon" aria-hidden="true">&#11015;</span> Install latest Firmware Update</button>
+		<nav class="navbar navbar-default navbar-static-top">
+			<div id="body" class="container">
+				<div class="navbarDistance">
+					<a href="index.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#9835;</span><span class="nav-label">WEBRADIO</span></span></a>
+					<a href="scheduler.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#9200;</span><span class="nav-label">SCHEDULER</span></span></a>
+					<a href="config.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#9881;</span><span class="nav-label">CONFIGURATION</span></span></a>
+					<a href="sound.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#128266;</span><span class="nav-label">SOUND SETTINGS</span></span></a>
+					<a href="display.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#128187;</span><span class="nav-label">DISPLAY SETTINGS</span></span></a>
+					<a href="maintenance.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#128295;</span><span class="nav-label">MAINTENANCE</span></span></a>
+					<a href="diagnostics.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#128202;</span><span class="nav-label">DIAGNOSTICS</span></span></a>
+					<a href="ota.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#11015;</span><span class="nav-label">OTA UPDATE</span></span></a>
+					<a href="about.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#8505;</span><span class="nav-label">ABOUT</span></span></a>
+				</div>
 			</div>
-		</div>	
-	
-		<footer class="navbar navbar-default navbar-fixed-bottom">
-		</footer>
+		</nav>
+
+<div id="body" class="container sound-page">
+			<header class="sound-page-header">
+				<h1>Firmware Upgrade</h1>
+				<p class="sound-page-lead">Install the latest firmware directly on the device. Keep power connected during the whole process.</p>
+			</header>
+			<div class="sound-studio">
+			<div class="row panel panel-default sound-card">
+				<div class="panel-heading">Legacy OTA Installer</div>
+				<div class="panel-body">
+					<p><strong>Current Firmware:</strong> <span id="firmware">...</span></p>
+					<p>After pressing install, the firmware is downloaded from the configured update host.</p>
+					<p><strong>Please note:</strong> Do not unplug your power supply.</p>
+					<button class="btn btn-alert" onclick="httpGet('update')"><span class="btn-icon" aria-hidden="true">&#11015;</span> Install latest Firmware Update</button>
+				</div>
+			</div>
+			</div>
+		</div>
 
 		<script src="app.js"></script>
 	</body>

@@ -14,11 +14,30 @@ const char ota_html[] PROGMEM = R"=====(
 	</head>
 
 	<body itemscope itemtype="http://schema.org/WebPage">
-@include_nav@
-<div id="body" class="container">
-			<h1>OTA Update</h1>
+		<nav class="navbar navbar-default navbar-static-top">
+			<div id="body" class="container">
+				<div class="navbarDistance">
+					<a href="index.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#9835;</span><span class="nav-label">WEBRADIO</span></span></a>
+					<a href="scheduler.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#9200;</span><span class="nav-label">SCHEDULER</span></span></a>
+					<a href="config.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#9881;</span><span class="nav-label">CONFIGURATION</span></span></a>
+					<a href="sound.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#128266;</span><span class="nav-label">SOUND SETTINGS</span></span></a>
+					<a href="display.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#128187;</span><span class="nav-label">DISPLAY SETTINGS</span></span></a>
+					<a href="maintenance.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#128295;</span><span class="nav-label">MAINTENANCE</span></span></a>
+					<a href="diagnostics.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#128202;</span><span class="nav-label">DIAGNOSTICS</span></span></a>
+					<a href="ota.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#11015;</span><span class="nav-label">OTA UPDATE</span></span></a>
+					<a href="about.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#8505;</span><span class="nav-label">ABOUT</span></span></a>
+				</div>
+			</div>
+		</nav>
 
-			<div id="ota-settings" class="row panel panel-default">
+<div id="body" class="container sound-page">
+			<header class="sound-page-header">
+				<h1>OTA Update</h1>
+				<p class="sound-page-lead">Check firmware status, review release history and install updates over the air.</p>
+			</header>
+			<div class="sound-studio">
+
+			<div id="ota-settings" class="row panel panel-default sound-card">
 				<div class="panel-heading">Firmware status</div>
 				<div class="panel-body">
 					<p class="config-help">Check online for a newer firmware build, then install it over the air. Do not unplug power during the update.</p>
@@ -39,7 +58,7 @@ const char ota_html[] PROGMEM = R"=====(
 				</div>
 			</div>
 
-			<div class="row panel panel-default">
+			<div class="row panel panel-default sound-card">
 				<div class="panel-heading">Release history</div>
 				<div class="panel-body">
 					<p class="config-help">Changelog from the remote version manifest. Refreshed when you open this page or run <strong>Check for updates</strong>.</p>
@@ -49,7 +68,7 @@ const char ota_html[] PROGMEM = R"=====(
 				</div>
 			</div>
 
-			<div class="row panel panel-default">
+			<div class="row panel panel-default sound-card">
 				<div class="panel-heading">Update source</div>
 				<div class="panel-body">
 					<p class="config-help">OTA metadata and firmware releases are hosted on GitHub:
@@ -61,6 +80,7 @@ const char ota_html[] PROGMEM = R"=====(
 						<input type="text" class="form-control" id="feat-ota-url" value="https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/version.json">
 					</div>
 				</div>
+			</div>
 			</div>
 		</div>
 

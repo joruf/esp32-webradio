@@ -27,11 +27,30 @@ const char config_html[] PROGMEM = R"=====(
 	</head>
 	
 	<body itemscope itemtype="http://schema.org/WebPage">	
-@include_nav@
-<div id="body" class="container">
-			<h1>Configuration</h1>
+		<nav class="navbar navbar-default navbar-static-top">
+			<div id="body" class="container">
+				<div class="navbarDistance">
+					<a href="index.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#9835;</span><span class="nav-label">WEBRADIO</span></span></a>
+					<a href="scheduler.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#9200;</span><span class="nav-label">SCHEDULER</span></span></a>
+					<a href="config.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#9881;</span><span class="nav-label">CONFIGURATION</span></span></a>
+					<a href="sound.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#128266;</span><span class="nav-label">SOUND SETTINGS</span></span></a>
+					<a href="display.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#128187;</span><span class="nav-label">DISPLAY SETTINGS</span></span></a>
+					<a href="maintenance.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#128295;</span><span class="nav-label">MAINTENANCE</span></span></a>
+					<a href="diagnostics.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#128202;</span><span class="nav-label">DIAGNOSTICS</span></span></a>
+					<a href="ota.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#11015;</span><span class="nav-label">OTA UPDATE</span></span></a>
+					<a href="about.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#8505;</span><span class="nav-label">ABOUT</span></span></a>
+				</div>
+			</div>
+		</nav>
 
-			<div class="row panel panel-default">
+<div id="body" class="container sound-page">
+			<header class="sound-page-header">
+				<h1>Configuration</h1>
+				<p class="sound-page-lead">Manage WiFi, startup behavior, presets and GPIO mappings. Changes are saved directly to NVS.</p>
+			</header>
+			<div class="sound-studio">
+
+			<div class="row panel panel-default sound-card">
 				<div class="panel-heading">WiFi Networks</div>
 				<div class="panel-body">
 					<p class="config-help">Add WiFi networks in priority order. The radio tries them from top to bottom. Signal strength is refreshed automatically.</p>
@@ -40,7 +59,7 @@ const char config_html[] PROGMEM = R"=====(
 				</div>
 			</div>
 
-			<div class="row panel panel-default">
+			<div class="row panel panel-default sound-card">
 				<div class="panel-heading">Clock and NTP</div>
 				<div class="panel-body">
 					<div class="row">
@@ -60,7 +79,7 @@ const char config_html[] PROGMEM = R"=====(
 				</div>
 			</div>
 
-			<div class="row panel panel-default">
+			<div class="row panel panel-default sound-card">
 				<div class="panel-heading">Startup</div>
 				<div class="panel-body">
 					<div class="row">
@@ -73,7 +92,7 @@ const char config_html[] PROGMEM = R"=====(
 				</div>
 			</div>
 
-			<div class="row panel panel-default">
+			<div class="row panel panel-default sound-card">
 				<div class="panel-heading">Radio Presets</div>
 				<div class="panel-body">
 					<p class="config-help">Define stream URLs for your preset buttons. Drag entries to change the display order on the Webradio page. Slot numbers identify each preset.</p>
@@ -82,7 +101,7 @@ const char config_html[] PROGMEM = R"=====(
 				</div>
 			</div>
 
-			<div class="row panel panel-default">
+			<div class="row panel panel-default sound-card">
 				<div class="panel-heading">GPIO Button Actions</div>
 				<div class="panel-body">
 					<p class="config-help">Map physical GPIO pins to radio commands, for example <code>uppreset = 1</code> or <code>stop</code>.</p>
@@ -91,6 +110,7 @@ const char config_html[] PROGMEM = R"=====(
 				</div>
 			</div>
 
+			</div>
 		</div>
 
 		<div id="config-dialog" class="config-dialog hidden" aria-hidden="true">

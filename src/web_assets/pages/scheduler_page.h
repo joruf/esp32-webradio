@@ -14,11 +14,30 @@ const char scheduler_html[] PROGMEM = R"=====(
 	</head>
 
 	<body itemscope itemtype="http://schema.org/WebPage">
-@include_nav@
-<div id="body" class="container">
-			<h1>Scheduler</h1>
+		<nav class="navbar navbar-default navbar-static-top">
+			<div id="body" class="container">
+				<div class="navbarDistance">
+					<a href="index.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#9835;</span><span class="nav-label">WEBRADIO</span></span></a>
+					<a href="scheduler.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#9200;</span><span class="nav-label">SCHEDULER</span></span></a>
+					<a href="config.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#9881;</span><span class="nav-label">CONFIGURATION</span></span></a>
+					<a href="sound.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#128266;</span><span class="nav-label">SOUND SETTINGS</span></span></a>
+					<a href="display.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#128187;</span><span class="nav-label">DISPLAY SETTINGS</span></span></a>
+					<a href="maintenance.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#128295;</span><span class="nav-label">MAINTENANCE</span></span></a>
+					<a href="diagnostics.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#128202;</span><span class="nav-label">DIAGNOSTICS</span></span></a>
+					<a href="ota.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#11015;</span><span class="nav-label">OTA UPDATE</span></span></a>
+					<a href="about.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#8505;</span><span class="nav-label">ABOUT</span></span></a>
+				</div>
+			</div>
+		</nav>
 
-			<div class="row panel panel-default">
+<div id="body" class="container sound-page">
+			<header class="sound-page-header">
+				<h1>Scheduler</h1>
+				<p class="sound-page-lead">Control sleep timer and alarm schedules with persistent settings stored on the device.</p>
+			</header>
+			<div class="sound-studio">
+
+			<div class="row panel panel-default sound-card">
 				<div class="panel-heading">Snooze Timer</div>
 				<div class="panel-body">
 					<p class="config-help">Snooze stops playback after the selected duration.</p>
@@ -41,13 +60,14 @@ const char scheduler_html[] PROGMEM = R"=====(
 				</div>
 			</div>
 
-			<div class="row panel panel-default">
+			<div class="row panel panel-default sound-card">
 				<div class="panel-heading">Alarm Schedules</div>
 				<div class="panel-body">
 					<p class="alarm-help">Configure alarm schedules below. Each alarm needs at least one weekday. Enter start and shut-off as <strong>hh:mm</strong> (click hours or minutes to edit each pair). Use <strong>Save Alarm</strong> or <strong>Remove Alarm</strong> to store changes; the result appears in the command log above.</p>
 					<div id="alarm-list"></div>
 					<button type="button" id="add-alarm" class="btn btn-primary"><span class="btn-icon" aria-hidden="true">&#10133;</span> Add Alarm</button>
 				</div>
+			</div>
 			</div>
 		</div>
 
