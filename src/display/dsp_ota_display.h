@@ -211,6 +211,8 @@ inline void dspOtaDisplayBegin(const char *targetVersion, const char *currentFir
   }
 
   enableBacklight(true);
+  // Hard-clear the complete panel first to avoid remnants from the previous view.
+  tft->fillRect(0, 0, tft->width(), tft->height(), BLACK);
   dspOtaTotalBytes = totalBytes;
   dspOtaLastPercent = 255;
   dspOtaLastDrawMs = 0;
