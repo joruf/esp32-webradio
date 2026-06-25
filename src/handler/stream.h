@@ -146,7 +146,6 @@ void showStreamDataOnTFT(const char *ml, bool full) {
     icystreamtitle = streamtitle;
     addTitleToHistory(streamtitle);
 #if defined(BLUETFT)
-    tftdata[1].str = icystreamtitle;
     dspDashboardInvalidateTitle();
 #else
     strncpy(displaytitle, streamtitle, sizeof(displaytitle) - 1);
@@ -160,7 +159,6 @@ void showStreamDataOnTFT(const char *ml, bool full) {
     icystreamtitle = streamtitle;
     addTitleToHistory(streamtitle);
 #if defined(BLUETFT)
-    tftdata[1].str = icystreamtitle;
     dspDashboardInvalidateTitle();
 #else
     showTextOnTFT(1, streamtitle);
@@ -432,8 +430,8 @@ static void handleTftInfoDisplay() {
     time_req = false;
     if (NetworkFound) {
       showTimeOnTFT(timetxt);
-      displayVolumeOnTFT();
-      displayBatteryChargeOnTFT();
+      renderVolumeOnTFT();
+      renderBatteryChargeOnTFT();
     }
   }
 }
@@ -502,7 +500,7 @@ static void handleVs1053VolumeAndTone() {
  * @brief Handle special (non-stream data) functions for spftask.
  *        Runs once per spftask iteration.
  */
-void handleDisplayData() {
+void handleRenderData() {
   // 1. Time and alarm (no SPI)
   handleTimeAndAlarmUpdate();
 

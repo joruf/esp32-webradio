@@ -81,7 +81,7 @@ static const char *isAcceptableNetwork(const String &ssid) {
  * @param rssi Signal strength in dBm
  * @param displayCount Reference to counter for displayed networks
  */
-static void displayNetworkOnTft(int index, const String &ssid, int rssi, int &displayCount) {
+static void renderNetworkOnTft(int index, const String &ssid, int rssi, int &displayCount) {
   if (displayCount >= MAX_DISPLAY_NETWORKS) {
     return;
   }
@@ -146,7 +146,7 @@ void listNetworks() {
              getEncryptionType(encryption), acceptable);
 
     // Display only strongest networks (scanNetworks sorts by signal strength)
-    displayNetworkOnTft(i + 1, WiFi.SSID(i), WiFi.RSSI(i), displayCount);
+    renderNetworkOnTft(i + 1, WiFi.SSID(i), WiFi.RSSI(i), displayCount);
 
     // Remember this network for later use
     networks += WiFi.SSID(i) + String("|");

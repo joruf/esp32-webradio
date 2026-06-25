@@ -69,7 +69,7 @@ bool dsp_begin() {
 // top divider.                                                              *
 // No action if bat0/bat100 not defined in the preferences. *
 //**************************************************************************************************
-void displayBatteryChargeOnTFT() {
+void renderBatteryChargeOnTFT() {
   dspCommonBatteryBar(tftdata, dsp_getwidth(), tft != nullptr);
 }
 
@@ -79,7 +79,7 @@ void displayBatteryChargeOnTFT() {
 // Show the current volume as an indicator on the screen. * The indicator is 2
 // pixels heigh. *
 //**************************************************************************************************
-void displayVolumeOnTFT() {
+void renderVolumeOnTFT() {
   if (tft) {
     dspCommonVolumeBar(dsp_getwidth(), dsp_getheight(), getOutputVolume(), true);
   }
@@ -91,7 +91,7 @@ void displayVolumeOnTFT() {
  * @param level Activity level 0-100
  * @param visible When false, hide the bar
  */
-void displayVuMeterOnTFT(uint8_t treble, uint8_t bass, bool visible) {
+void renderVuMeterOnTFT(uint8_t treble, uint8_t bass, bool visible) {
   if (treble > bass) {
     dspCommonVuMeterBar(dsp_getwidth(), treble, true, visible);
   } else {

@@ -379,7 +379,7 @@ SSD1306::SSD1306(uint8_t sda, uint8_t scl) {
 // top divider.                                                              *
 // No action if bat0/bat100 not defined in the preferences. *
 //**************************************************************************************************
-void displayBatteryChargeOnTFT() {
+void renderBatteryChargeOnTFT() {
   if (tft) {
     if (ini_block.bat0 < ini_block.bat100) // Levels set in preferences?
     {
@@ -410,7 +410,7 @@ void displayBatteryChargeOnTFT() {
 // Show the current volume as an indicator on the screen. * The indicator is 2
 // pixels heigh. *
 //**************************************************************************************************
-void displayVolumeOnTFT() {
+void renderVolumeOnTFT() {
   if (tft) {
     static uint8_t oldvol = 0; // Previous volume
     uint8_t newvol;            // Current setting
@@ -428,7 +428,7 @@ void displayVolumeOnTFT() {
   }
 }
 
-void displayVuMeterOnTFT(uint8_t treble, uint8_t bass, bool visible) {}
+void renderVuMeterOnTFT(uint8_t treble, uint8_t bass, bool visible) {}
 
 //**************************************************************************************************
 //                                      D I S P L A Y T I M E *

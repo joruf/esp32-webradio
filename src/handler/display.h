@@ -2,32 +2,122 @@
 #include "display/dsp_dashboard.h"
 #endif
 
+#if defined(BLUETFT)
+
+/**
+ * @brief Requests display of the song title on the TFT dashboard.
+ *
+ * @param str Title text
+ * @note The actual display update happens in dspDashboardRefreshLiveStatus()
+ */
+void showTitleOnTFT(const char *str) {
+  if (str) {
+    icystreamtitle = String(str);
+  }
+  dspDashboardInvalidateTitle();
+}
+
+/**
+ * @brief Requests display of the song title on the TFT dashboard.
+ *
+ * @param str Title text
+ */
+void showTitleOnTFT(String &str) {
+  icystreamtitle = str;
+  dspDashboardInvalidateTitle();
+}
+
+/**
+ * @brief Requests display of the station name on the TFT dashboard.
+ *
+ * @param str Station name text
+ */
+void showStationNameOnTFT(const char *str) {
+  dspDashboardSetStationName(str);
+}
+
+/**
+ * @brief Requests display of the station name on the TFT dashboard.
+ *
+ * @param str Station name text
+ */
+void showStationNameOnTFT(String &str) {
+  dspDashboardSetStationName(str.c_str());
+}
+
+/**
+ * @brief Requests display of short status text above the WiFi row.
+ *
+ * @param str Status text
+ */
+void showShortStatusOnTFT(const char *str) {
+  dspDashboardSetShortStatus(str);
+}
+
+/**
+ * @brief Requests display of short status text above the WiFi row.
+ *
+ * @param str Status text
+ */
+void showShortStatusOnTFT(String &str) {
+  dspDashboardSetShortStatus(str.c_str());
+}
+
+/**
+ * @brief Stores legacy top-line text (not shown on the BLUETFT dashboard).
+ *
+ * @param str Legacy text
+ */
+void showLegacyOnTFT(const char *str) {
+  dspDashboardSetLegacy(str);
+}
+
+/**
+ * @brief Stores legacy top-line text (not shown on the BLUETFT dashboard).
+ *
+ * @param str Legacy text
+ */
+void showLegacyOnTFT(String &str) {
+  dspDashboardSetLegacy(str.c_str());
+}
+
+#endif /* BLUETFT */
+
 /**
  * @brief Requests display of a text on the TFT display (char* version).
  *
- * @param inx Index of the TFT segment (must be < TFTSECS)
+ * @param inx Index of the TFT segment (0=legacy, 1=title, 2=station, 3=short status)
  * @param str String to display (as char*)
  * @note The actual display update happens asynchronously in handle_tft_txt()
  */
 void showTextOnTFT(uint16_t inx, const char *str) {
+#if defined(BLUETFT)
+  switch (inx) {
+  case 0:
+    showLegacyOnTFT(str);
+    return;
+  case 1:
+    showTitleOnTFT(str);
+    return;
+  case 2:
+    showStationNameOnTFT(str);
+    return;
+  case 3:
+    showShortStatusOnTFT(str);
+    return;
+  default:
+    return;
+  }
+#else
   if (inx < TFTSECS) // Segment available on display
   {
-#if defined(BLUETFT)
-    if (inx == 1) {
-      if (str) {
-        icystreamtitle = String(str);
-        tftdata[inx].str = icystreamtitle;
-      }
-      dspDashboardInvalidateTitle();
-      return;
-    }
-#endif
     if (str) // String specified?
     {
       tftdata[inx].str = String(str); // set string
     }
     tftdata[inx].update_req = true; // and request flag
   }
+#endif
 }
 
 /**
@@ -38,19 +128,30 @@ void showTextOnTFT(uint16_t inx, const char *str) {
  * @note The actual display update happens asynchronously in handle_tft_txt()
  */
 void showTextOnTFT(uint16_t inx, String &str) {
+#if defined(BLUETFT)
+  switch (inx) {
+  case 0:
+    showLegacyOnTFT(str);
+    return;
+  case 1:
+    showTitleOnTFT(str);
+    return;
+  case 2:
+    showStationNameOnTFT(str);
+    return;
+  case 3:
+    showShortStatusOnTFT(str);
+    return;
+  default:
+    return;
+  }
+#else
   if (inx < TFTSECS) // Segment available on display
   {
-#if defined(BLUETFT)
-    if (inx == 1) {
-      icystreamtitle = str;
-      tftdata[inx].str = icystreamtitle;
-      dspDashboardInvalidateTitle();
-      return;
-    }
-#endif
     tftdata[inx].str = str;         // Set string
     tftdata[inx].update_req = true; // and request flag
   }
+#endif
 }
 
 /**
@@ -136,15 +237,25 @@ static void drawSegmentText(scrseg_struct *p) {
  * @param inx Index in tftdata[] (must be < TFTSECS)
  * @note Assumes that 'tft' (display handle) is valid.
  */
-void displayinfo(uint16_t inx) {
+void renderInfo(uint16_t inx) {
 #if defined(BLUETFT)
-  if (!tft || inx >= TFTSECS) {
+  if (!tft || inx >= TFTSECS || inx == 0) {
     return;
   }
-  if (inx == 0) {
-    return;
+
+  switch (inx) {
+  case 1:
+    dspDashboardRefreshTitle();
+    break;
+  case 2:
+    dspDashboardRefreshStationBitrate();
+    break;
+  case 3:
+    dspDashboardRefreshShortStatus();
+    break;
+  default:
+    break;
   }
-  dspDashboardDrawSegment(inx, &tftdata[inx]);
 #else
   uint16_t width = dsp_getwidth();
   scrseg_struct *p = &tftdata[inx];
@@ -172,23 +283,19 @@ void displayinfo(uint16_t inx) {
  * @note This function should be called regularly in the main loop.
  */
 bool handle_tft_txt() {
+#if defined(BLUETFT)
+  return dspDashboardProcessTextUpdates();
+#else
   bool updated = false;
 
   for (uint16_t i = 0; i < TFTSECS; i++) {
-#if defined(BLUETFT)
-    if (i == 0 || i == 1) {
-      if (tftdata[i].update_req) {
-        tftdata[i].update_req = false;
-      }
-      continue;
-    }
-#endif
     if (tftdata[i].update_req) {
-      displayinfo(i);
+      renderInfo(i);
       tftdata[i].update_req = false;
       updated = true;
     }
   }
 
   return updated;
+#endif
 }

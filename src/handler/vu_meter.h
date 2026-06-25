@@ -62,7 +62,7 @@ public:
         trebleLevel_ = 0;
         bassLevel_ = 0;
         if (displaytype == T_BLUETFT || displaytype == T_ILI9341) {
-          displayVuMeterOnTFT(0, 0, false);
+          renderVuMeterOnTFT(0, 0, false);
         }
       }
       return;
@@ -132,7 +132,7 @@ public:
 
     if (displaytype == T_BLUETFT || displaytype == T_ILI9341) {
       const bool visible = (datamode != STOPPED && (trebleLevel_ > 0 || bassLevel_ > 0));
-      displayVuMeterOnTFT(trebleLevel_, bassLevel_, visible);
+      renderVuMeterOnTFT(trebleLevel_, bassLevel_, visible);
     }
   }
 

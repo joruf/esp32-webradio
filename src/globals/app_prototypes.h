@@ -32,10 +32,20 @@ bool playStream(int16_t _preset); // true=sending play info succeeded; false= un
 void playSound(bool _enable);
 void stop_mp3client();
 void IRAM_ATTR enableBacklight(bool enable);
-void handleDisplayData();
+void handleRenderData();
 String nvsGetHostFromPref(int16_t preset);
 String nvsGetHostFromPref();
 void showTextOnTFT(uint16_t inx, const char *str);
 void showTextOnTFT(uint16_t inx, String &str);
+#if defined(BLUETFT)
+void showTitleOnTFT(const char *str);
+void showTitleOnTFT(String &str);
+void showStationNameOnTFT(const char *str);
+void showStationNameOnTFT(String &str);
+void showShortStatusOnTFT(const char *str);
+void showShortStatusOnTFT(String &str);
+void showLegacyOnTFT(const char *str);
+void showLegacyOnTFT(String &str);
+#endif
 
 #endif

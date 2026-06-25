@@ -78,7 +78,7 @@ static uint32_t filterADCValue(uint32_t raw_value) { return (15 * adcval + raw_v
  *
  * This task runs with low priority in an infinite loop.
  * It handles:
- * - Display updates on the TFT (via handleDisplayData)
+ * - TFT updates (via handleRenderData)
  * - ADC measurement and filtering (volume control, etc.)
  *
  * @param parameter Unused parameter (for FreeRTOS task creation)
@@ -86,7 +86,7 @@ static uint32_t filterADCValue(uint32_t raw_value) { return (15 * adcval + raw_v
  */
 void spftask(void *parameter) {
   while (true) {
-    handleDisplayData();                  // Maybe some special funcs?
+    handleRenderData();                  // Maybe some special funcs?
     vTaskDelay(100 / portTICK_PERIOD_MS); // Pause for a short time
 
     uint32_t raw_adc = adc1_get_raw(ADC1_CHANNEL_0); // Read ADC

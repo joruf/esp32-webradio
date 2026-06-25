@@ -93,7 +93,7 @@ void dsp_update() // Updates to the physical screen
 // Show the current battery charge level on the screen. * No action if
 // bat0/bat100 not defined in the preferences. *
 //**************************************************************************************************
-void displayBatteryChargeOnTFT() {
+void renderBatteryChargeOnTFT() {
   if (ini_block.bat0 < ini_block.bat100) // Levels set in preferences?
   {
     static uint16_t oldpos = 0; // Previous charge level
@@ -120,7 +120,7 @@ void displayBatteryChargeOnTFT() {
 // Show the current volume as an indicator on the screen. * The indicator is 2
 // pixels heigh. *
 //**************************************************************************************************
-void displayVolumeOnTFT() {
+void renderVolumeOnTFT() {
   static uint8_t oldvol = 0; // Previous volume
   uint8_t newvol;            // Current setting
   uint16_t pos;              // Positon of volume indicator
@@ -134,7 +134,7 @@ void displayVolumeOnTFT() {
   }
 }
 
-void displayVuMeterOnTFT(uint8_t treble, uint8_t bass, bool visible) {}
+void renderVuMeterOnTFT(uint8_t treble, uint8_t bass, bool visible) {}
 
 //**************************************************************************************************
 //                                      D I S P L A Y T I M E *

@@ -77,6 +77,19 @@ static char dspDashboardLastWifi[48] = "";
 static int32_t dspDashboardLastSnoozeSec = -1;
 static char dspDashboardLastStationKey[88] = "";
 static char dspDashboardLastTitle[150] = "";
+static char dspDashboardLastShortStatus[150] = "";
+
+#define DSP_DASH_COLOR_LEGACY WHITE
+#define DSP_DASH_COLOR_TITLE YELLOW
+#define DSP_DASH_COLOR_STATION CYAN
+#define DSP_DASH_COLOR_STATUS GREEN
+
+static char dspDashStationText[150] = "";
+static char dspDashShortStatusText[150] = "";
+static char dspDashLegacyText[64] = "";
+static bool dspDashStationUpdateReq = false;
+static bool dspDashShortStatusUpdateReq = false;
+static bool dspDashLegacyUpdateReq = false;
 
 inline void dspDashboardInvalidateSnooze(void) {
   dspDashboardLastSnoozeSec = -1;
@@ -91,6 +104,45 @@ inline void dspDashboardInvalidateStation(void) {
  */
 inline void dspDashboardInvalidateTitle(void) {
   dspDashboardLastTitle[0] = '\0';
+}
+
+inline void dspDashboardInvalidateShortStatus(void) {
+  dspDashboardLastShortStatus[0] = '\0';
+}
+
+/**
+ * @brief Store station name and request a TFT redraw.
+ *
+ * @param station Station name text
+ */
+inline void dspDashboardSetStationName(const char *station) {
+  strncpy(dspDashStationText, station ? station : "", sizeof(dspDashStationText) - 1);
+  dspDashStationText[sizeof(dspDashStationText) - 1] = '\0';
+  dspDashboardInvalidateStation();
+  dspDashStationUpdateReq = true;
+}
+
+/**
+ * @brief Store short status text and request a TFT redraw.
+ *
+ * @param status Short status line (above WiFi row)
+ */
+inline void dspDashboardSetShortStatus(const char *status) {
+  strncpy(dspDashShortStatusText, status ? status : "", sizeof(dspDashShortStatusText) - 1);
+  dspDashShortStatusText[sizeof(dspDashShortStatusText) - 1] = '\0';
+  dspDashboardInvalidateShortStatus();
+  dspDashShortStatusUpdateReq = true;
+}
+
+/**
+ * @brief Store legacy top-line text (not shown on the BLUETFT dashboard).
+ *
+ * @param text Legacy segment text
+ */
+inline void dspDashboardSetLegacy(const char *text) {
+  strncpy(dspDashLegacyText, text ? text : "", sizeof(dspDashLegacyText) - 1);
+  dspDashLegacyText[sizeof(dspDashLegacyText) - 1] = '\0';
+  dspDashLegacyUpdateReq = true;
 }
 
 /**
@@ -624,7 +676,7 @@ inline void dspDashboardUpdateSnooze(void) {
  * @param color Station name color
  * @param brKbps Bitrate in kbps, or 0 to hide
  */
-inline void dspDashboardDrawStationRow(const char *station, uint16_t color, int brKbps) {
+inline void dspDashboardDrawStationName(const char *station, uint16_t color, int brKbps) {
   char brLabel[6];
   char stationClip[DSP_CHARS_PER_LINE + 1];
   char cacheKey[88];
@@ -680,8 +732,6 @@ inline void dspDashboardDrawStationRow(const char *station, uint16_t color, int 
  */
 inline void dspDashboardRefreshStationBitrate(void) {
   char buf[150];
-  uint16_t len;
-  int brKbps;
 
   if (!tft) {
     return;
@@ -691,8 +741,7 @@ inline void dspDashboardRefreshStationBitrate(void) {
     dspDashboardDrawChrome();
   }
 
-  len = tftdata[2].str.length();
-  if (len == 0) {
+  if (dspDashStationText[0] == '\0') {
     if (dspDashboardLastStationKey[0] != '\0') {
       dsp_fillRect(DSP_CONTENT_X, 17, DSP_CONTENT_W, 12, BLACK);
       dspDashboardLastStationKey[0] = '\0';
@@ -700,24 +749,20 @@ inline void dspDashboardRefreshStationBitrate(void) {
     return;
   }
 
-  if (len >= sizeof(buf)) {
-    len = sizeof(buf) - 1;
-  }
-  tftdata[2].str.toCharArray(buf, len + 1);
+  strncpy(buf, dspDashStationText, sizeof(buf) - 1);
+  buf[sizeof(buf) - 1] = '\0';
   utf8ascii(buf);
 
-  brKbps = dspDashboardGetDisplayBitrateKbps();
-
-  dspDashboardDrawStationRow(buf, tftdata[2].color, brKbps);
+  dspDashboardDrawStationName(buf, DSP_DASH_COLOR_STATION, dspDashboardGetDisplayBitrateKbps());
 }
 
 /**
- * @brief Draw song title on one row (same drawing code as dspDashboardDrawStationRow).
+ * @brief Draw song title on one row below the station name.
  *
  * @param title Title text
  * @param color Text color
  */
-inline void dspDashboardDrawTitleRow(const char *title, uint16_t color) {
+inline void dspDashboardDrawTitle(const char *title, uint16_t color) {
   char titleClip[DSP_CHARS_PER_LINE + 1];
   const uint16_t y = DSP_TITLE_Y;
 
@@ -742,7 +787,7 @@ inline void dspDashboardDrawTitleRow(const char *title, uint16_t color) {
 }
 
 /**
- * @brief Refresh song title row (same pattern as dspDashboardRefreshStationBitrate).
+ * @brief Refresh song title row from icystreamtitle.
  */
 inline void dspDashboardRefreshTitle(void) {
   char buf[150];
@@ -756,7 +801,7 @@ inline void dspDashboardRefreshTitle(void) {
     dspDashboardDrawChrome();
   }
 
-  len = tftdata[1].str.length();
+  len = icystreamtitle.length();
   if (len == 0) {
     if (dspDashboardLastTitle[0] != '\0') {
       dsp_fillRect(DSP_CONTENT_X, DSP_TITLE_Y, DSP_CONTENT_W, DSP_TITLE_ROW_H, BLACK);
@@ -768,16 +813,127 @@ inline void dspDashboardRefreshTitle(void) {
   if (len >= sizeof(buf)) {
     len = sizeof(buf) - 1;
   }
-  tftdata[1].str.toCharArray(buf, len + 1);
+  icystreamtitle.toCharArray(buf, len + 1);
   utf8ascii(buf);
 
-  dspDashboardDrawTitleRow(buf, tftdata[1].color);
+  dspDashboardDrawTitle(buf, DSP_DASH_COLOR_TITLE);
+}
+
+/**
+ * @brief Draw short status text on the row above the WiFi line.
+ *
+ * Snooze countdown uses the same row and takes priority when active.
+ *
+ * @param status Status text
+ * @param color Text color
+ */
+inline void dspDashboardDrawShortStatus(const char *status, uint16_t color) {
+  char buf[150];
+  const uint16_t y = 97;
+
+  if (!tft) {
+    return;
+  }
+
+  if (!dspDashboardChromeReady) {
+    dspDashboardDrawChrome();
+  }
+
+  if (sleeptimer_ms > 0 && enc_menu_mode != PRESET) {
+    return;
+  }
+
+  if (!status || status[0] == '\0') {
+    if (dspDashboardLastShortStatus[0] != '\0') {
+      dsp_fillRect(DSP_CONTENT_X, y, DSP_CONTENT_W, 8, BLACK);
+      dspDashboardLastShortStatus[0] = '\0';
+    }
+    return;
+  }
+
+  if (strcmp(status, dspDashboardLastShortStatus) == 0) {
+    return;
+  }
+
+  strncpy(dspDashboardLastShortStatus, status, sizeof(dspDashboardLastShortStatus) - 1);
+  dspDashboardLastShortStatus[sizeof(dspDashboardLastShortStatus) - 1] = '\0';
+
+  strncpy(buf, status, sizeof(buf) - 1);
+  buf[sizeof(buf) - 1] = '\0';
+  utf8ascii(buf);
+
+  dspDashboardDrawWrappedText(y, 8, color, buf, 1);
+}
+
+/**
+ * @brief Legacy top-line text (unused on the BLUETFT dashboard layout).
+ *
+ * @param text Legacy text
+ * @param color Text color
+ */
+inline void dspDashboardDrawLegacy(const char *text, uint16_t color) {
+  (void)text;
+  (void)color;
+}
+
+/**
+ * @brief Process pending dashboard text update requests (station, short status).
+ *
+ * @return true if at least one field was redrawn
+ */
+inline bool dspDashboardProcessTextUpdates(void) {
+  bool updated = false;
+  char buf[150];
+
+  if (dspDashLegacyUpdateReq) {
+    dspDashLegacyUpdateReq = false;
+  }
+
+  if (dspDashStationUpdateReq) {
+    dspDashStationUpdateReq = false;
+    strncpy(buf, dspDashStationText, sizeof(buf) - 1);
+    buf[sizeof(buf) - 1] = '\0';
+    utf8ascii(buf);
+    dspDashboardDrawStationName(buf, DSP_DASH_COLOR_STATION, dspDashboardGetDisplayBitrateKbps());
+    updated = true;
+  }
+
+  if (dspDashShortStatusUpdateReq) {
+    dspDashShortStatusUpdateReq = false;
+    strncpy(buf, dspDashShortStatusText, sizeof(buf) - 1);
+    buf[sizeof(buf) - 1] = '\0';
+    utf8ascii(buf);
+    dspDashboardDrawShortStatus(buf, DSP_DASH_COLOR_STATUS);
+    updated = true;
+  }
+
+  return updated;
+}
+
+/**
+ * @brief Redraw short status from the stored dashboard text.
+ */
+inline void dspDashboardRefreshShortStatus(void) {
+  char buf[150];
+
+  if (!tft) {
+    return;
+  }
+
+  if (!dspDashboardChromeReady) {
+    dspDashboardDrawChrome();
+  }
+
+  strncpy(buf, dspDashShortStatusText, sizeof(buf) - 1);
+  buf[sizeof(buf) - 1] = '\0';
+  utf8ascii(buf);
+  dspDashboardDrawShortStatus(buf, DSP_DASH_COLOR_STATUS);
 }
 
 /**
  * @brief Refresh dashboard fields from live globals (same source as buildLiveStatusJson).
  *
- * Song title: icystreamtitle. Station row: tftdata[2] / icyname.
+ * Song title: icystreamtitle. Station row: dspDashStationText.
  * Call only while the SPI bus is claimed when dsp_isUseSPI().
  */
 inline void dspDashboardRefreshLiveStatus(void) {
@@ -788,57 +944,6 @@ inline void dspDashboardRefreshLiveStatus(void) {
   dspDashboardRefreshTitle();
   dspDashboardUpdateSnooze();
   dspDashboardRefreshStationBitrate();
-}
-
-/**
- * @brief Render a text segment into the dashboard content zones.
- *
- * @param inx Segment index (1=title, 2=station, 3=status)
- * @param segment Segment data
- */
-inline void dspDashboardDrawSegment(uint16_t inx, scrseg_struct *segment) {
-  char buf[150];
-  uint16_t len;
-
-  if (!tft || !segment) {
-    return;
-  }
-
-  if (!dspDashboardChromeReady) {
-    dspDashboardDrawChrome();
-  }
-
-  len = segment->str.length();
-  if (len == 0) {
-    if (inx == 1) {
-      dsp_fillRect(DSP_CONTENT_X, DSP_TITLE_Y, DSP_CONTENT_W, DSP_TITLE_ROW_H, BLACK);
-      dspDashboardLastTitle[0] = '\0';
-    } else if (inx == 2) {
-      dsp_fillRect(DSP_CONTENT_X, 17, DSP_CONTENT_W, 12, BLACK);
-      dspDashboardLastStationKey[0] = '\0';
-    } else if (inx == 3 && sleeptimer_ms <= 0) {
-      dsp_fillRect(DSP_CONTENT_X, 97, DSP_CONTENT_W, 8, BLACK);
-    }
-    return;
-  }
-
-  if (inx == 3 && sleeptimer_ms > 0 && enc_menu_mode != PRESET) {
-    return;
-  }
-
-  if (len >= sizeof(buf)) {
-    len = sizeof(buf) - 1;
-  }
-  segment->str.toCharArray(buf, len + 1);
-  utf8ascii(buf);
-
-  if (inx == 1) {
-    dspDashboardDrawTitleRow(buf, segment->color);
-  } else if (inx == 2) {
-    dspDashboardDrawStationRow(buf, segment->color, dspDashboardGetDisplayBitrateKbps());
-  } else if (inx == 3) {
-    dspDashboardDrawWrappedText(97, 8, segment->color, buf, 1);
-  }
 }
 
 /**

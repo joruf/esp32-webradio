@@ -351,16 +351,16 @@ void dsp_update() {
 //**************************************************************************************************
 // Dummy routine for this type of display. *
 //**************************************************************************************************
-void displayBatteryChargeOnTFT() {}
+void renderBatteryChargeOnTFT() {}
 
 //**************************************************************************************************
 //                                      D I S P L A Y V O L U M E *
 //**************************************************************************************************
 // Dummy routine for this type of display. *
 //**************************************************************************************************
-void displayVolumeOnTFT() {}
+void renderVolumeOnTFT() {}
 
-void displayVuMeterOnTFT(uint8_t treble, uint8_t bass, bool visible) {}
+void renderVuMeterOnTFT(uint8_t treble, uint8_t bass, bool visible) {}
 
 //**************************************************************************************************
 //                                      D I S P L A Y T I M E *

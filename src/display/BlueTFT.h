@@ -19,14 +19,8 @@
 #define YELLOW ST7735_RED | ST7735_GREEN
 #define WHITE ST7735_WHITE
 
-// Dashboard text segments (content column; chrome drawn by dsp_dashboard.h)
+// Dashboard text segments (see dsp_dashboard.h); TFTSECS kept for legacy index API
 #define TFTSECS 4
-scrseg_struct tftdata[TFTSECS] = {
-    {false, WHITE, 0, 8, ""},     // 0: legacy / unused on dashboard
-    {false, YELLOW, 32, 62, ""},  // 1: song title (wrapped)
-    {false, CYAN, 17, 12, ""},    // 2: station name
-    {false, GREEN, 97, 8, ""},    // 3: short status (above WiFi row)
-};
 
 St7735Display st7735Display;
 Adafruit_ST7735 *tft = NULL;
@@ -61,7 +55,7 @@ bool dsp_begin() {
   return (tft != NULL);
 }
 
-void displayBatteryChargeOnTFT() {
+void renderBatteryChargeOnTFT() {
   if (!tft || ini_block.bat0 >= ini_block.bat100) {
     return;
   }
@@ -79,13 +73,13 @@ void displayBatteryChargeOnTFT() {
   dsp_fillRect(DSP_CONTENT_X + barWidth, 13, DSP_CONTENT_W - barWidth, 1, DSP_COL_HEADER_BG);
 }
 
-void displayVolumeOnTFT() {
+void renderVolumeOnTFT() {
   if (tft) {
     dspDashboardDrawVolume(getOutputVolume());
   }
 }
 
-void displayVuMeterOnTFT(uint8_t treble, uint8_t bass, bool visible) {
+void renderVuMeterOnTFT(uint8_t treble, uint8_t bass, bool visible) {
   if (tft) {
     dspDashboardDrawVu(treble, bass, visible);
   }
