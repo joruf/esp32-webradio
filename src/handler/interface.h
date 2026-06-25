@@ -55,6 +55,12 @@ void handleWebpage(const String &pagename) {
   int TCPCHUNKSIZE = 1024; // Max number of bytes per write
 
   dbgprint("FileRequest received %s", pagename.c_str());
+  if (pagename.indexOf("favicon.ico") >= 0) {
+    cmdclient.print("HTTP/1.1 204 No Content\r\n");
+    cmdclient.print("Connection: close\r\n");
+    cmdclient.print("Cache-Control: public, max-age=600\r\n\r\n");
+    return;
+  }
   ct = getContentType(pagename);      // Get content type
   if ((ct == "") || (pagename == "")) // Empty is illegal
   {
@@ -131,11 +137,9 @@ void handleWebpage(const String &pagename) {
     }
 
     dbgprint("Length of page is %d", l);
-    cmdclient.print(httpheader(ct)); // Send header
+    cmdclient.print(httpheader(ct, 600)); // Send header (10 minutes cache)
 
-    if (l < 10) { // The content of the HTTP response follows the header
-      cmdclient.println("Testline<br>");
-    } else if (!streamWebPage(cmdclient, p, l, ct, isDarkModeActive(), TCPCHUNKSIZE)) {
+    if (l > 0 && !streamWebPage(cmdclient, p, l, ct, isDarkModeActive(), TCPCHUNKSIZE)) {
       dbgprint("HTTP client disconnected while sending %s", pagename.c_str());
     }
     cmdclient.flush();

@@ -948,6 +948,51 @@ bool syncAlarmsToRadioConfig() {
 }
 
 /**
+ * @brief Mask WiFi passwords before sending config JSON to web clients.
+ *
+ * @param doc Parsed radio configuration document
+ */
+static void maskWifiPasswordsForWeb(JsonDocument &doc) {
+  if (!doc["wifi"].is<JsonArray>()) {
+    return;
+  }
+
+  for (JsonObject net : doc["wifi"].as<JsonArray>()) {
+    if (!net["password"].isNull()) {
+      net["password"] = RADIO_CONFIG_MASKED_PASSWORD;
+    }
+  }
+}
+
+/**
+ * @brief Read unified config for web clients with masked WiFi passwords.
+ *
+ * Prefers the persisted `radio_config` blob to reduce NVS key scans. Falls back
+ * to rebuilding from individual NVS keys only when the blob is missing/invalid.
+ *
+ * @return String JSON document safe for web clients
+ */
+String getRadioConfigJsonForWeb() {
+  String stored = nvsGetRadioConfig();
+  if (stored.length() > 0) {
+    JsonDocument doc;
+    if (!deserializeJson(doc, stored) && !doc.overflowed()) {
+      ensureRadioConfigStructure(doc);
+      ensureRadioConfigFeatures(doc);
+      maskWifiPasswordsForWeb(doc);
+
+      String output;
+      serializeJson(doc, output);
+      if (output.length() > 0 && output.length() < RADIO_CONFIG_MAX_LEN) {
+        return output;
+      }
+    }
+  }
+
+  return buildRadioConfigJsonFromNvs(true);
+}
+
+/**
  * @brief Return the default unified radio configuration JSON.
  *
  * @return String JSON document

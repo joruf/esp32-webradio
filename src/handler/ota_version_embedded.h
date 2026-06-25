@@ -8,12 +8,17 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.24",
+  "version": "v2.25",
   "released": "2026-06-25",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.24.bin",
-  "notes": "BLUETFT song title multi-line wrap (22 chars per line). Web UI load fixes: non-blocking WiFi signal and OTA check, deferred startup API requests.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.25.bin",
+  "notes": "Webserver stability release: robust HTTP request parsing, faster getconfig from radio_config blob, favicon no-content response, SSE live updates restored with polling fallback, static asset cache set to 10 minutes, Raw Configuration moved to Maintenance page.",
   "history": [
+    {
+      "version": "v2.25",
+      "released": "2026-06-25",
+      "notes": "Webserver stability release: robust HTTP request parsing to avoid partial-header timeouts, getconfig now prefers stored radio_config blob (NVS key scan fallback only on invalid/missing blob), favicon served as 204 No Content with caching, SSE live updates restored with automatic polling fallback, static pages/assets cached for 10 minutes, and Raw Configuration moved from config page to maintenance page."
+    },
     {
       "version": "v2.24",
       "released": "2026-06-25",

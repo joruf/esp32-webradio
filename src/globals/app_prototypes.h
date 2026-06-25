@@ -15,7 +15,7 @@ char *dbgprint(const char *format, ...);
 const char *analyzeCmd(const char *str);
 const char *analyzeCmd(const char *par, const char *val);
 void chomp(String &str);
-String httpheader(String contentstype);
+String httpheader(String contentstype, uint16_t cacheMaxAgeSec = 0);
 void recoverHttpServerState();
 bool nvsKeyExists(const char *key);
 void mp3loop();

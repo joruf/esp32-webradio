@@ -202,7 +202,7 @@ static bool httpReadTakeBuffered(uint8_t *out) {
   return false;
 }
 
-uint8_t httpReadByte(bool forcestart, uint16_t maxIdleRetries = 3) {
+uint8_t httpReadByte(bool forcestart, uint16_t maxIdleRetries = 40) {
   uint8_t *buf = httpReadBuf;
   uint16_t &i = httpReadPos;
   uint16_t &len = httpReadLen;
@@ -569,7 +569,7 @@ void handlehttpreply() {
             sndstr += String(defprefs_txt + 1);           // read initial values
           } else if (http_getcmd.startsWith("getconfig")) // Get unified JSON config
           {
-            String json = buildRadioConfigJsonFromNvs(true);
+            String json = getRadioConfigJsonForWeb();
             if (json.length() == 0 || !isValidRadioConfigJson(json)) {
               dbgprint("getconfig: rebuilt JSON invalid, using defaults");
               json = getDefaultRadioConfigJson();
@@ -703,7 +703,7 @@ void handlehttp() {
   // dbgprint ( "handlehttp started" ) ;
   while (millis() < deadline) // Loop till command/file seen
   {
-    c = httpReadByte(first); // Get a byte
+    c = httpReadByte(first, 120); // Get a byte (tolerate short network gaps)
     first = false;     // No more first call
     if (!cmdclient.connected()) {
       break;
@@ -828,30 +828,27 @@ void handlehttp() {
 // Set http headers to a string. *
 //**************************************************************************************************
 
-#ifndef WEBUI_CACHE_MAX_AGE
-#define WEBUI_CACHE_MAX_AGE 0
-#endif
-
 /**
  * @brief Generate HTTP response header string.
  *
- * Uses WEBUI_CACHE_MAX_AGE: values >= 1 send max-age caching; 0 disables caching.
+ * Set @p cacheMaxAgeSec to a value >= 1 for cacheable static responses.
  *
  * @param contentstype The Content-Type header value (e.g., "text/html")
+ * @param cacheMaxAgeSec Cache lifetime in seconds, 0 disables caching
  * @return String Complete HTTP header
  */
-String httpheader(String contentstype) {
+String httpheader(String contentstype, uint16_t cacheMaxAgeSec) {
   String header = String("HTTP/1.1 200 OK\nContent-type:") + contentstype +
                   String("\n"
                          "Server: " NAME "\n"
                          "Connection: close\n"
                          "Cache-Control: ");
-#if WEBUI_CACHE_MAX_AGE >= 1
-  header += String("max-age=") + String(WEBUI_CACHE_MAX_AGE) + "\n";
-  header += String("Last-Modified: " FIRMWARE "\n\n");
-#else
-  header += String("no-cache, no-store, must-revalidate\n"
-                   "Pragma: no-cache\n\n");
-#endif
+  if (cacheMaxAgeSec > 0) {
+    header += String("max-age=") + String(cacheMaxAgeSec) + "\n";
+    header += String("Last-Modified: " FIRMWARE "\n\n");
+  } else {
+    header += String("no-cache, no-store, must-revalidate\n"
+                     "Pragma: no-cache\n\n");
+  }
   return header;
 }
