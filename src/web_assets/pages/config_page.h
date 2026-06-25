@@ -84,7 +84,7 @@ const char config_html[] PROGMEM = R"=====(
 							<select class="form-control" id="cfg-preset"></select>
 						</div>
 					</div>
-					<p class="config-help">Equalizer settings are on the <a href="sound.html">Sound Settings</a> page. Volume is on the <a href="index.html">Webradio</a> page.</p>
+					<p class="config-help">Equalizer settings are on the <a href="sound.html">Sound Settings</a> page. Volume is on the <a href="index.html">Webradio</a> page. Raw JSON editing is available on the <a href="maintenance.html">Maintenance</a> page.</p>
 				</div>
 			</div>
 
@@ -106,21 +106,6 @@ const char config_html[] PROGMEM = R"=====(
 				</div>
 			</div>
 
-			<div class="row panel panel-default">
-				<div class="panel-heading config-collapse-heading" id="raw-config-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="raw-config-panel">
-					Raw Configuration
-					<span class="config-collapse-icon" aria-hidden="true">&#9654;</span>
-				</div>
-				<div class="panel-body config-collapse-panel hidden" id="raw-config-panel">
-					<p class="config-help">View, edit, or paste the complete JSON configuration. Use Reload to refresh from the form fields, then Save JSON to apply. Restore Defaults resets the device to factory settings.</p>
-					<textarea id="raw-config-json" class="form-control config-raw-json" rows="12" spellcheck="false"></textarea>
-					<div class="config-raw-actions">
-						<button type="button" id="raw-config-load" class="btn btn-default"><span class="btn-icon" aria-hidden="true">&#8635;</span> Reload</button>
-						<button type="button" id="raw-config-save" class="btn btn-success"><span class="btn-icon" aria-hidden="true">&#128190;</span> Save JSON</button>
-						<button type="button" id="restore-config" class="btn btn-warning"><span class="btn-icon" aria-hidden="true">&#8634;</span> Restore Defaults</button>
-					</div>
-				</div>
-			</div>
 		</div>
 
 		<div id="config-dialog" class="config-dialog hidden" aria-hidden="true">

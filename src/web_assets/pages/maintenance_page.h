@@ -50,6 +50,21 @@ const char maintenance_html[] PROGMEM = R"=====(
 					</div>
 				</div>
 			</div>
+
+			<div class="row panel panel-default">
+				<div class="panel-heading">
+					Raw Configuration
+				</div>
+				<div class="panel-body" id="raw-config-panel">
+					<p class="config-help">View, edit, or paste the complete JSON configuration. Use Reload to refresh current values from NVS, then Save JSON to apply. Restore Defaults resets the device to factory settings.</p>
+					<textarea id="raw-config-json" class="form-control config-raw-json" rows="12" spellcheck="false"></textarea>
+					<div class="config-raw-actions">
+						<button type="button" id="raw-config-load" class="btn btn-default"><span class="btn-icon" aria-hidden="true">&#8635;</span> Reload</button>
+						<button type="button" id="raw-config-save" class="btn btn-success"><span class="btn-icon" aria-hidden="true">&#128190;</span> Save JSON</button>
+						<button type="button" id="restore-config" class="btn btn-warning"><span class="btn-icon" aria-hidden="true">&#8634;</span> Restore Defaults</button>
+					</div>
+				</div>
+			</div>
 		</div>
 
 		<div id="config-dialog" class="config-dialog hidden" aria-hidden="true">

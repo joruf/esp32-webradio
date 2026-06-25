@@ -1275,33 +1275,14 @@ const char app_js[] PROGMEM = R"=====(
     }
 
     function initRawConfigPanel() {
-        var $toggle = $("#raw-config-toggle");
         var $panel = $("#raw-config-panel");
 
-        if (!$toggle.length || !$panel.length || $toggle.data("rawBound")) {
+        if (!$panel.length || $panel.data("rawBound")) {
             return;
         }
 
-        $toggle.data("rawBound", true);
-
-        function setRawPanelOpen(open) {
-            $panel.toggleClass("hidden", !open);
-            $toggle.attr("aria-expanded", open ? "true" : "false");
-            $toggle.find(".config-collapse-icon").html(open ? "&#9660;" : "&#9654;");
-            if (open) {
-                syncRawConfigEditor();
-            }
-        }
-
-        $toggle.on("click keydown", function(e) {
-            if (e.type === "keydown" && e.which !== 13 && e.which !== 32) {
-                return;
-            }
-            if (e.type === "keydown") {
-                e.preventDefault();
-            }
-            setRawPanelOpen($panel.hasClass("hidden"));
-        });
+        $panel.data("rawBound", true);
+        syncRawConfigEditor();
 
         $("#raw-config-load").on("click", function(e) {
             e.preventDefault();
@@ -2056,7 +2037,6 @@ const char app_js[] PROGMEM = R"=====(
         initConfigSelectOptions();
         bindConfigChangeHandlers();
         initPresetDragDrop();
-        initRawConfigPanel();
 
         loadRadioConfig().always(function() {
             startWifiSignalPolling();
@@ -2108,6 +2088,9 @@ const char app_js[] PROGMEM = R"=====(
         if (!$("#maintenance-page").length) {
             return;
         }
+
+        initRawConfigPanel();
+        loadRadioConfig();
 
         $("#erase-eeprom").off("click.webradioErase").on("click.webradioErase", function(e) {
             e.preventDefault();
