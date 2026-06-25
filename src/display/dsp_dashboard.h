@@ -6,10 +6,10 @@
  * @brief Modern 160x128 landscape dashboard for BLUETFT (ST7735).
  *
  * Layout (no overflow):
- *  - Header 15px: date left, time right
- *  - Left gutter 12px: vertical volume bar + % label
- *  - Right gutter 12px: vertical VU meter
- *  - Center 136px: station, song title (wrapped), WiFi SSID + signal %
+ * - Header 15px: date left, time right
+ * - Left gutter 12px: vertical volume bar + % label
+ * - Right gutter 12px: vertical VU meter
+ * - Center 136px: station, song title (wrapped), WiFi SSID + signal %
  */
 
 #include "globals/globals.h"
@@ -77,6 +77,7 @@ static char dspDashboardLastWifi[48] = "";
 static int32_t dspDashboardLastSnoozeSec = -1;
 static char dspDashboardLastStationKey[88] = "";
 static char dspDashboardLastTitle[150] = "";
+static uint8_t dspDashboardLastTitleLines = 0;
 static char dspDashboardLastShortStatus[150] = "";
 
 #  define DSP_DASH_COLOR_LEGACY WHITE
@@ -747,33 +748,103 @@ inline void dspDashboardRefreshStationBitrate(void) {
 }
 
 /**
- * @brief Draw song title on one row below the station name.
+ * @brief Draw song title inside the content column with word-wrapping.
  *
  * @param title Title text
  * @param color Text color
  */
 inline void dspDashboardDrawSongTitle(const char *title, uint16_t color) {
-  char titleClip[DSP_CHARS_PER_LINE + 1];
-  const uint16_t y = DSP_TITLE_Y;
+  const uint16_t start_y = DSP_TITLE_Y;
+  const size_t max_chars_per_line = 22; // Maximum characters allowed per line
+  const uint16_t y_offset = 12;         // Adjustable pixel offset for subsequent lines
 
   if (!tft) {
     return;
   }
 
-  if (strcmp(title ? title : "", dspDashboardLastTitle) == 0) {
+  const char *safe_title = title ? title : "";
+
+  if (strcmp(safe_title, dspDashboardLastTitle) == 0) {
     return;
   }
 
-  strncpy(dspDashboardLastTitle, title ? title : "", sizeof(dspDashboardLastTitle) - 1);
+  // Clear the precise bounding box of the PREVIOUS text before modifying states
+  if (dspDashboardLastTitleLines > 0) {
+    uint16_t clear_h = dspDashboardLastTitleLines * y_offset;
+    dsp_fillRect(DSP_CONTENT_X, start_y, DSP_CONTENT_W, clear_h, BLACK);
+  } else {
+    dsp_fillRect(DSP_CONTENT_X, start_y, DSP_CONTENT_W, DSP_TITLE_ROW_H, BLACK);
+  }
+
+  strncpy(dspDashboardLastTitle, safe_title, sizeof(dspDashboardLastTitle) - 1);
   dspDashboardLastTitle[sizeof(dspDashboardLastTitle) - 1] = '\0';
 
-  dsp_fillRect(DSP_CONTENT_X, y, DSP_CONTENT_W, DSP_TITLE_ROW_H, BLACK);
-  dspDashboardTruncate(titleClip, sizeof(titleClip), title ? title : "", DSP_CHARS_PER_LINE);
+  // If the new title is empty, we are completely done after clearing the screen area
+  if (safe_title[0] == '\0') {
+    dspDashboardLastTitleLines = 0;
+    return;
+  }
 
   dsp_setTextColor(color);
   dsp_setTextSize(1);
-  dsp_setCursor(DSP_TEXT_X, y + 2);
-  dsp_print(titleClip);
+
+  size_t title_len = strlen(safe_title);
+  size_t src_index = 0;
+  uint16_t current_y = start_y + 2;
+  uint8_t current_line_count = 0;
+
+  // Loop until the entire string is processed
+  while (src_index < title_len) {
+    // Skip any leading spaces at the start of a new line
+    while (src_index < title_len && safe_title[src_index] == ' ') {
+      src_index++;
+    }
+
+    if (src_index >= title_len) {
+      break;
+    }
+
+    size_t remaining_len = title_len - src_index;
+    size_t chunk_len = (remaining_len > max_chars_per_line) ? max_chars_per_line : remaining_len;
+
+    // If the remaining text is longer than the line limit, look for a word boundary
+    if (remaining_len > max_chars_per_line) {
+      size_t last_space_index = 0;
+      bool space_found = false;
+
+      // Search backwards within the current chunk for a space
+      for (size_t i = chunk_len; i > 0; i--) {
+        if (safe_title[src_index + i - 1] == ' ') {
+          last_space_index = i - 1;
+          space_found = true;
+          break;
+        }
+      }
+
+      // If a space was found, adjust the chunk length to break at the word boundary
+      if (space_found && last_space_index > 0) {
+        chunk_len = last_space_index;
+      }
+    }
+
+    // Safely copy and terminate the line chunk
+    char titleClip[max_chars_per_line + 1];
+    strncpy(titleClip, safe_title + src_index, chunk_len);
+    titleClip[chunk_len] = '\0';
+
+    // Set cursor position and print the current line
+    dsp_setCursor(DSP_TEXT_X, current_y);
+    dsp_print(titleClip);
+
+    current_line_count++;
+
+    // Prepare variables for the next line
+    src_index += chunk_len;
+    current_y += y_offset; // Move down for the next iteration
+  }
+
+  // Save the amount of rendered lines for the next update cycle
+  dspDashboardLastTitleLines = current_line_count;
 }
 
 /**
@@ -793,10 +864,8 @@ inline void dspDashboardRefreshTitle(void) {
 
   len = icystreamtitle.length();
   if (len == 0) {
-    if (dspDashboardLastTitle[0] != '\0') {
-      dsp_fillRect(DSP_CONTENT_X, DSP_TITLE_Y, DSP_CONTENT_W, DSP_TITLE_ROW_H, BLACK);
-      dspDashboardLastTitle[0] = '\0';
-    }
+    // Always call draw to process the background clearing if a title was previously on screen
+    dspDashboardDrawSongTitle("", DSP_DASH_COLOR_TITLE);
     return;
   }
 
