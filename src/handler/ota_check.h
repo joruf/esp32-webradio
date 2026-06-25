@@ -25,6 +25,7 @@ public:
    */
   void check(bool force) {
     if (!force && millis() - lastCheckMs_ < 3600000UL) {
+      ensureEmbeddedStatus();
       return;
     }
 
@@ -78,14 +79,7 @@ public:
       }
     }
 
-    if (latestVersion_.length() == 0) {
-      return;
-    }
-
-    if (compareFirmwareVersions(latestVersion_, String(FIRMWARE)) > 0) {
-      updateAvailable_ = true;
-      dbgprint("OTA update available: %s", latestVersion_.c_str());
-    }
+    applyUpdateAvailability();
   }
 
   /**
@@ -145,6 +139,31 @@ public:
   }
 
 private:
+  void applyUpdateAvailability(void) {
+    updateAvailable_ = false;
+
+    if (latestVersion_.length() == 0) {
+      return;
+    }
+
+    if (compareFirmwareVersions(latestVersion_, String(FIRMWARE)) > 0) {
+      updateAvailable_ = true;
+      dbgprint("OTA update available: %s", latestVersion_.c_str());
+    }
+  }
+
+  void ensureEmbeddedStatus(void) {
+    if (latestVersion_.length() > 0) {
+      return;
+    }
+
+    manifestFromRemote_ = false;
+    checkError_ = "";
+    if (loadEmbeddedManifest()) {
+      applyUpdateAvailability();
+    }
+  }
+
   bool updateAvailable_ = false;
   bool manifestFromRemote_ = false;
   String latestVersion_;

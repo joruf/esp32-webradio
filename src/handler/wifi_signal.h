@@ -219,7 +219,7 @@ inline void wifiSignalStoreScanResults(int count) {
   wifiSignals.storeScanResults(count);
 }
 
-inline String buildWifiSignalsJson(bool allowFreshScan = true) {
+inline String buildWifiSignalsJson(bool allowFreshScan = false) {
   return wifiSignals.buildJson(allowFreshScan);
 }
 

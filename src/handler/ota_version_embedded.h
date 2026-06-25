@@ -8,12 +8,17 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.23",
-  "released": "2026-06-24",
+  "version": "v2.24",
+  "released": "2026-06-25",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.23.bin",
-  "notes": "BLUETFT song title on TFT (same refresh path as station name). Bitrate display kbps fix. Rotary encoder preset selection fix.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.24.bin",
+  "notes": "BLUETFT song title multi-line wrap (22 chars per line). Web UI load fixes: non-blocking WiFi signal and OTA check, deferred startup API requests.",
   "history": [
+    {
+      "version": "v2.24",
+      "released": "2026-06-25",
+      "notes": "BLUETFT dashboard: song title wraps across multiple lines (22 characters per line, up to 8 lines below station name). Web UI: faster page load — WiFi signal API uses scan cache (optional scan=1), OTA check returns embedded manifest without blocking HTTP, theme and preset list load after static assets, improved yield during large CSS/JS transfers."
+    },
     {
       "version": "v2.23",
       "released": "2026-06-24",
@@ -21,17 +26,17 @@ const char ota_version_embedded_json[] PROGMEM = R"=====(
     },
     {
       "version": "v2.22",
-      "released": "2026-06-15",
+      "released": "2026-06-24",
       "notes": "Modern TFT dashboard for BLUETFT (160x128): vertical volume bar with % on the left, vertical VU meter on the right, header with date and time, WiFi SSID with signal bar and quality % (same curve as Web UI), station name, wrapped song metadata, status line, play indicator, optional battery line in header. No layout overflow."
     },
     {
       "version": "v2.21",
-      "released": "2026-06-25",
+      "released": "2026-06-24",
       "notes": "OTA install fix: dual OTA partition table (ota_app.csv), HTTPS firmware download, restart only after successful update. Dark mode on all Web UI pages including preset select. Navigation from nav_menu.html (build-time embed). VU meter: 2px bar, improved activity display."
     },
     {
       "version": "v2.20",
-      "released": "2026-06-15",
+      "released": "2026-06-24",
       "notes": "VU meter fix: visible yellow activity bar below the top line on BLUETFT/ILI9341 (displaytype set at boot). HTTP/SSE no longer block normal requests. Web UI GET queue, SSE polling fallback, config save race fixes. SPI claim timeout prevents display/audio deadlock."
     },
     {

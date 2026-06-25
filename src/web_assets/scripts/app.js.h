@@ -1851,8 +1851,9 @@ const char app_js[] PROGMEM = R"=====(
         });
     }
 
-    function refreshOtaStatus() {
-        return fetch("/?checkupdate=1&_t=" + Date.now())
+    function refreshOtaStatus(forceRemote) {
+        var url = forceRemote ? "/?checkupdate=1&_t=" : "/?checkupdate&_t=";
+        return fetch(url + Date.now())
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 applyOtaCheckData(data);
@@ -1866,14 +1867,14 @@ const char app_js[] PROGMEM = R"=====(
         }
 
         loadRadioConfig().always(function() {
-            refreshOtaStatus().catch(function() {
+            refreshOtaStatus(false).catch(function() {
                 $("#ota-status-text").removeClass("text-success text-warning").addClass("text-danger").text("Check failed");
             });
         });
 
         $("#ota-check-btn").off("click.ota").on("click.ota", function() {
             $("#ota-status-text").removeClass("text-success text-warning text-danger").text("Checking...");
-            refreshOtaStatus()
+            refreshOtaStatus(true)
                 .then(function(data) {
                     showCommandLog(data.update_available ?
                         ("Update available: " + data.latest_version) : "Firmware is up to date");
@@ -2200,7 +2201,6 @@ const char app_js[] PROGMEM = R"=====(
     }
 
     $(function() {
-        syncThemeFromServer();
         setInterval(syncThemeFromServer, 60000);
         initConfigPage();
         initSoundPage();
@@ -2376,7 +2376,6 @@ const char app_js[] PROGMEM = R"=====(
         xhr.open("GET", theUrl, true);
         xhr.send();
     }
-    fillPresetList();
 
 
     /**
@@ -2597,6 +2596,8 @@ const char app_js[] PROGMEM = R"=====(
     }
 
     window.onload = function() {
+            syncThemeFromServer();
+            fillPresetList();
             if (!shouldRunLiveUpdates()) {
                 return;
             }

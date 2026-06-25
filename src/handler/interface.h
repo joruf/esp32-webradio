@@ -133,7 +133,6 @@ void handleWebpage(const String &pagename) {
     if (l < 10) { // The content of the HTTP response follows the header
       cmdclient.println("Testline<br>");
     } else {
-      uint16_t chunkCount = 0;
       while (l) // Loop through the output page
       {
         if (!cmdclient.connected()) {
@@ -149,10 +148,8 @@ void handleWebpage(const String &pagename) {
           p += TCPCHUNKSIZE;                // Update startpoint and rest of bytes
           l -= TCPCHUNKSIZE;
         }
-        if ((++chunkCount & 0x03) == 0) {
-          cmdclient.flush();
-          yield();
-        }
+        cmdclient.flush();
+        yield();
       }
     }
     cmdclient.flush();

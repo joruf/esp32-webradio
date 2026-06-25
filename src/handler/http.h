@@ -539,7 +539,7 @@ void handlehttpreply() {
             sendHttpJsonResponse(json);
             return;
           } else if (http_getcmd.startsWith("getwifisignals")) {
-            sendHttpJsonResponse(buildWifiSignalsJson(true));
+            sendHttpJsonResponse(buildWifiSignalsJson(http_getcmd.indexOf("scan=1") >= 0));
             return;
           } else if (http_getcmd.startsWith("saveconfig")) // Save unified JSON config
           {
@@ -746,7 +746,8 @@ void handlehttp() {
   }
 
   if (http_getcmd.startsWith("checkupdate")) {
-    otaChecker.check(true);
+    const bool forceRemote = http_getcmd.startsWith("checkupdate=1");
+    otaChecker.check(forceRemote);
     sendHttpJsonResponse(otaChecker.buildCheckJson());
     return;
   }
