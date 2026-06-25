@@ -258,7 +258,7 @@ The project includes ready‑to‑use drivers for several display types. Switch 
 > **Unified API:** All displays share the same programming interface:
 > - `showTextOnTFT(segment, string)` – Display text on a specific screen segment
 > - `displayVolumeOnTFT()` – Show volume level as a visual bar
-> - `showTimeOnTFT()` – Display current time (right‑aligned)
+> - `renderTimeOnTFT()` – Display current time (right‑aligned)
 > - `displayBatteryChargeOnTFT()` – Show battery level (if configured)
 
 > **Layout:** See `display.h` for the segment layout configuration (top line, middle text, bottom area, and rotary encoder status line).

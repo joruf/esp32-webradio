@@ -126,7 +126,7 @@ void renderVolumeOnTFT() {
   uint16_t pos;              // Positon of volume indicator
 
   newvol = getOutputVolume(); // Get current volume setting
-  if (newvol != oldvol)               // Volume changed?
+  if (newvol != oldvol)       // Volume changed?
   {
     oldvol = newvol; // Remember for next compare
     nxtserial->printf("h0.val=%d\xFF\xFF\xFF",
@@ -141,7 +141,7 @@ void renderVuMeterOnTFT(uint8_t treble, uint8_t bass, bool visible) {}
 //**************************************************************************************************
 // Show the time on the screen. *
 //**************************************************************************************************
-void showTimeOnTFT(const char *str, uint16_t color) {
+void renderTimeOnTFT(const char *str, uint16_t color) {
   static char oldtim = '.'; // For compare
 
   if (str[0] == '\0') // Empty string?

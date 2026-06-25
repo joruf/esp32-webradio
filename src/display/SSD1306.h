@@ -417,7 +417,7 @@ void renderVolumeOnTFT() {
     uint16_t pos;              // Positon of volume indicator
 
     newvol = getOutputVolume(); // Get current volume setting
-    if (newvol != oldvol)               // Volume changed?
+    if (newvol != oldvol)       // Volume changed?
     {
       oldvol = newvol;                                   // Remember for next compare
       pos = map(newvol, 0, 100, 0, dsp_getwidth());      // Compute position on TFT
@@ -438,7 +438,7 @@ void renderVuMeterOnTFT(uint8_t treble, uint8_t bass, bool visible) {}
 // An empty string will force a refresh on next call. * A character on the
 // screen is 8 pixels high and 6 pixels wide. *
 //**************************************************************************************************
-void showTimeOnTFT(const char *str, uint16_t color) {
+void renderTimeOnTFT(const char *str, uint16_t color) {
   static char oldstr[9] = "........";      // For compare
   uint8_t i;                               // Index in strings
   uint16_t pos = dsp_getwidth() + TIMEPOS; // X-position of character, TIMEPOS is negative

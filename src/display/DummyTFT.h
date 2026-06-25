@@ -58,4 +58,4 @@ void renderVuMeterOnTFT(uint8_t treble, uint8_t bass, bool visible) {}
 //**************************************************************************************************
 // Dummy routine for this type of display.                                                         *
 //**************************************************************************************************
-void showTimeOnTFT(const char *str, uint16_t color) {}
+void renderTimeOnTFT(const char *str, uint16_t color) {}

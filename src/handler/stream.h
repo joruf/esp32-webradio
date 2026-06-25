@@ -125,8 +125,8 @@ static void formatStreamTitle(char *streamtitle) {
 }
 
 #if defined(BLUETFT)
-#include "display/dsp_dashboard.h"
-#include "handler/wifi_display.h"
+#  include "display/dsp_dashboard.h"
+#  include "handler/wifi_display.h"
 #endif
 
 /**
@@ -318,7 +318,7 @@ bool connectToWebradioServer() {
   dbgprint("Connect to new host %s", host.c_str());
 
   showTextOnTFT(0, "Webradio");
-  showTimeOnTFT("");
+  renderTimeOnTFT("");
 
   datamode = INIT;
   chunked = false;
@@ -429,7 +429,7 @@ static void handleTftInfoDisplay() {
   if (time_req) {
     time_req = false;
     if (NetworkFound) {
-      showTimeOnTFT(timetxt);
+      renderTimeOnTFT(timetxt);
       renderVolumeOnTFT();
       renderBatteryChargeOnTFT();
     }

@@ -128,8 +128,8 @@ String getSDfilename(String nodeID) {
     if (!claimSPI("sdopen")) {
       return String("");
     }
-    root = SD.open(p);  // Open the directory (this level)
-    releaseSPI();       // Release SPI bus
+    root = SD.open(p); // Open the directory (this level)
+    releaseSPI();      // Release SPI bus
     for (i = 1; i <= n; i++) {
       if (!claimSPI("sdopenxt")) {
         return String("");
@@ -183,7 +183,7 @@ int listsdtracks(const char *dirname, int level = 0, bool send = true) {
   oldfcount = fcount; // To see if files found in this directory
   // dbgprint ( "SD directory is %s", dirname ) ;        // Show current
   // directory
-  ldirname = strlen(dirname);       // Length of dirname to remove from filename
+  ldirname = strlen(dirname); // Length of dirname to remove from filename
   if (!claimSPI("sdopen2")) {
     return fcount;
   }
@@ -372,14 +372,14 @@ bool connecttofile() {
   String path; // Full file spec
 
   showTextOnTFT(0, "ESP32 MP3 Player"); // Set screen segment top line
-  showTimeOnTFT("");                    // Clear time on TFT screen
+  renderTimeOnTFT("");                  // Clear time on TFT screen
   path = host.substring(9);             // Path, skip the "localhost" part
   if (!claimSPI("sdopen3")) {
     return false;
   }
-  handle_ID3(path);                     // See if there are ID3 tags in this file
-  mp3filelength = mp3file.available();  // Get length
-  releaseSPI();                         // Release SPI bus
+  handle_ID3(path);                    // See if there are ID3 tags in this file
+  mp3filelength = mp3file.available(); // Get length
+  releaseSPI();                        // Release SPI bus
   if (!mp3file) {
     dbgprint("Error opening file %s", path.c_str()); // No luck
     return false;

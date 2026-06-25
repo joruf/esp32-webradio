@@ -6,7 +6,7 @@
 //**************************************************************************************************
 // Forward declaration and prototypes of various functions.                                        *
 //**************************************************************************************************
-void showTimeOnTFT(const char *str, uint16_t color = 0xFFFF);
+void renderTimeOnTFT(const char *str, uint16_t color = 0xFFFF);
 void showStreamDataOnTFT(const char *ml, bool full = false);
 void handleNextDataByteFromServer(uint8_t b);
 void handleWebpage(const String &pagename);

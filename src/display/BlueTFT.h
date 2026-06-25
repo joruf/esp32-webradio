@@ -85,7 +85,7 @@ void renderVuMeterOnTFT(uint8_t treble, uint8_t bass, bool visible) {
   }
 }
 
-void showTimeOnTFT(const char *str, uint16_t color) {
+void renderTimeOnTFT(const char *str, uint16_t color) {
   (void)color;
   if (!tft) {
     return;

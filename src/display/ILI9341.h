@@ -69,9 +69,7 @@ bool dsp_begin() {
 // top divider.                                                              *
 // No action if bat0/bat100 not defined in the preferences. *
 //**************************************************************************************************
-void renderBatteryChargeOnTFT() {
-  dspCommonBatteryBar(tftdata, dsp_getwidth(), tft != nullptr);
-}
+void renderBatteryChargeOnTFT() { dspCommonBatteryBar(tftdata, dsp_getwidth(), tft != nullptr); }
 
 //**************************************************************************************************
 //                                      D I S P L A Y V O L U M E *
@@ -107,7 +105,7 @@ void renderVuMeterOnTFT(uint8_t treble, uint8_t bass, bool visible) {
 // An empty string will force a refresh on next call. * A character on the
 // screen is 8 pixels high and 6 pixels wide. *
 //**************************************************************************************************
-void showTimeOnTFT(const char *str, uint16_t color) {
+void renderTimeOnTFT(const char *str, uint16_t color) {
   static char oldstr[9] = "........";      // For compare
   uint8_t i;                               // Index in strings
   uint16_t pos = dsp_getwidth() + TIMEPOS; // X-position of character, TIMEPOS is negative
