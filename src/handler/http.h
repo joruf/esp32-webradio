@@ -13,6 +13,7 @@ void saveDefaultConfig();
 #include "captive_portal.h"
 
 static String http_host_header = "";
+static String http_post_body_cache = "";
 static uint8_t httpReadBuf[1024]; // HTTP input buffer shared with body reader
 static uint16_t httpReadPos = 0;    // Read position in httpReadBuf
 static uint16_t httpReadLen = 0;  // Number of valid bytes in httpReadBuf
@@ -26,6 +27,7 @@ static void resetHttpRequestState() {
   http_getcmd = "";
   http_rqfile = "";
   http_post_content_length = 0;
+  http_post_body_cache = "";
   http_response_flag = false;
   http_host_header = "";
   httpReadResetBuffer();
@@ -283,6 +285,12 @@ static int httpReadPostByte(uint32_t deadline) {
 }
 
 static String readHttpPostBody(size_t maxLen) {
+  if (http_post_body_cache.length() > 0) {
+    String body = http_post_body_cache;
+    http_post_body_cache = "";
+    return body;
+  }
+
   String body = "";
   uint32_t targetLen = http_post_content_length;
   uint32_t deadline = millis() + 5000;
@@ -300,6 +308,16 @@ static String readHttpPostBody(size_t maxLen) {
       body += (char)b;
     }
   } else if (targetLen == 0) {
+    while (body.length() < maxLen - 1) {
+      int b = httpReadPostByte(deadline);
+      if (b < 0) {
+        break;
+      }
+      if (b != '\r') {
+        body += (char)b;
+      }
+    }
+    body.trim();
   } else {
     while (body.length() < maxLen - 1) {
       int b = httpReadPostByte(deadline);
@@ -409,6 +427,7 @@ bool writeAlarmConfig() {
 
   if (body.length() > 0) {
     if (applyAlarmConfig(body)) {
+      syncAlarmsToRadioConfig();
       dbgprint("Alarm configuration saved (%d bytes)", body.length());
       fillkeylist();
       return true;
@@ -428,17 +447,37 @@ bool writeRadioConfig() {
   String body = readHttpPostBody(RADIO_CONFIG_MAX_LEN);
 
   if (body.length() > 0) {
-    if (applyRadioConfig(body, true)) {
+    if (applyRadioConfigMerge(body, true)) {
       readprogbuttons();
       dbgprint("Radio configuration saved (%d bytes)", body.length());
       fillkeylist();
       return true;
     }
-    dbgprint("Radio configuration save rejected (invalid JSON)");
+    dbgprint("Radio configuration save rejected (%d bytes)", body.length());
     return false;
   }
 
   dbgprint("Radio configuration save ignored (empty body)");
+  return false;
+}
+
+/**
+ * @brief Read feature settings JSON from the HTTP POST body and save them.
+ */
+bool writeFeaturesConfig() {
+  String body = readHttpPostBody(RADIO_CONFIG_MAX_LEN);
+
+  if (body.length() > 0) {
+    if (applyFeaturesConfig(body)) {
+      dbgprint("Feature configuration saved (%d bytes)", body.length());
+      fillkeylist();
+      return true;
+    }
+    dbgprint("Feature configuration save rejected (%d bytes)", body.length());
+    return false;
+  }
+
+  dbgprint("Feature configuration save ignored (empty body)");
   return false;
 }
 
@@ -547,6 +586,13 @@ void handlehttpreply() {
               sndstr += String("Configuration saved");
             } else {
               sndstr += String("Configuration save failed");
+            }
+          } else if (http_getcmd.startsWith("savefeatures")) // Save display/feature settings only
+          {
+            if (writeFeaturesConfig()) {
+              sndstr += String("Display settings saved");
+            } else {
+              sndstr += String("Display settings save failed");
             }
           } else if (http_getcmd.startsWith("restoreconfig")) // Restore factory defaults
           {
@@ -667,6 +713,21 @@ void handlehttp() {
       // that's the end of the client HTTP request, so send a response:
       if (currentLine.length() == 0) {
         http_response_flag = reqseen; // Response required or not
+        if (reqseen && http_post_content_length > 0 && http_post_content_length <= RADIO_CONFIG_MAX_LEN) {
+          timerStop(timer);
+          http_post_body_cache.reserve(http_post_content_length + 1);
+          uint32_t targetLen = http_post_content_length;
+          uint32_t bodyDeadline = millis() + 5000;
+          while (http_post_body_cache.length() < targetLen) {
+            int b = httpReadPostByte(bodyDeadline);
+            if (b < 0) {
+              break;
+            }
+            http_post_body_cache += (char)b;
+          }
+          timerStart(timer);
+          http_post_content_length = 0;
+        }
         break;
       } else {
         // Newline seen, remember if it is like "GET /xxx?y=2&b=9 HTTP/1.1"

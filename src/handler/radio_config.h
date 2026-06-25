@@ -178,6 +178,191 @@ static String extractAlarmsJson(const String &json) {
 }
 
 /**
+ * @brief Extract alarm JSON from an already parsed radio configuration document.
+ *
+ * @param doc Parsed radio configuration document
+ * @return String Alarm-only JSON document
+ */
+static String extractAlarmsJsonFromDoc(JsonDocument &doc) {
+  JsonDocument alarmsDoc;
+  alarmsDoc["version"] = doc["version"] | 1;
+  alarmsDoc["alarms"].set(doc["alarms"]);
+
+  String output;
+  serializeJson(alarmsDoc, output);
+  return output;
+}
+
+/**
+ * @brief Read the configuration version from a JSON value.
+ *
+ * @param version Version field from a radio configuration document
+ * @return int Version number, or 0 if missing/invalid
+ */
+static int readConfigVersion(JsonVariantConst version) {
+  if (version.isNull()) {
+    return 0;
+  }
+  if (version.is<int>()) {
+    return version.as<int>();
+  }
+  if (version.is<long>()) {
+    return (int)version.as<long>();
+  }
+  if (version.is<double>()) {
+    return (int)version.as<double>();
+  }
+  return 0;
+}
+
+/**
+ * @brief Append one factory-default weekday alarm to a JSON array.
+ *
+ * @param alarms Target alarm array
+ */
+static void appendDefaultAlarm(JsonArray &alarms) {
+  JsonObject alarm = alarms.add<JsonObject>();
+  alarm["id"] = 1;
+  alarm["enabled"] = true;
+  alarm["start"] = "6:30";
+  alarm["stop"] = "7:30";
+  JsonArray days = alarm["days"].to<JsonArray>();
+  days.add("mon");
+  days.add("tue");
+  days.add("wed");
+  days.add("thu");
+  days.add("fri");
+}
+
+/**
+ * @brief Fill missing top-level radio configuration fields with firmware defaults.
+ *
+ * Existing values are preserved. New fields introduced by firmware updates are added
+ * so older NVS documents remain writable after a firmware upgrade.
+ *
+ * @param doc Parsed radio configuration document
+ */
+static void ensureRadioConfigStructure(JsonDocument &doc) {
+  int version = readConfigVersion(doc["version"]);
+  if (version < RADIO_CONFIG_VERSION) {
+    doc["version"] = RADIO_CONFIG_VERSION;
+  }
+
+  if (!doc["alarms"].is<JsonArray>()) {
+    doc["alarms"].to<JsonArray>();
+  }
+  JsonArray alarms = doc["alarms"].to<JsonArray>();
+  if (alarms.size() == 0) {
+    appendDefaultAlarm(alarms);
+  }
+
+  if (!doc["clock"].is<JsonObject>()) {
+    JsonObject clock = doc["clock"].to<JsonObject>();
+    clock["server"] = "pool.ntp.org";
+    clock["offset"] = 1;
+    clock["dst"] = 1;
+  } else {
+    JsonObject clock = doc["clock"].as<JsonObject>();
+    const char *server = clock["server"] | "pool.ntp.org";
+    if (!server || strlen(server) == 0) {
+      clock["server"] = "pool.ntp.org";
+    }
+    if (clock["offset"].isNull()) {
+      clock["offset"] = 1;
+    }
+    if (clock["dst"].isNull()) {
+      clock["dst"] = 1;
+    }
+  }
+
+  if (!doc["wifi"].is<JsonArray>()) {
+    doc["wifi"].to<JsonArray>();
+  }
+
+  if (!doc["presets"].is<JsonArray>() || doc["presets"].as<JsonArray>().size() == 0) {
+    JsonArray presets = doc["presets"].to<JsonArray>();
+    presets.clear();
+    appendDefaultPresets(presets);
+  }
+
+  if (!doc["gpio"].is<JsonArray>() || doc["gpio"].as<JsonArray>().size() == 0) {
+    JsonArray gpio = doc["gpio"].to<JsonArray>();
+    gpio.clear();
+    appendDefaultGpio(gpio);
+  }
+
+  if (!doc["tone"].is<JsonObject>()) {
+    JsonObject tone = doc["tone"].to<JsonObject>();
+    tone["ha"] = 0;
+    tone["hf"] = 0;
+    tone["la"] = 0;
+    tone["lf"] = 0;
+  }
+
+  if (doc["volume"].isNull()) {
+    doc["volume"] = 72;
+  }
+  if (doc["preset"].isNull()) {
+    doc["preset"] = 6;
+  }
+}
+
+/**
+ * @brief Ensure the optional features object exists and contains all current fields.
+ *
+ * @param doc Parsed radio configuration document
+ */
+static void ensureRadioConfigFeatures(JsonDocument &doc) {
+  setFeatureDefaults();
+  applyFeaturesFromDoc(doc);
+  appendFeaturesToDoc(doc);
+}
+
+/**
+ * @brief Return true if a stored radio_config blob should be rebuilt from NVS keys.
+ *
+ * @param stored Serialized radio_config JSON from NVS
+ * @return bool
+ */
+static bool radioConfigNeedsUpgrade(const String &stored) {
+  if (stored.length() == 0) {
+    return true;
+  }
+
+  JsonDocument doc;
+  if (deserializeJson(doc, stored) || doc.overflowed()) {
+    return true;
+  }
+
+  if (readConfigVersion(doc["version"]) < RADIO_CONFIG_VERSION) {
+    return true;
+  }
+  if (!doc["features"].is<JsonObject>()) {
+    return true;
+  }
+  if (!doc["tone"].is<JsonObject>()) {
+    return true;
+  }
+  if (!doc["alarms"].is<JsonArray>()) {
+    return true;
+  }
+  if (!doc["clock"].is<JsonObject>()) {
+    return true;
+  }
+  if (!doc["wifi"].is<JsonArray>()) {
+    return true;
+  }
+  if (!doc["presets"].is<JsonArray>()) {
+    return true;
+  }
+  if (!doc["gpio"].is<JsonArray>()) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * @brief Validate unified radio configuration JSON.
  *
  * @param json JSON document
@@ -189,30 +374,15 @@ bool isValidRadioConfigJson(const String &json) {
   }
 
   JsonDocument doc;
-  if (deserializeJson(doc, json)) {
+  if (deserializeJson(doc, json) || doc.overflowed()) {
     return false;
   }
 
-  if (!doc["version"].is<int>()) {
-    return false;
-  }
-  if (!doc["alarms"].is<JsonArray>()) {
-    return false;
-  }
-  if (!doc["clock"].is<JsonObject>()) {
-    return false;
-  }
-  if (!doc["wifi"].is<JsonArray>()) {
-    return false;
-  }
-  if (!doc["presets"].is<JsonArray>()) {
-    return false;
-  }
-  if (!doc["gpio"].is<JsonArray>()) {
-    return false;
-  }
+  ensureRadioConfigStructure(doc);
+  ensureRadioConfigFeatures(doc);
 
-  return true;
+  return doc["alarms"].is<JsonArray>() && doc["clock"].is<JsonObject>() && doc["wifi"].is<JsonArray>() &&
+         doc["presets"].is<JsonArray>() && doc["gpio"].is<JsonArray>() && doc["features"].is<JsonObject>();
 }
 
 /**
@@ -384,6 +554,27 @@ String buildRadioConfigJsonFromNvs(bool maskWifiPasswords) {
       applyFeaturesFromDoc(featDoc);
     }
   }
+  if (nvsKeyExists("feat_dark_start")) {
+    features.dark_start = constrain(nvsGetValue("feat_dark_start").toInt(), 0, 23);
+  }
+  if (nvsKeyExists("feat_dark_end")) {
+    features.dark_end = constrain(nvsGetValue("feat_dark_end").toInt(), 0, 23);
+  }
+  if (nvsKeyExists("feat_vu_meter")) {
+    features.vu_meter = nvsGetValue("feat_vu_meter").toInt() != 0;
+  }
+  if (nvsKeyExists("feat_watchdog")) {
+    features.stream_watchdog = nvsGetValue("feat_watchdog").toInt() != 0;
+  }
+  if (nvsKeyExists("feat_alarm_fade")) {
+    features.alarm_fade_sec = constrain(nvsGetValue("feat_alarm_fade").toInt(), 5, 600);
+  }
+  if (nvsKeyExists("feat_ota_url")) {
+    String otaUrl = nvsGetValue("feat_ota_url");
+    if (otaUrl.length() > 0) {
+      features.ota_check_url = otaUrl;
+    }
+  }
   appendFeaturesToDoc(doc);
 
   if (doc.overflowed()) {
@@ -402,29 +593,88 @@ String buildRadioConfigJsonFromNvs(bool maskWifiPasswords) {
 }
 
 /**
- * @brief Apply unified radio configuration JSON to NVS and runtime state.
+ * @brief Load the current radio configuration document for merging.
  *
- * @param json JSON document
+ * @param doc Target document
+ * @return true if a usable document was loaded
+ */
+static bool loadRadioConfigDocument(JsonDocument &doc) {
+  String stored = nvsGetRadioConfig();
+  if (stored.length() > 0 && !deserializeJson(doc, stored) && !doc.overflowed()) {
+    ensureRadioConfigStructure(doc);
+    return true;
+  }
+
+  String rebuilt = buildRadioConfigJsonFromNvs(false);
+  if (rebuilt.length() == 0 || deserializeJson(doc, rebuilt) || doc.overflowed()) {
+    return false;
+  }
+
+  ensureRadioConfigStructure(doc);
+  return true;
+}
+
+/**
+ * @brief Merge keys present in @p patch into an existing radio configuration document.
+ *
+ * @param doc Target document (modified in place)
+ * @param patch Patch document with one or more top-level keys
+ */
+static void mergeRadioConfigPatch(JsonDocument &doc, JsonDocument &patch) {
+  if (patch["version"].is<int>() || patch["version"].is<long>() || patch["version"].is<double>()) {
+    doc["version"] = patch["version"];
+  }
+  if (patch["volume"].is<int>() || patch["volume"].is<long>() || patch["volume"].is<double>()) {
+    doc["volume"] = patch["volume"];
+  }
+  if (patch["preset"].is<int>() || patch["preset"].is<long>() || patch["preset"].is<double>()) {
+    doc["preset"] = patch["preset"];
+  }
+
+  if (patch["clock"].is<JsonObject>()) {
+    JsonObject target = doc["clock"].to<JsonObject>();
+    for (JsonPair kv : patch["clock"].as<JsonObject>()) {
+      target[kv.key().c_str()] = kv.value();
+    }
+  }
+
+  if (patch["tone"].is<JsonObject>()) {
+    JsonObject target = doc["tone"].to<JsonObject>();
+    for (JsonPair kv : patch["tone"].as<JsonObject>()) {
+      target[kv.key().c_str()] = kv.value();
+    }
+  }
+
+  if (patch["features"].is<JsonObject>()) {
+    JsonObject target = doc["features"].to<JsonObject>();
+    for (JsonPair kv : patch["features"].as<JsonObject>()) {
+      target[kv.key().c_str()] = kv.value();
+    }
+  }
+
+  if (patch["alarms"].is<JsonArray>()) {
+    doc["alarms"].set(patch["alarms"]);
+  }
+  if (patch["wifi"].is<JsonArray>()) {
+    doc["wifi"].set(patch["wifi"]);
+  }
+  if (patch["presets"].is<JsonArray>()) {
+    doc["presets"].set(patch["presets"]);
+  }
+  if (patch["gpio"].is<JsonArray>()) {
+    doc["gpio"].set(patch["gpio"]);
+  }
+}
+
+/**
+ * @brief Persist a prepared radio configuration document to NVS and runtime state.
+ *
+ * @param doc Parsed and normalized radio configuration document
  * @param maskWifiPasswords If true, masked WiFi passwords are restored from NVS
  * @return true if configuration was accepted
  */
-bool applyRadioConfig(const String &json, bool maskWifiPasswords) {
-  if (!isValidRadioConfigJson(json)) {
-    dbgprint("applyRadioConfig: invalid JSON");
-    return false;
-  }
-
-  JsonDocument doc;
-  DeserializationError parseError = deserializeJson(doc, json);
-  if (parseError) {
-    dbgprint("applyRadioConfig: parse failed: %s", parseError.c_str());
-    return false;
-  }
-  if (doc.overflowed()) {
-    dbgprint("applyRadioConfig: JSON document overflow");
-    return false;
-  }
-
+static bool applyRadioConfigDoc(JsonDocument &doc, bool maskWifiPasswords) {
+  ensureRadioConfigStructure(doc);
   doc.remove("wifi_signals");
 
   uint16_t i;
@@ -432,11 +682,7 @@ bool applyRadioConfig(const String &json, bool maskWifiPasswords) {
 
   nvsOpen();
 
-  String *savedWifi = new String[100];
-  if (savedWifi == nullptr) {
-    dbgprint("applyRadioConfig: out of memory");
-    return false;
-  }
+  static String savedWifi[100];
 
   for (i = 0; i < 100; i++) {
     sprintf(key, "wifi_%02d", i);
@@ -479,8 +725,6 @@ bool applyRadioConfig(const String &json, bool maskWifiPasswords) {
     nvsAddValue(key, String(ssid) + String("/") + pass);
     i++;
   }
-
-  delete[] savedWifi;
 
   JsonObject clock = doc["clock"];
   String previousClkServer = ini_block.clk_server;
@@ -552,27 +796,42 @@ bool applyRadioConfig(const String &json, bool maskWifiPasswords) {
     nvsAddValue(key, String(command));
   }
 
-  String alarmsJson = extractAlarmsJson(json);
+  String alarmsJson = extractAlarmsJsonFromDoc(doc);
   if (alarmsJson.length() > 0) {
     if (!applyAlarmConfig(alarmsJson)) {
-      dbgprint("applyRadioConfig: alarm save failed");
-      return false;
-    }
-    JsonDocument alarmsDoc;
-    if (!deserializeJson(alarmsDoc, ini_block.alrm_config)) {
-      doc["alarms"].set(alarmsDoc["alarms"]);
+      dbgprint("applyRadioConfig: alarm save rejected, keeping existing schedule");
+      JsonDocument alarmsDoc;
+      if (ini_block.alrm_config.length() > 0 &&
+          !deserializeJson(alarmsDoc, ini_block.alrm_config)) {
+        doc["alarms"].set(alarmsDoc["alarms"]);
+      }
+    } else {
+      JsonDocument alarmsDoc;
+      if (!deserializeJson(alarmsDoc, ini_block.alrm_config)) {
+        doc["alarms"].set(alarmsDoc["alarms"]);
+      }
     }
   }
 
-  applyFeaturesFromDoc(doc);
+  ensureRadioConfigFeatures(doc);
+  JsonObject feat = doc["features"];
+  nvsAddValue("feat_dark_start", String((int)(feat["dark_start"] | 20)));
+  nvsAddValue("feat_dark_end", String((int)(feat["dark_end"] | 7)));
+  nvsAddValue("feat_vu_meter", String((int)(feat["vu_meter"] | true)));
+  nvsAddValue("feat_watchdog", String((int)(feat["stream_watchdog"] | true)));
+  nvsAddValue("feat_alarm_fade", String((int)(feat["alarm_fade_sec"] | 15)));
+  nvsAddValue("feat_ota_url", String((const char *)(feat["ota_check_url"] | "")));
 
   String outputJson;
   serializeJson(doc, outputJson);
-  if (outputJson.length() == 0) {
-    return false;
+  if (outputJson.length() == 0 || outputJson.length() >= RADIO_CONFIG_MAX_LEN) {
+    dbgprint("applyRadioConfig: radio_config blob skipped (length=%d)", outputJson.length());
+  } else if (nvsSetRadioConfig(outputJson) != ESP_OK) {
+    dbgprint("applyRadioConfig: radio_config blob save failed, keeping key-based config");
   }
 
-  if (nvsSetRadioConfig(outputJson) != ESP_OK) {
+  if (nvsCommit() != ESP_OK) {
+    dbgprint("applyRadioConfig: NVS commit failed");
     return false;
   }
 
@@ -581,16 +840,111 @@ bool applyRadioConfig(const String &json, bool maskWifiPasswords) {
 }
 
 /**
+ * @brief Merge a partial JSON patch into the stored config and persist it.
+ *
+ * @param patchJson JSON document with one or more top-level keys to update
+ * @param maskWifiPasswords If true, masked WiFi passwords are restored from NVS
+ * @return true if configuration was accepted
+ */
+bool applyRadioConfigMerge(const String &patchJson, bool maskWifiPasswords) {
+  if (patchJson.length() == 0 || patchJson.length() >= RADIO_CONFIG_MAX_LEN) {
+    dbgprint("applyRadioConfigMerge: invalid length");
+    return false;
+  }
+
+  JsonDocument patch;
+  if (deserializeJson(patch, patchJson) || patch.overflowed()) {
+    dbgprint("applyRadioConfigMerge: parse failed");
+    return false;
+  }
+
+  JsonDocument doc;
+  if (!loadRadioConfigDocument(doc)) {
+    dbgprint("applyRadioConfigMerge: unable to load base config");
+    return false;
+  }
+
+  mergeRadioConfigPatch(doc, patch);
+  return applyRadioConfigDoc(doc, maskWifiPasswords);
+}
+
+/**
+ * @brief Merge and persist only the features section of the radio configuration.
+ *
+ * @param json JSON document containing a "features" object
+ * @return true if feature settings were saved
+ */
+bool applyFeaturesConfig(const String &json) {
+  return applyRadioConfigMerge(json, false);
+}
+
+/**
+ * @brief Apply unified radio configuration JSON to NVS and runtime state.
+ *
+ * @param json JSON document (full or partial)
+ * @param maskWifiPasswords If true, masked WiFi passwords are restored from NVS
+ * @return true if configuration was accepted
+ */
+bool applyRadioConfig(const String &json, bool maskWifiPasswords) {
+  return applyRadioConfigMerge(json, maskWifiPasswords);
+}
+
+/**
  * @brief Ensure unified radio configuration exists in NVS.
  */
 void migrateToRadioConfig() {
-  if (nvsKeyExists(RADIO_CONFIG_NVS_KEY)) {
+  if (!nvsKeyExists(RADIO_CONFIG_NVS_KEY)) {
+    dbgprint("BOOT: Creating radio_config JSON from NVS keys");
+    nvsSetRadioConfig(buildRadioConfigJsonFromNvs(false));
+    nvsCommit();
     return;
   }
 
-  dbgprint("BOOT: Migrating NVS keys to radio_config JSON");
-  String json = buildRadioConfigJsonFromNvs(false);
-  nvsSetRadioConfig(json);
+  String stored = nvsGetRadioConfig();
+  if (radioConfigNeedsUpgrade(stored)) {
+    dbgprint("BOOT: Upgrading radio_config JSON to v%d", RADIO_CONFIG_VERSION);
+    String json = buildRadioConfigJsonFromNvs(false);
+    if (json.length() > 0) {
+      nvsSetRadioConfig(json);
+      nvsCommit();
+    }
+  }
+}
+
+/**
+ * @brief Update the alarms array inside the unified radio_config NVS document.
+ *
+ * @return true if the radio_config blob was updated
+ */
+bool syncAlarmsToRadioConfig() {
+  if (ini_block.alrm_config.length() == 0) {
+    return false;
+  }
+
+  JsonDocument doc;
+  if (!loadRadioConfigDocument(doc)) {
+    return false;
+  }
+
+  JsonDocument alarmsDoc;
+  if (deserializeJson(alarmsDoc, ini_block.alrm_config) || alarmsDoc.overflowed()) {
+    return false;
+  }
+
+  doc["alarms"].set(alarmsDoc["alarms"]);
+  ensureRadioConfigFeatures(doc);
+
+  String outputJson;
+  serializeJson(doc, outputJson);
+  if (outputJson.length() == 0 || outputJson.length() >= RADIO_CONFIG_MAX_LEN) {
+    return false;
+  }
+
+  if (nvsSetRadioConfig(outputJson) != ESP_OK) {
+    return false;
+  }
+
+  return nvsCommit() == ESP_OK;
 }
 
 /**

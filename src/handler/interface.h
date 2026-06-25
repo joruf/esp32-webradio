@@ -1,3 +1,6 @@
+#include "features_config.h"
+#include "web_theme_serve.h"
+
 /**
  * @brief Returns the content type of a file based on its file extension.
  *
@@ -132,25 +135,8 @@ void handleWebpage(const String &pagename) {
 
     if (l < 10) { // The content of the HTTP response follows the header
       cmdclient.println("Testline<br>");
-    } else {
-      while (l) // Loop through the output page
-      {
-        if (!cmdclient.connected()) {
-          dbgprint("HTTP client disconnected while sending %s", pagename.c_str());
-          break;
-        }
-        if (l <= TCPCHUNKSIZE) // Near the end?
-        {
-          cmdclient.write(p, l); // send last part
-          l = 0;
-        } else {
-          cmdclient.write(p, TCPCHUNKSIZE); // Send part of the page
-          p += TCPCHUNKSIZE;                // Update startpoint and rest of bytes
-          l -= TCPCHUNKSIZE;
-        }
-        cmdclient.flush();
-        yield();
-      }
+    } else if (!streamWebPage(cmdclient, p, l, ct, isDarkModeActive(), TCPCHUNKSIZE)) {
+      dbgprint("HTTP client disconnected while sending %s", pagename.c_str());
     }
     cmdclient.flush();
     // The HTTP response ends with another blank line:

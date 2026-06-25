@@ -72,6 +72,19 @@ String nvsGetValue(const char *key) {
  * @param val The value to associate with the key
  * @return esp_err_t ESP_OK on success, otherwise error code
  */
+/**
+ * @brief Commit pending NVS changes to flash.
+ *
+ * @return esp_err_t ESP_OK on success
+ */
+esp_err_t nvsCommit() {
+  nvsOpen();
+  if (!nvshandle) {
+    return ESP_ERR_INVALID_STATE;
+  }
+  return nvs_commit(nvshandle);
+}
+
 esp_err_t nvsAddValue(const char *key, String val) {
   String currentValue;
   bool needsWrite = true;

@@ -73,6 +73,12 @@ esp_err_t nvsSetAlarmConfig(const String &json) {
   nvserr = nvs_set_str(nvshandle, ALRM_CONFIG_NVS_KEY, json.c_str());
   if (nvserr) {
     dbgprint("nvsSetAlarmConfig failed!");
+    return nvserr;
+  }
+
+  nvserr = nvs_commit(nvshandle);
+  if (nvserr) {
+    dbgprint("nvsSetAlarmConfig commit failed!");
   }
   return nvserr;
 }

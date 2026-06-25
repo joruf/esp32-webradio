@@ -712,14 +712,117 @@ const char app_js[] PROGMEM = R"=====(
     }
 
     function canPersistRadioConfig() {
-        return !configFormLoading && ($("#preset-list").length || $("#sound-settings").length || $("#display-settings").length || $("#ota-settings").length);
+        return !configFormLoading && (
+            $("#preset-list").length ||
+            $("#sound-settings").length ||
+            $("#display-settings").length ||
+            $("#ota-settings").length ||
+            $("#clk-server").length
+        );
+    }
+
+    function collectConfigPatch() {
+        var patch = {};
+        var defaults = getDefaultRadioConfig();
+
+        if ($("#sound-settings").length && $("#tone-ha").length) {
+            patch.tone = {
+                ha: parseInt($("#tone-ha").val(), 10) || 0,
+                hf: parseInt($("#tone-hf").val(), 10) || 0,
+                la: parseInt($("#tone-la").val(), 10) || 0,
+                lf: parseInt($("#tone-lf").val(), 10) || 0
+            };
+        }
+
+        if ($("#feat-dark-start").length) {
+            patch.features = collectDisplayFeatures();
+        } else if ($("#feat-ota-url").length) {
+            patch.features = $.extend({}, defaults.features,
+                (loadedRadioConfig && loadedRadioConfig.features) ? loadedRadioConfig.features : {},
+                { ota_check_url: $("#feat-ota-url").val() || "" });
+        }
+
+        if ($("#clk-server").length) {
+            patch.clock = {
+                server: String($("#clk-server").val() || "").trim() || "pool.ntp.org",
+                offset: normalizeClockOffsetValue($("#clk-offset").val()),
+                dst: normalizeBinaryClockValue($("#clk-dst").val())
+            };
+            if ($("#cfg-preset").length) {
+                patch.preset = parseInt($("#cfg-preset").val(), 10) || 0;
+            }
+        }
+
+        return patch;
+    }
+
+    function mergePatchIntoLoadedConfig(patch) {
+        var defaults = getDefaultRadioConfig();
+        var base = loadedRadioConfig ? $.extend(true, {}, loadedRadioConfig) : defaults;
+        var merged = mergeWithDefaultConfig($.extend(true, {}, base, patch));
+
+        if (patch.features) {
+            merged.features = $.extend({}, defaults.features, merged.features || {}, patch.features);
+        }
+
+        return merged;
+    }
+
+    function saveConfigPatch(patch, options) {
+        options = options || {};
+
+        if (!options.skipReadyCheck && !radioConfigReady) {
+            if (!options.silentLog) {
+                showCommandLog("Configuration is still loading. Please wait and try again.", { type: "error" });
+            }
+            return;
+        }
+
+        if (!patch || typeof patch !== "object" || Object.keys(patch).length === 0) {
+            return;
+        }
+
+        $.ajax({
+            url: "/?saveconfig&_t=" + Date.now(),
+            type: "POST",
+            contentType: "application/json; charset=UTF-8",
+            data: JSON.stringify(patch),
+            success: function(response) {
+                if (response.indexOf("failed") >= 0) {
+                    if (!options.silentLog) {
+                        showCommandLog(response, { type: "error" });
+                    }
+                    return;
+                }
+
+                loadedRadioConfig = mergePatchIntoLoadedConfig(patch);
+                if (patch.alarms) {
+                    alarmState.alarms = patch.alarms.slice(0);
+                }
+
+                if (!options.silentLog) {
+                    showCommandLog(response);
+                }
+                if (options.applyAudio) {
+                    applyAudioSettingsFromConfig(loadedRadioConfig);
+                }
+                if ($("#raw-config-panel").length && !$("#raw-config-panel").hasClass("hidden")) {
+                    syncRawConfigEditor();
+                }
+            },
+            error: function() {
+                if (!options.silentLog) {
+                    showCommandLog("Failed to save configuration", { type: "error" });
+                }
+            }
+        });
     }
 
     function persistRadioConfig(options) {
         if (!canPersistRadioConfig()) {
             return;
         }
-        saveRadioConfig($.extend({ applyAudio: false }, options || {}));
+        saveConfigPatch(collectConfigPatch(), options);
     }
 
     function applySoundSelectChange(fieldId, value) {
@@ -1299,6 +1402,9 @@ const char app_js[] PROGMEM = R"=====(
                 var responseText = $.trim(response || "");
 
                 alarmState.alarms = config.alarms;
+                if (loadedRadioConfig) {
+                    loadedRadioConfig.alarms = config.alarms.slice(0);
+                }
                 if (responseText.length === 0) {
                     if (!options.silent) {
                         showCommandLog(errorPrefix + "empty response from device");
@@ -1332,7 +1438,7 @@ const char app_js[] PROGMEM = R"=====(
     function applyRadioConfigToForms(cfg) {
         configFormLoading = true;
         loadedRadioConfig = mergeWithDefaultConfig(cfg);
-        radioConfigState.version = loadedRadioConfig.version || 2;
+        radioConfigState.version = loadedRadioConfig.version || 3;
         radioConfigState.wifi = loadedRadioConfig.wifi || [];
         radioConfigState.presets = loadedRadioConfig.presets || [];
         radioConfigState.gpio = loadedRadioConfig.gpio || [];
@@ -1403,7 +1509,7 @@ const char app_js[] PROGMEM = R"=====(
             };
         }
 
-        config.version = radioConfigState.version || config.version || 2;
+        config.version = radioConfigState.version || config.version || 3;
         if ($("#preset-list").length) {
             config.wifi = radioConfigState.wifi.slice(0);
             config.presets = radioConfigState.presets.slice(0);
@@ -1419,18 +1525,22 @@ const char app_js[] PROGMEM = R"=====(
         }
         if ($("#feat-dark-start").length) {
             var existingFeatures = (loadedRadioConfig && loadedRadioConfig.features) ? loadedRadioConfig.features : {};
-            config.features = {
+            config.features = $.extend({}, getDefaultRadioConfig().features, existingFeatures, {
                 dark_start: parseInt($("#feat-dark-start").val(), 10) || 0,
                 dark_end: parseInt($("#feat-dark-end").val(), 10) || 0,
                 alarm_fade_sec: parseInt($("#feat-alarm-fade").val(), 10) || 15,
                 vu_meter: $("#feat-vu-meter").is(":checked"),
                 stream_watchdog: $("#feat-watchdog").is(":checked"),
                 ota_check_url: $("#feat-ota-url").length ? ($("#feat-ota-url").val() || "") : (existingFeatures.ota_check_url || "")
-            };
+            });
         } else if ($("#feat-ota-url").length) {
             var otaFeatures = (loadedRadioConfig && loadedRadioConfig.features) ? $.extend({}, loadedRadioConfig.features) : {};
             otaFeatures.ota_check_url = $("#feat-ota-url").val() || "";
-            config.features = otaFeatures;
+            config.features = $.extend({}, getDefaultRadioConfig().features, otaFeatures);
+        } else if (!config.features) {
+            config.features = $.extend({}, getDefaultRadioConfig().features);
+        } else {
+            config.features = $.extend({}, getDefaultRadioConfig().features, config.features);
         }
         if (!$("#alarm-list").length && alarmState.alarms && alarmState.alarms.length) {
             config.alarms = alarmState.alarms.slice(0);
@@ -1618,7 +1728,7 @@ const char app_js[] PROGMEM = R"=====(
 
     function getDefaultRadioConfig() {
         return {
-            version: 2,
+            version: 3,
             alarms: [{
                 id: 1,
                 enabled: true,
@@ -1702,6 +1812,9 @@ const char app_js[] PROGMEM = R"=====(
             merged = $.extend(true, {}, defaults, cfg);
         }
 
+        if (!merged.wifi || !Array.isArray(merged.wifi)) {
+            merged.wifi = defaults.wifi.slice(0);
+        }
         if (!merged.presets || merged.presets.length === 0) {
             merged.presets = defaults.presets.slice(0);
         }
@@ -1719,6 +1832,8 @@ const char app_js[] PROGMEM = R"=====(
         }
         if (!merged.features) {
             merged.features = $.extend({}, defaults.features);
+        } else {
+            merged.features = $.extend({}, defaults.features, merged.features);
         }
 
         return merged;
@@ -1739,11 +1854,17 @@ const char app_js[] PROGMEM = R"=====(
             return config;
         }
 
+        config = mergeWithDefaultConfig(config);
         delete config.wifi_signals;
         config.alarms = sanitizeAlarmsForSave(config.alarms);
+        if (!config.alarms.length) {
+            config.alarms = getDefaultRadioConfig().alarms.slice(0);
+        }
 
         if (!config.features) {
             config.features = getDefaultRadioConfig().features;
+        } else {
+            config.features = $.extend({}, getDefaultRadioConfig().features, config.features);
         }
 
         if (!config.clock) {
@@ -1754,12 +1875,28 @@ const char app_js[] PROGMEM = R"=====(
             config.tone = getDefaultRadioConfig().tone;
         }
 
+        if (!Array.isArray(config.wifi)) {
+            config.wifi = [];
+        }
+
+        if (!Array.isArray(config.presets) || !config.presets.length) {
+            config.presets = getDefaultRadioConfig().presets.slice(0);
+        }
+
+        if (!Array.isArray(config.gpio) || !config.gpio.length) {
+            config.gpio = getDefaultRadioConfig().gpio.slice(0);
+        }
+
         if (config.volume === undefined || config.volume === null) {
             config.volume = getDefaultRadioConfig().volume;
         }
 
         if (config.preset === undefined || config.preset === null) {
             config.preset = getDefaultRadioConfig().preset;
+        }
+
+        if (!config.version) {
+            config.version = getDefaultRadioConfig().version;
         }
 
         return config;
@@ -1782,6 +1919,23 @@ const char app_js[] PROGMEM = R"=====(
         }
 
         loadRadioConfig();
+    }
+
+    function collectDisplayFeatures() {
+        var defaults = getDefaultRadioConfig().features;
+        var existing = (loadedRadioConfig && loadedRadioConfig.features) ? loadedRadioConfig.features : {};
+
+        return $.extend({}, defaults, existing, {
+            dark_start: parseInt($("#feat-dark-start").val(), 10) || 0,
+            dark_end: parseInt($("#feat-dark-end").val(), 10) || 0,
+            alarm_fade_sec: parseInt($("#feat-alarm-fade").val(), 10) || 15,
+            vu_meter: $("#feat-vu-meter").is(":checked"),
+            stream_watchdog: $("#feat-watchdog").is(":checked")
+        });
+    }
+
+    function saveDisplayFeatures(options) {
+        saveConfigPatch({ features: collectDisplayFeatures() }, options);
     }
 
     function parseFirmwareString(firmware) {
@@ -2026,40 +2180,9 @@ const char app_js[] PROGMEM = R"=====(
             return;
         }
 
-        var applyAudio = options.applyAudio !== false;
-        var config = collectRadioConfig();
-        var json = JSON.stringify(config);
-
-        $.ajax({
-            url: "/?saveconfig&_t=" + Date.now(),
-            type: "POST",
-            contentType: "application/json; charset=UTF-8",
-            data: json,
-            success: function(response) {
-                if (response.indexOf("failed") >= 0) {
-                    if (!options.silentLog) {
-                        showCommandLog(response, { type: "error" });
-                    }
-                    return;
-                }
-                loadedRadioConfig = config;
-                alarmState.alarms = config.alarms || alarmState.alarms;
-                if (!options.silentLog) {
-                    showCommandLog(response);
-                }
-                if (applyAudio) {
-                    applyAudioSettingsFromConfig(config);
-                }
-                if ($("#raw-config-panel").length && !$("#raw-config-panel").hasClass("hidden")) {
-                    syncRawConfigEditor();
-                }
-            },
-            error: function() {
-                if (!options.silentLog) {
-                    showCommandLog("Failed to save configuration", { type: "error" });
-                }
-            }
-        });
+        saveConfigPatch(collectRadioConfig(), $.extend({
+            applyAudio: options.applyAudio !== false
+        }, options));
     }
 
     $(document).on("click", "#add-alarm", function() {
@@ -2160,7 +2283,7 @@ const char app_js[] PROGMEM = R"=====(
     });
 
     $(document).on("click", "#display-settings-save", function() {
-        saveRadioConfig({ applyAudio: false });
+        saveDisplayFeatures({ silentLog: false });
     });
 
     $(document).on("click", "#sound-eq-reset", function() {
@@ -2637,7 +2760,7 @@ const char app_js[] PROGMEM = R"=====(
             });
             $(document).on("change blur", "#feat-ota-url", function() {
                 if (canPersistRadioConfig()) {
-                    saveRadioConfig({ applyAudio: false });
+                    persistRadioConfig({ silentLog: false });
                 }
             });
     });
