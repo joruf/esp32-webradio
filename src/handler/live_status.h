@@ -112,6 +112,8 @@ static String buildLiveStatusJson(void) {
   json += "\"rssi\":" + String(WiFi.status() == WL_CONNECTED ? WiFi.RSSI() : 0) + ",";
   json += "\"wifi_ssid\":\"" + jsonEscapeString(WiFi.SSID().c_str()) + "\",";
   json += "\"playing\":" + String(datamode == STOPPED ? "false" : "true") + ",";
+  json += "\"playback_state\":\"" + String(datamode == STOPPED ? "STOP" : "PLAY") + "\",";
+  json += "\"stream_kbps\":" + String(mbitrate > 0 ? mbitrate : bitrate) + ",";
   json += "\"dark_mode\":" + String(isDarkModeActive() ? "true" : "false") + ",";
   json += "\"snooze_sec\":" + String(sleeptimer_ms > 0 ? sleeptimer_ms / 1000 : 0) + ",";
   json += "\"vu_level\":" + String(getVuMeterLevel()) + ",";

@@ -2464,6 +2464,17 @@ const char app_js[] PROGMEM = R"=====(
     $("#setstat").on("click", function() { // Insert a new radio stream
         setstat();
     });
+    $(document)
+        .off("keydown.stationSubmit keypress.stationSubmit", "#station")
+        .on("keydown.stationSubmit keypress.stationSubmit", "#station", function(e) {
+            var isEnter = (e.key === "Enter") || (e.which === 13) || (e.keyCode === 13);
+            if (!isEnter) {
+                return;
+            }
+            e.preventDefault();
+            e.stopPropagation();
+            setstat();
+        });
 
 
 
@@ -2731,6 +2742,19 @@ const char app_js[] PROGMEM = R"=====(
     function applyLiveStatusData(data) {
             if(document.getElementById("statlabel")) document.getElementById("statlabel").innerHTML = data.station;
             if(document.getElementById("songlabel")) document.getElementById("songlabel").innerHTML = data.title;
+            var isPlaying = (data.playing === true) || (String(data.playback_state || "").toUpperCase() === "PLAY");
+            updatePlayButtonBlink(isPlaying);
+            if (document.getElementById("live-stream-kbps")) {
+                var kbps = parseInt(data.stream_kbps, 10);
+                if (isNaN(kbps) || kbps < 0) {
+                    kbps = 0;
+                }
+                document.getElementById("live-stream-kbps").textContent = "Stream: " + kbps + " kbps";
+                var liveMeta = document.querySelector(".webradio-live-meta");
+                if (liveMeta) {
+                    liveMeta.style.display = (isPlaying && kbps > 0) ? "flex" : "none";
+                }
+            }
 
             if (data.firmware) {
                 var firmwareParts = String(data.firmware).split(/\s+/);
@@ -2781,6 +2805,40 @@ const char app_js[] PROGMEM = R"=====(
 
     var sseLiveSource = null;
     var livePollTimer = null;
+    var playBlinkTimer = null;
+    var playBlinkState = false;
+
+    function updatePlayButtonBlink(isPlaying) {
+        var playBtn = document.getElementById("play");
+        if (!playBtn) {
+            return;
+        }
+        if (!isPlaying) {
+            if (playBlinkTimer) {
+                clearInterval(playBlinkTimer);
+                playBlinkTimer = null;
+            }
+            playBlinkState = false;
+            playBtn.classList.remove("is-live-playing-a");
+            playBtn.classList.remove("is-live-playing-b");
+            return;
+        }
+        if (!playBlinkTimer) {
+            playBlinkState = true;
+            playBtn.classList.add("is-live-playing-a");
+            playBlinkTimer = setInterval(function() {
+                var btn = document.getElementById("play");
+                if (!btn) {
+                    clearInterval(playBlinkTimer);
+                    playBlinkTimer = null;
+                    return;
+                }
+                playBlinkState = !playBlinkState;
+                btn.classList.toggle("is-live-playing-a", playBlinkState);
+                btn.classList.toggle("is-live-playing-b", !playBlinkState);
+            }, 1000);
+        }
+    }
 
     function startLivePolling() {
         if (livePollTimer) {

@@ -96,6 +96,19 @@ const char app_css[] PROGMEM = R"=====(
 	.webradio-control-toolbar .btn { width: auto; min-width: 88px; flex: 0 0 auto; }
 	.webradio-preset-list { width: 100%; min-height: 12em; }
 	.webradio-display-body { display: flex; flex-wrap: wrap; gap: 8px; }
+	.webradio-live-meta { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+	.webradio-live-pill {
+		display: inline-flex;
+		align-items: center;
+		padding: 3px 10px;
+		border-radius: 999px;
+		font-size: 0.8em;
+		font-weight: 700;
+		background: #efefef;
+		color: #444;
+	}
+	#play.is-live-playing-a { background-color: #5cb85c; border-color: #4cae4c; color: #fff; }
+	#play.is-live-playing-b { background-color: #3f8f3f; border-color: #377f37; color: #fff; }
 	.maintenance-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 	.ota-history-list {
 		list-style: none;
@@ -304,6 +317,9 @@ const char app_css[] PROGMEM = R"=====(
 	body.theme-dark .ota-history-date { color: #9ecbff; }
 	body.theme-dark .ota-history-notes { color: #ddd; }
 	body.theme-dark .webradio-volume-value { color: #e0e0e0; }
+	body.theme-dark .webradio-live-pill { background: #2f2f2f; color: #ddd; }
+	body.theme-dark #play.is-live-playing-a { background-color: #3c8f4a; border-color: #32783e; color: #fff; }
+	body.theme-dark #play.is-live-playing-b { background-color: #2f6f3a; border-color: #285f31; color: #fff; }
 	body.theme-dark input[type="range"] {
 		accent-color: #5b9bd5;
 	}

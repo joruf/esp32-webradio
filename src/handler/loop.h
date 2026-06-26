@@ -41,11 +41,19 @@ void IRAM_ATTR timer10sec() {
     count60sec = 0; // Reset count
   }
 
-  static uint32_t oldtotalcount = 7321; // Needed for change detection
+  static uint32_t oldtotalcount = 0;    // Needed for change detection
+  static bool bitrateBaselineValid = false;
   static uint8_t morethanonce = 0;      // Counter for succesive fails
   uint32_t bytesplayed;                 // Bytes send to MP3 converter
 
   if (datamode & (INIT | HEADER | DATA | METADATA | PLAYLISTINIT | PLAYLISTHEADER | PLAYLISTDATA)) { // Test op playing
+    if (!bitrateBaselineValid || totalcount < oldtotalcount) {
+      // Initialize or resync baseline to avoid unsigned underflow spikes.
+      oldtotalcount = totalcount;
+      bitrateBaselineValid = true;
+      return;
+    }
+
     bytesplayed = totalcount - oldtotalcount; // Nunber of bytes played in the 10 seconds
     oldtotalcount = totalcount;               // Save for comparison in next cycle
     if (bytesplayed == 0)                     // Still playing?
@@ -73,6 +81,10 @@ void IRAM_ATTR timer10sec() {
       mbitrate = (bytesplayed + 625) / 1250; // Measured bitrate
       morethanonce = 0;                      // Data seen, reset failcounter
     }
+  } else {
+    bitrateBaselineValid = false;
+    oldtotalcount = totalcount;
+    morethanonce = 0;
   }
 }
 

@@ -252,23 +252,43 @@ static bool applyHttpLocationHeader(const String &location) {
  */
 static void parseHostString(const String &host, String &hostwoext, uint16_t &port, String &extension) {
   int inx;
+  String normalized = host;
+  bool httpsScheme = false;
 
-  hostwoext = host;
+  normalized.trim();
+  if (normalized.startsWith("http://")) {
+    normalized = normalized.substring(7);
+  } else if (normalized.startsWith("https://")) {
+    normalized = normalized.substring(8);
+    httpsScheme = true;
+  }
+
+  hostwoext = normalized;
   port = 80;
   extension = "/";
 
   // Extract extension
-  inx = host.indexOf("/");
-  if (inx > 0) {
-    extension = host.substring(inx);
-    hostwoext = host.substring(0, inx);
+  inx = normalized.indexOf("/");
+  if (inx >= 0) {
+    extension = normalized.substring(inx);
+    hostwoext = normalized.substring(0, inx);
   }
 
   // Extract port number
   inx = hostwoext.indexOf(":");
   if (inx >= 0) {
-    port = host.substring(inx + 1).toInt();
-    hostwoext = host.substring(0, inx);
+    uint16_t parsedPort = (uint16_t)hostwoext.substring(inx + 1).toInt();
+    if (parsedPort > 0) {
+      port = parsedPort;
+    }
+    hostwoext = hostwoext.substring(0, inx);
+  } else if (httpsScheme) {
+    // Firmware streams via plain HTTP client only; keep default HTTP port.
+    port = 80;
+  }
+
+  if (extension.length() == 0) {
+    extension = "/";
   }
 }
 
@@ -316,6 +336,9 @@ bool connectToWebradioServer() {
 
   stop_mp3client();
   dbgprint("Connect to new host %s", host.c_str());
+  if (host.startsWith("https://")) {
+    dbgprint("HTTPS URL detected; trying plain HTTP request to same host");
+  }
 
   showTextOnTFT(0, "Webradio");
   renderTimeOnTFT("");

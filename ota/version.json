@@ -1,10 +1,15 @@
 {
-  "version": "v2.26",
+  "version": "v2.27",
   "released": "2026-06-26",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.26.bin",
-  "notes": "Diagnostics expansion with deep runtime/system metadata, OTA display full-screen black clear on update start, modernized display settings with instant save and validation, stream watchdog setting moved to Configuration page, and broad UI style alignment across pages.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.27.bin",
+  "notes": "Stream playback UX and robustness update: fixed manual stream URL parsing, Enter-to-play on index input, stable stream kbps reporting, JS-driven play-button blink, and conditional live status visibility only while active streaming.",
   "history": [
+    {
+      "version": "v2.27",
+      "released": "2026-06-26",
+      "notes": "Fixed stream URL parsing for manually entered URLs (including scheme handling), added Enter key submission for Play Stream input, and stabilized stream bitrate reporting by preventing measurement spikes during counter resets. Index live status now reports stream_kbps via measured bitrate with fallback to header bitrate. Play button blink is now JS-driven in 1-second toggles while playback is active. Live stream meta panel is shown only when playback is active and stream kbps is greater than zero."
+    },
     {
       "version": "v2.26",
       "released": "2026-06-26",

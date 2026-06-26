@@ -47,6 +47,9 @@ const char index_html[] PROGMEM = R"=====(
 					<a id="youtubelink" href="#" target="_blank" style="color: blue; text-decoration: none;">
 							<span id="songlabel">Lade Titel...</span>
 					</a>
+					<div class="webradio-live-meta">
+						<span class="webradio-live-pill" id="live-stream-kbps">Stream: 0 kbps</span>
+					</div>
 					<div id="title-history" class="title-history-table" aria-live="polite">
 						<div class="title-history-empty">No songs recognized yet.</div>
 					</div>
