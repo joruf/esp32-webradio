@@ -8,12 +8,17 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.27",
+  "version": "v2.28",
   "released": "2026-06-26",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.27.bin",
-  "notes": "Stream playback UX and robustness update: fixed manual stream URL parsing, Enter-to-play on index input, stable stream kbps reporting, JS-driven play-button blink, and conditional live status visibility only while active streaming.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.28.bin",
+  "notes": "Web UI live-update optimization release: reduced unnecessary getJSON traffic using adaptive polling fallback with SSE-first behavior, slower idle/background update cadence, and resilient reconnection handling. Includes modern preset chip selection with reliable active-state sync and display alarm fade range updated to 0-60 seconds.",
   "history": [
+    {
+      "version": "v2.28",
+      "released": "2026-06-26",
+      "notes": "Optimized live status updates to save resources: SSE remains primary, polling fallback is now adaptive (active/idle/background intervals) with retry backoff and visibility-aware scheduling. Added stable preset state synchronization from live payloads and settings load so the active preset button is always highlighted correctly after refresh. Simplified index preset UI by removing redundant current-label text and keeping visual active-state only. Display alarm fade setting now supports 0-60 seconds."
+    },
     {
       "version": "v2.27",
       "released": "2026-06-26",
