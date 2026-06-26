@@ -336,6 +336,13 @@ const char app_css[] PROGMEM = R"=====(
 	.sound-master-meter { grid-column: 1 / -1; grid-row: 2; height: 6px; border-radius: 999px; background: #e8e8e8; overflow: hidden; }
 	.sound-master-meter-fill { display: block; height: 100%; width: 0%; border-radius: inherit; background: linear-gradient(90deg, #5b9bd5, #337ab7); transition: width 0.12s ease-out; }
 	.sound-master-slider { grid-column: 1 / -1; grid-row: 3; width: 100%; margin: 0; accent-color: #337ab7; }
+	.display-settings-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+	.display-setting-card { margin: 0; padding: 12px; border: 1px solid #e8e8e8; border-radius: 6px; background: #fafafa; }
+	.display-setting-card label { margin-bottom: 8px; font-weight: 600; }
+	.display-hour-select { max-width: 220px; }
+	.display-toggle { margin: 8px 0 0 0; }
+	.display-toggle label { font-weight: 600; }
+	.display-invalid { border-color: #a94442 !important; box-shadow: 0 0 0 2px rgba(169, 68, 66, 0.15); }
 	.sound-eq-layout { display: flex; flex-direction: column; gap: 20px; }
 	.sound-eq-visual { padding: 12px 14px 8px; border: 1px solid #e8e8e8; border-radius: 6px; background: linear-gradient(180deg, #fafbfc 0%, #f4f6f8 100%); }
 	.sound-eq-svg { display: block; width: 100%; height: 88px; }
@@ -366,6 +373,7 @@ const char app_css[] PROGMEM = R"=====(
 		.sound-master-meter { grid-column: 2; grid-row: 1; }
 		.sound-master-value { grid-column: 3; grid-row: 1; }
 		.sound-master-slider { grid-column: 4; grid-row: 1; min-width: 200px; max-width: 280px; }
+		.display-settings-grid { grid-template-columns: 1fr 1fr; }
 	}
 	body.theme-dark .sound-page-lead,
 	body.theme-dark .sound-card-sub,
@@ -376,6 +384,7 @@ const char app_css[] PROGMEM = R"=====(
 	body.theme-dark .sound-eq-visual { background: linear-gradient(180deg, #252525 0%, #1c1c1c 100%); border-color: #444; }
 	body.theme-dark .sound-band { background: #222; border-color: #444; }
 	body.theme-dark .sound-master-meter { background: #333; }
+	body.theme-dark .display-setting-card { background: #242424; border-color: #444; }
 	body.theme-dark .sound-eq-footer { border-top-color: #444; }
 	body.theme-dark .sound-eq-grid-line { stroke: #555; }
 	body.theme-dark .sound-band-summary { color: #7eb8e8; }

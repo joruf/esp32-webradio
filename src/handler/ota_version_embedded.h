@@ -8,12 +8,17 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.25",
-  "released": "2026-06-25",
+  "version": "v2.26",
+  "released": "2026-06-26",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.25.bin",
-  "notes": "Webserver stability release: robust HTTP request parsing, faster getconfig from radio_config blob, favicon no-content response, SSE live updates restored with polling fallback, static asset cache set to 10 minutes, Raw Configuration moved to Maintenance page.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.26.bin",
+  "notes": "Diagnostics expansion with deep runtime/system metadata, OTA display full-screen black clear on update start, modernized display settings with instant save and validation, stream watchdog setting moved to Configuration page, and broad UI style alignment across pages.",
   "history": [
+    {
+      "version": "v2.26",
+      "released": "2026-06-26",
+      "notes": "Diagnostics endpoint now includes chip, CPU, reset, memory, flash, network, and partition details for better incident analysis. OTA start screen now hard-clears the full display to black to prevent stale UI artifacts. Display settings page was modernized (time selects, fade slider, immediate save, start/end validation). Stream watchdog controls were moved from display to configuration with persistent autosave. Multiple pages were aligned to the newer sound-style UI layout."
+    },
     {
       "version": "v2.25",
       "released": "2026-06-25",

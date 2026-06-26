@@ -27,22 +27,7 @@ const char config_html[] PROGMEM = R"=====(
 	</head>
 	
 	<body itemscope itemtype="http://schema.org/WebPage">	
-		<nav class="navbar navbar-default navbar-static-top">
-			<div id="body" class="container">
-				<div class="navbarDistance">
-					<a href="index.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#9835;</span><span class="nav-label">WEBRADIO</span></span></a>
-					<a href="scheduler.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#9200;</span><span class="nav-label">SCHEDULER</span></span></a>
-					<a href="config.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#9881;</span><span class="nav-label">CONFIGURATION</span></span></a>
-					<a href="sound.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#128266;</span><span class="nav-label">SOUND SETTINGS</span></span></a>
-					<a href="display.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#128187;</span><span class="nav-label">DISPLAY SETTINGS</span></span></a>
-					<a href="maintenance.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#128295;</span><span class="nav-label">MAINTENANCE</span></span></a>
-					<a href="diagnostics.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#128202;</span><span class="nav-label">DIAGNOSTICS</span></span></a>
-					<a href="ota.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#11015;</span><span class="nav-label">OTA UPDATE</span></span></a>
-					<a href="about.html"><span class="btn btn-primary nav-btn"><span class="nav-icon" aria-hidden="true">&#8505;</span><span class="nav-label">ABOUT</span></span></a>
-				</div>
-			</div>
-		</nav>
-
+@include_nav@
 <div id="body" class="container sound-page">
 			<header class="sound-page-header">
 				<h1>Configuration</h1>
@@ -89,6 +74,16 @@ const char config_html[] PROGMEM = R"=====(
 						</div>
 					</div>
 					<p class="config-help">Equalizer settings are on the <a href="sound.html">Sound Settings</a> page. Volume is on the <a href="index.html">Webradio</a> page. Raw JSON editing is available on the <a href="maintenance.html">Maintenance</a> page.</p>
+				</div>
+			</div>
+
+			<div class="row panel panel-default sound-card">
+				<div class="panel-heading">Playback Reliability</div>
+				<div class="panel-body">
+					<div class="checkbox display-toggle">
+						<label><input type="checkbox" id="feat-watchdog" checked> Enable stream watchdog (auto-reconnect)</label>
+					</div>
+					<p class="config-help">When enabled, this monitors network streams only (not SD/local files). If no stream data arrives for 30 seconds, the player stops and automatically reconnects to the same stream (up to 5 retries per stall). When disabled, no automatic reconnect is triggered by this watchdog.</p>
 				</div>
 			</div>
 

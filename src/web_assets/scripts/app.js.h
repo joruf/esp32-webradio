@@ -734,7 +734,8 @@ const char app_js[] PROGMEM = R"=====(
             };
         }
 
-        if ($("#feat-dark-start").length) {
+        if ($("#feat-dark-start").length || $("#feat-dark-end").length || $("#feat-alarm-fade").length ||
+            $("#feat-vu-meter").length || $("#feat-watchdog").length) {
             patch.features = collectDisplayFeatures();
         } else if ($("#feat-ota-url").length) {
             patch.features = $.extend({}, defaults.features,
@@ -892,6 +893,15 @@ const char app_js[] PROGMEM = R"=====(
         $("#clk-server")
             .off("change.configField")
             .on("change.configField", function() {
+                if (configFormLoading) {
+                    return;
+                }
+                persistRadioConfig({ silentLog: false });
+            });
+
+        $(document)
+            .off("change.configFeature", "#feat-watchdog")
+            .on("change.configFeature", "#feat-watchdog", function() {
                 if (configFormLoading) {
                     return;
                 }
@@ -1449,13 +1459,24 @@ const char app_js[] PROGMEM = R"=====(
         if ($("#gpio-list").length) {
             renderGpioList();
         }
-        if ($("#feat-dark-start").length) {
+        if ($("#feat-dark-start").length || $("#feat-dark-end").length || $("#feat-alarm-fade").length ||
+            $("#feat-vu-meter").length || $("#feat-watchdog").length) {
             var feat = loadedRadioConfig.features || getDefaultRadioConfig().features;
-            $("#feat-dark-start").val(feat.dark_start !== undefined ? feat.dark_start : 20);
-            $("#feat-dark-end").val(feat.dark_end !== undefined ? feat.dark_end : 7);
-            $("#feat-alarm-fade").val(feat.alarm_fade_sec !== undefined ? feat.alarm_fade_sec : 15);
-            $("#feat-vu-meter").prop("checked", feat.vu_meter !== false);
-            $("#feat-watchdog").prop("checked", feat.stream_watchdog !== false);
+            if ($("#feat-dark-start").length) {
+                $("#feat-dark-start").val(feat.dark_start !== undefined ? feat.dark_start : 20);
+            }
+            if ($("#feat-dark-end").length) {
+                $("#feat-dark-end").val(feat.dark_end !== undefined ? feat.dark_end : 7);
+            }
+            if ($("#feat-alarm-fade").length) {
+                $("#feat-alarm-fade").val(feat.alarm_fade_sec !== undefined ? feat.alarm_fade_sec : 15);
+            }
+            if ($("#feat-vu-meter").length) {
+                $("#feat-vu-meter").prop("checked", feat.vu_meter !== false);
+            }
+            if ($("#feat-watchdog").length) {
+                $("#feat-watchdog").prop("checked", feat.stream_watchdog !== false);
+            }
         }
         if ($("#feat-ota-url").length && loadedRadioConfig.features) {
             $("#feat-ota-url").val(loadedRadioConfig.features.ota_check_url || "");
@@ -1899,20 +1920,118 @@ const char app_js[] PROGMEM = R"=====(
             return;
         }
 
-        loadRadioConfig();
+        fillSelectIfEmpty("#feat-dark-start", buildNumericSelectOptions(0, 23, 20, function(hour) {
+            return (hour < 10 ? "0" : "") + hour + ":00";
+        }));
+        fillSelectIfEmpty("#feat-dark-end", buildNumericSelectOptions(0, 23, 7, function(hour) {
+            return (hour < 10 ? "0" : "") + hour + ":00";
+        }));
+
+        function normalizeDisplayHourValue(value, fallback) {
+            var parsed = parseInt(value, 10);
+            if (isNaN(parsed)) {
+                return fallback;
+            }
+            if (parsed < 0) {
+                return 0;
+            }
+            if (parsed > 23) {
+                return 23;
+            }
+            return parsed;
+        }
+
+        function normalizeDisplayFadeValue(value) {
+            var parsed = parseInt(value, 10);
+            if (isNaN(parsed)) {
+                return 15;
+            }
+            if (parsed < 5) {
+                return 5;
+            }
+            if (parsed > 600) {
+                return 600;
+            }
+            return parsed;
+        }
+
+        function updateDisplayFadeValueLabel() {
+            var fade = normalizeDisplayFadeValue($("#feat-alarm-fade").val());
+            $("#feat-alarm-fade").val(String(fade));
+            $("#feat-alarm-fade-value").text(fade + " sec");
+        }
+
+        function validateDisplayDarkHours(showError) {
+            var darkStart = normalizeDisplayHourValue($("#feat-dark-start").val(), 20);
+            var darkEnd = normalizeDisplayHourValue($("#feat-dark-end").val(), 7);
+            var valid = darkStart !== darkEnd;
+
+            $("#feat-dark-start").toggleClass("display-invalid", !valid);
+            $("#feat-dark-end").toggleClass("display-invalid", !valid);
+
+            if (!valid && showError) {
+                showCommandLog("Dark mode start and end hour must be different.", { type: "error" });
+            }
+
+            return valid;
+        }
+
+        function persistDisplaySettings(showLog) {
+            if (configFormLoading) {
+                return;
+            }
+
+            updateDisplayFadeValueLabel();
+            if (!validateDisplayDarkHours(showLog)) {
+                return;
+            }
+
+            saveDisplayFeatures({ silentLog: !showLog });
+        }
+
+        $(document)
+            .off("change.displaySettings", "#feat-dark-start, #feat-dark-end, #feat-vu-meter")
+            .on("change.displaySettings", "#feat-dark-start, #feat-dark-end, #feat-vu-meter", function() {
+                persistDisplaySettings(true);
+            });
+
+        $(document)
+            .off("input.displayFade change.displayFade", "#feat-alarm-fade")
+            .on("input.displayFade", "#feat-alarm-fade", function() {
+                updateDisplayFadeValueLabel();
+            })
+            .on("change.displayFade", "#feat-alarm-fade", function() {
+                persistDisplaySettings(true);
+            });
+
+        loadRadioConfig().always(function() {
+            updateDisplayFadeValueLabel();
+            validateDisplayDarkHours(false);
+        });
     }
 
     function collectDisplayFeatures() {
         var defaults = getDefaultRadioConfig().features;
         var existing = (loadedRadioConfig && loadedRadioConfig.features) ? loadedRadioConfig.features : {};
+        var merged = $.extend({}, defaults, existing);
 
-        return $.extend({}, defaults, existing, {
-            dark_start: parseInt($("#feat-dark-start").val(), 10) || 0,
-            dark_end: parseInt($("#feat-dark-end").val(), 10) || 0,
-            alarm_fade_sec: parseInt($("#feat-alarm-fade").val(), 10) || 15,
-            vu_meter: $("#feat-vu-meter").is(":checked"),
-            stream_watchdog: $("#feat-watchdog").is(":checked")
-        });
+        if ($("#feat-dark-start").length) {
+            merged.dark_start = Math.max(0, Math.min(23, parseInt($("#feat-dark-start").val(), 10) || 0));
+        }
+        if ($("#feat-dark-end").length) {
+            merged.dark_end = Math.max(0, Math.min(23, parseInt($("#feat-dark-end").val(), 10) || 0));
+        }
+        if ($("#feat-alarm-fade").length) {
+            merged.alarm_fade_sec = Math.max(5, Math.min(600, parseInt($("#feat-alarm-fade").val(), 10) || 15));
+        }
+        if ($("#feat-vu-meter").length) {
+            merged.vu_meter = $("#feat-vu-meter").is(":checked");
+        }
+        if ($("#feat-watchdog").length) {
+            merged.stream_watchdog = $("#feat-watchdog").is(":checked");
+        }
+
+        return merged;
     }
 
     function saveDisplayFeatures(options) {
@@ -2263,10 +2382,6 @@ const char app_js[] PROGMEM = R"=====(
             return;
         }
         saveConfigDialogEntry();
-    });
-
-    $(document).on("click", "#display-settings-save", function() {
-        saveDisplayFeatures({ silentLog: false });
     });
 
     $(document).on("click", "#sound-eq-reset", function() {
