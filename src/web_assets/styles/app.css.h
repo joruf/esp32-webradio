@@ -212,7 +212,10 @@ const char app_css[] PROGMEM = R"=====(
 		background: transparent;
 	}
 	@media (max-width: 767px) {
-		.title-history-table { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+		.title-history-table { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+	}
+	@media (max-width: 420px) {
+		.title-history-table { grid-template-columns: repeat(1, minmax(0, 1fr)); }
 	}
 	@media (max-width: 767px) {
 		.navbarDistance .nav-label { display: none; }
