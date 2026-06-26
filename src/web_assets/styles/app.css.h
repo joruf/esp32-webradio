@@ -95,6 +95,48 @@ const char app_css[] PROGMEM = R"=====(
 	.webradio-playback-actions { display: flex; flex-wrap: nowrap; gap: 8px; align-items: center; flex: 0 0 auto; }
 	.webradio-control-toolbar .btn { width: auto; min-width: 88px; flex: 0 0 auto; }
 	.webradio-preset-list { width: 100%; min-height: 12em; }
+	.webradio-preset-browser {
+		border: 1px solid #ddd;
+		border-radius: 6px;
+		background: #fafafa;
+		padding: 12px;
+	}
+	.webradio-preset-browser-head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 6px 10px;
+		margin-bottom: 10px;
+	}
+	.webradio-preset-modern-list {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		max-height: 260px;
+		overflow-y: auto;
+	}
+	.webradio-preset-chip {
+		border: 1px solid #cfd6df;
+		background: #fff;
+		color: #2d3d52;
+		border-radius: 999px;
+		padding: 6px 12px;
+		font-size: 0.9em;
+		line-height: 1.3;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+	.webradio-preset-chip:hover {
+		background: #eef4fb;
+		border-color: #9eb5d1;
+	}
+	.webradio-preset-chip.is-active {
+		background: #2f557c;
+		border-color: #2f557c;
+		color: #fff;
+	}
 	.webradio-display-body { display: flex; flex-wrap: wrap; gap: 8px; }
 	.webradio-live-meta { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
 	.webradio-live-pill {
@@ -227,6 +269,24 @@ const char app_css[] PROGMEM = R"=====(
 		background-color: #1a1a1a;
 		color: #e0e0e0;
 		border-color: #444;
+	}
+	body.theme-dark .webradio-preset-browser {
+		background: #171b21;
+		border-color: #2f3744;
+	}
+	body.theme-dark .webradio-preset-chip {
+		background: #202632;
+		border-color: #3a465a;
+		color: #d3deef;
+	}
+	body.theme-dark .webradio-preset-chip:hover {
+		background: #2a3341;
+		border-color: #4f6280;
+	}
+	body.theme-dark .webradio-preset-chip.is-active {
+		background: #4d6f97;
+		border-color: #4d6f97;
+		color: #fff;
 	}
 	body.theme-dark select option,
 	body.theme-dark #preset option {

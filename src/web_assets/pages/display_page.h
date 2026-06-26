@@ -39,7 +39,7 @@ const char display_html[] PROGMEM = R"=====(
 					</div>
 					<div class="form-group display-setting-card">
 						<label for="feat-alarm-fade">Alarm volume fade</label>
-						<input type="range" class="form-control" id="feat-alarm-fade" min="5" max="600" step="5" value="15">
+						<input type="range" class="form-control" id="feat-alarm-fade" min="0" max="60" step="1" value="15">
 						<div class="config-help">Duration: <strong id="feat-alarm-fade-value">15 sec</strong></div>
 					</div>
 					<div class="checkbox display-toggle">

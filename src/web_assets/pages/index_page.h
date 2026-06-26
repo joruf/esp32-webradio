@@ -83,8 +83,15 @@ const char index_html[] PROGMEM = R"=====(
 						<input id="station" class="form-control" placeholder="Insert a radio stream">
 					</div>
 					<br /><br />
-					
-					<select id="preset" class="form-control webradio-preset-list" size="10">
+
+					<div class="webradio-preset-browser">
+						<div class="webradio-preset-browser-head">
+							<strong>Available presets</strong>
+						</div>
+						<div id="preset-modern-list" class="webradio-preset-modern-list" aria-live="polite"></div>
+					</div>
+
+					<select id="preset" class="form-control webradio-preset-list" size="10" style="display:none;">
 						<option value="-1">-- Select --</option>
 					</select>
 				</div>

@@ -1946,11 +1946,11 @@ const char app_js[] PROGMEM = R"=====(
             if (isNaN(parsed)) {
                 return 15;
             }
-            if (parsed < 5) {
-                return 5;
+            if (parsed < 0) {
+                return 0;
             }
-            if (parsed > 600) {
-                return 600;
+            if (parsed > 60) {
+                return 60;
             }
             return parsed;
         }
@@ -2022,7 +2022,7 @@ const char app_js[] PROGMEM = R"=====(
             merged.dark_end = Math.max(0, Math.min(23, parseInt($("#feat-dark-end").val(), 10) || 0));
         }
         if ($("#feat-alarm-fade").length) {
-            merged.alarm_fade_sec = Math.max(5, Math.min(600, parseInt($("#feat-alarm-fade").val(), 10) || 15));
+            merged.alarm_fade_sec = Math.max(0, Math.min(60, parseInt($("#feat-alarm-fade").val(), 10) || 15));
         }
         if ($("#feat-vu-meter").length) {
             merged.vu_meter = $("#feat-vu-meter").is(":checked");
@@ -2458,8 +2458,21 @@ const char app_js[] PROGMEM = R"=====(
 
     $("#preset").on("change", function() {
         console.log("Preset Channel: "+this.value);
+        renderIndexPresetCards();
         handlepreset(this.value);
     });
+
+    $(document)
+        .off("click.presetChip", ".webradio-preset-chip")
+        .on("click.presetChip", ".webradio-preset-chip", function() {
+            var value = $(this).data("preset-value");
+            var select = document.getElementById("preset");
+            if (!select || value === undefined || value === null) {
+                return;
+            }
+            select.value = String(value);
+            $("#preset").trigger("change");
+        });
 
     $("#setstat").on("click", function() { // Insert a new radio stream
         setstat();
@@ -2546,6 +2559,66 @@ const char app_js[] PROGMEM = R"=====(
         httpGet("preset=" + prestNbr);
     }
 
+    function renderIndexPresetCards() {
+        var select = document.getElementById("preset");
+        var list = document.getElementById("preset-modern-list");
+        var currentValue = null;
+        var html = "";
+        var i;
+
+        if (!select || !list) {
+            return;
+        }
+
+        for (i = 0; i < select.options.length; i++) {
+            if (select.options[i].selected) {
+                currentValue = select.options[i].value;
+                break;
+            }
+        }
+
+        for (i = 0; i < select.options.length; i++) {
+            var opt = select.options[i];
+            if (!opt || opt.value === "-1") {
+                continue;
+            }
+            var isActive = String(opt.value) === String(currentValue);
+            html += '<button type="button" class="webradio-preset-chip' + (isActive ? ' is-active' : '') +
+                '" data-preset-value="' + escapeHtml(opt.value) + '">' + escapeHtml(opt.text || ("Preset " + opt.value)) + '</button>';
+        }
+
+        if (html.length === 0) {
+            list.innerHTML = '<div class="config-help">No presets configured.</div>';
+            return;
+        }
+
+        list.innerHTML = html;
+    }
+
+    function syncIndexPresetSelection(value) {
+        var select = document.getElementById("preset");
+        var target = parseInt(String(value).trim(), 10);
+        var i;
+        var found = false;
+
+        if (!select || isNaN(target)) {
+            return;
+        }
+
+        for (i = 0; i < select.options.length; i++) {
+            if (parseInt(select.options[i].value, 10) === target) {
+                select.selectedIndex = i;
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            select.selectedIndex = 0;
+        }
+        renderIndexPresetCards();
+    }
+
 
     function handletone(id, toneVal, options) {
         options = options || {};
@@ -2565,13 +2638,18 @@ const char app_js[] PROGMEM = R"=====(
 
     function selectItemByValue(elmnt, value) {
         var sel = document.getElementById(elmnt);
+        var target = String(value).trim();
+        var targetNumber = parseInt(target, 10);
         if (typeof sel === 'undefined' || sel === null) {
             return;
         }
         
         for (var i = 0; i < sel.options.length; i++) {
-            if (sel.options[i].value == value) {
+            var optionValue = String(sel.options[i].value).trim();
+            var optionNumber = parseInt(optionValue, 10);
+            if ((optionValue === target) || (!isNaN(optionNumber) && !isNaN(targetNumber) && optionNumber === targetNumber)) {
                 sel.selectedIndex = i;
+                return;
             }
         }
     }
@@ -2584,6 +2662,11 @@ const char app_js[] PROGMEM = R"=====(
         if (!sel) {
             return;
         }
+        sel.innerHTML = "";
+        opt = document.createElement("OPTION");
+        opt.value = "-1";
+        opt.text = "-- Select --";
+        sel.add(opt);
         var theUrl = "/?settings&_t=" + Date.now();
         var xhr = new XMLHttpRequest();
         xhr.onreadystatechange = function() {
@@ -2591,18 +2674,31 @@ const char app_js[] PROGMEM = R"=====(
                 lines = xhr.responseText.split("\n");
 
                 for (i = 0; i < (lines.length - 1); i++) {
-                    parts = lines[i].split("=");
-                    if (parts[0].indexOf("preset_") == 0) {
+                    var line = String(lines[i] || "").trim();
+                    if (!line) {
+                        continue;
+                    }
+                    parts = line.split("=");
+                    if (parts.length < 2) {
+                        continue;
+                    }
+                    var key = String(parts.shift() || "").trim();
+                    var value = String(parts.join("=") || "").trim();
+                    if (key.indexOf("preset_") == 0) {
                         opt = document.createElement("OPTION");
-                        opt.value = parts[0].substring(7);
-                        opt.text = parts[1];
+                        opt.value = key.substring(7);
+                        opt.text = value;
                         
                         sel.add(opt);
                     }
-                    if ((parts[0].indexOf("tone") == 0) || (parts[0] == "preset")) {
-                        selectItemByValue(parts[0], parts[1]);
+                    if (key === "preset") {
+                        syncIndexPresetSelection(value);
+                    }
+                    if (key.indexOf("tone") == 0) {
+                        selectItemByValue(key, value);
                     }
                 }
+                renderIndexPresetCards();
             }
         }
         xhr.open("GET", theUrl, true);
@@ -2742,6 +2838,9 @@ const char app_js[] PROGMEM = R"=====(
     function applyLiveStatusData(data) {
             if(document.getElementById("statlabel")) document.getElementById("statlabel").innerHTML = data.station;
             if(document.getElementById("songlabel")) document.getElementById("songlabel").innerHTML = data.title;
+            if (data.preset !== undefined && data.preset !== null) {
+                syncIndexPresetSelection(data.preset);
+            }
             var isPlaying = (data.playing === true) || (String(data.playback_state || "").toUpperCase() === "PLAY");
             updatePlayButtonBlink(isPlaying);
             if (document.getElementById("live-stream-kbps")) {
