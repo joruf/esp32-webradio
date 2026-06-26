@@ -2422,7 +2422,11 @@ const char app_js[] PROGMEM = R"=====(
     }
 
     $(function() {
-        setInterval(syncThemeFromServer, 60000);
+        setInterval(function() {
+            if (!shouldRunLiveUpdates()) {
+                syncThemeFromServer();
+            }
+        }, 120000);
         initConfigPage();
         initSoundPage();
         initDisplayPage();
@@ -2895,11 +2899,70 @@ const char app_js[] PROGMEM = R"=====(
         return $("#preset").length > 0;
     }
 
+    var LIVE_POLL_INTERVAL_ACTIVE_MS = 4000;
+    var LIVE_POLL_INTERVAL_IDLE_MS = 12000;
+    var LIVE_POLL_INTERVAL_HIDDEN_MS = 30000;
+    var LIVE_POLL_ERROR_MAX_MS = 60000;
+
+    var livePollInFlight = false;
+    var livePollLastData = null;
+    var livePollErrorCount = 0;
+
+    function isLiveDataPlaying(data) {
+        if (!data) {
+            return false;
+        }
+        return (data.playing === true) || (String(data.playback_state || "").toUpperCase() === "PLAY");
+    }
+
+    function getLivePollBaseIntervalMs() {
+        if (document.hidden) {
+            return LIVE_POLL_INTERVAL_HIDDEN_MS;
+        }
+        if (isLiveDataPlaying(livePollLastData)) {
+            return LIVE_POLL_INTERVAL_ACTIVE_MS;
+        }
+        return LIVE_POLL_INTERVAL_IDLE_MS;
+    }
+
+    function stopLivePolling() {
+        if (livePollTimer) {
+            clearTimeout(livePollTimer);
+            livePollTimer = null;
+        }
+    }
+
+    function scheduleLivePoll(delayMs) {
+        stopLivePolling();
+        livePollTimer = setTimeout(function() {
+            livePollTimer = null;
+            loadJSONData();
+        }, Math.max(500, delayMs));
+    }
+
     function loadJSONData() {
-            fetch('/?getJSON')
+            if (livePollInFlight) {
+                return;
+            }
+
+            livePollInFlight = true;
+            fetch('/?getJSON&_t=' + Date.now())
                     .then(response => response.json())
-                    .then(function(data) { applyLiveStatusData(data); })
-                    .catch(err => console.log("Error loading JSON:", err));
+                    .then(function(data) {
+                        livePollLastData = data;
+                        livePollErrorCount = 0;
+                        applyLiveStatusData(data);
+                        scheduleLivePoll(getLivePollBaseIntervalMs());
+                        livePollInFlight = false;
+                    })
+                    .catch(function(err) {
+                        var base = getLivePollBaseIntervalMs();
+                        livePollErrorCount += 1;
+                        var retryDelay = Math.min(LIVE_POLL_ERROR_MAX_MS, base * Math.pow(2, Math.min(livePollErrorCount, 4)));
+                        console.log("Error loading JSON:", err);
+                        scheduleLivePoll(retryDelay);
+                        livePollInFlight = false;
+                    });
     }
 
     var sseLiveSource = null;
@@ -2940,30 +3003,35 @@ const char app_js[] PROGMEM = R"=====(
     }
 
     function startLivePolling() {
-        if (livePollTimer) {
+        if (livePollTimer || livePollInFlight) {
             return;
         }
-        loadJSONData();
-        livePollTimer = setInterval(loadJSONData, 2000);
+        scheduleLivePoll(0);
     }
 
     function startLiveUpdates() {
         if (typeof EventSource !== "undefined") {
             try {
                 sseLiveSource = new EventSource("/?events");
+                sseLiveSource.onopen = function() {
+                    stopLivePolling();
+                };
                 sseLiveSource.onmessage = function(ev) {
                     try {
-                        applyLiveStatusData(JSON.parse(ev.data));
+                        livePollLastData = JSON.parse(ev.data);
+                        applyLiveStatusData(livePollLastData);
+                        livePollErrorCount = 0;
                     } catch (e) {
                         console.log("SSE parse error", e);
                     }
                 };
                 sseLiveSource.onerror = function() {
-                    if (sseLiveSource) {
+                    // Let EventSource auto-reconnect while possible.
+                    if (sseLiveSource && sseLiveSource.readyState === EventSource.CLOSED) {
                         sseLiveSource.close();
                         sseLiveSource = null;
+                        startLivePolling();
                     }
-                    startLivePolling();
                 };
                 return;
             } catch (e) {
@@ -2973,13 +3041,37 @@ const char app_js[] PROGMEM = R"=====(
         startLivePolling();
     }
 
+    document.addEventListener("visibilitychange", function() {
+        if (!shouldRunLiveUpdates()) {
+            return;
+        }
+        if (sseLiveSource) {
+            return;
+        }
+        if (document.hidden) {
+            scheduleLivePoll(LIVE_POLL_INTERVAL_HIDDEN_MS);
+        } else {
+            scheduleLivePoll(0);
+        }
+    });
+
+    window.addEventListener("beforeunload", function() {
+        stopLivePolling();
+        if (sseLiveSource) {
+            sseLiveSource.close();
+            sseLiveSource = null;
+        }
+    });
+
     window.onload = function() {
-            syncThemeFromServer();
+            if (!shouldRunLiveUpdates()) {
+                syncThemeFromServer();
+            }
             fillPresetList();
             if (!shouldRunLiveUpdates()) {
                 return;
             }
-            if (!livePollTimer) {
+            if (!sseLiveSource && !livePollTimer && !livePollInFlight) {
                 startLiveUpdates();
             }
     };

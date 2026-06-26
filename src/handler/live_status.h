@@ -117,6 +117,7 @@ static String buildLiveStatusJson(void) {
   json += "\"dark_mode\":" + String(isDarkModeActive() ? "true" : "false") + ",";
   json += "\"snooze_sec\":" + String(sleeptimer_ms > 0 ? sleeptimer_ms / 1000 : 0) + ",";
   json += "\"vu_level\":" + String(getVuMeterLevel()) + ",";
+  json += "\"preset\":" + String(ini_block.newpreset) + ",";
   json += buildTitleHistoryJson();
   json += "}";
   return json;
