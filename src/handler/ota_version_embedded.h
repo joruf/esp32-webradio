@@ -8,12 +8,17 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.28",
-  "released": "2026-06-26",
+  "version": "v2.29",
+  "released": "2026-06-27",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.28.bin",
-  "notes": "Web UI live-update optimization release: reduced unnecessary getJSON traffic using adaptive polling fallback with SSE-first behavior, slower idle/background update cadence, and resilient reconnection handling. Includes modern preset chip selection with reliable active-state sync and display alarm fade range updated to 0-60 seconds.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.29.bin",
+  "notes": "Audio startup noise reduction release: improved anti-pop stream start sequence with delayed amplifier enable and decoder warmup buffering, including an extended cold-boot warmup window for the first automatic preset start after power-on.",
   "history": [
+    {
+      "version": "v2.29",
+      "released": "2026-06-27",
+      "notes": "Reduced startup pop/pfffftt artifacts by decoupling amplifier enable from immediate volume writes and moving unmute/fade-in to decoder-confirmed start timing. Added stream warmup gating before enabling audio output and an extra one-time cold-boot warmup window for the very first automatic stream start after device boot."
+    },
     {
       "version": "v2.28",
       "released": "2026-06-26",

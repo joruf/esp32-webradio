@@ -379,6 +379,15 @@ bool connectToWebradioServer() {
 /**
  * @brief Process QDATA chunk type - send data to VS1053.
  */
+static bool streamStartWarmupPending = false;
+static uint16_t streamStartWarmupChunks = 0;
+static uint32_t streamStartWarmupMs = 0;
+static const uint16_t STREAM_START_WARMUP_MIN_CHUNKS = 24;
+static const uint32_t STREAM_START_WARMUP_MIN_MS = 180;
+static bool streamFirstStartAfterBoot = true;
+static const uint16_t STREAM_START_BOOT_WARMUP_MIN_CHUNKS = 72;
+static const uint32_t STREAM_START_BOOT_WARMUP_MIN_MS = 650;
+
 static void processQDataChunk() {
   if (!claimSPI("chunk")) {
     return;
@@ -386,23 +395,44 @@ static void processQDataChunk() {
   vs1053player->playChunk(inchunk.buf, sizeof(inchunk.buf));
   releaseSPI();
   totalcount += sizeof(inchunk.buf);
+
+  if (streamStartWarmupPending) {
+    const bool bootWarmup = streamFirstStartAfterBoot;
+    const uint16_t minChunks = bootWarmup ? STREAM_START_BOOT_WARMUP_MIN_CHUNKS : STREAM_START_WARMUP_MIN_CHUNKS;
+    const uint32_t minMs = bootWarmup ? STREAM_START_BOOT_WARMUP_MIN_MS : STREAM_START_WARMUP_MIN_MS;
+    streamStartWarmupChunks++;
+    if ((streamStartWarmupChunks >= minChunks) &&
+        (millis() - streamStartWarmupMs >= minMs)) {
+      streamStartWarmupPending = false;
+      streamFirstStartAfterBoot = false;
+      beginStreamAudioOnDecoderStart();
+    }
+  }
 }
 
 /**
  * @brief Process QSTARTSONG chunk type - start the player.
  */
 static void processQStartSong() {
+  streamStartWarmupPending = false;
+  streamStartWarmupChunks = 0;
+  streamStartWarmupMs = millis();
+
   if (!claimSPI("startsong")) {
     return;
   }
+  vs1053player->setOutputEnabled(false);
   vs1053player->startSong();
   releaseSPI();
+  streamStartWarmupPending = true;
 }
 
 /**
  * @brief Process QSTOPSONG chunk type - stop the player.
  */
 static void processQStopSong() {
+  streamStartWarmupPending = false;
+  streamStartWarmupChunks = 0;
   if (!claimSPI("stopsong")) {
     return;
   }

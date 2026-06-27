@@ -8,6 +8,7 @@ static uint32_t volumeFadeDurationMs = VOLUME_FADE_MS;
 static uint8_t volumeFadeStartLevel = 0;
 static uint8_t volumeFadeCurrent = 0;
 static bool volumeFadeStopPending = false;
+static bool volumeFadeStartPending = false;
 
 /**
  * @brief Returns the volume level to apply to the VS1053 right now.
@@ -144,6 +145,7 @@ void startAlarmVolumeFade(uint16_t durationSec) {
   volumeFadeCurrent = 0;
   volumeFadeActive = true;
   muteflag = false;
+  volumeFadeStartPending = false;
 }
 
 /**
@@ -156,6 +158,7 @@ static void startVolumeFadeOut(bool stopAfter) {
 
   volumeFadeIn = false;
   volumeFadeStopPending = stopAfter;
+  volumeFadeStartPending = false;
   volumeFadeStartMs = millis();
   volumeFadeStartLevel = startLevel;
   volumeFadeCurrent = startLevel;
@@ -169,6 +172,25 @@ static void startVolumeFadeOut(bool stopAfter) {
   }
 
   volumeFadeActive = true;
+}
+
+/**
+ * @brief Start queued play fade once decoder start is confirmed.
+ *
+ * Called from the play task when QSTARTSONG is processed. This avoids enabling
+ * audio output before valid stream data is available.
+ */
+void beginStreamAudioOnDecoderStart(void) {
+  if (!volumeFadeStartPending) {
+    return;
+  }
+
+  volumeFadeStartPending = false;
+  if (vs1053Available && vs1053player) {
+    vs1053player->setOutputEnabled(true);
+  }
+  playSound(true);
+  startVolumeFadeIn();
 }
 
 /**
@@ -264,6 +286,7 @@ bool runStream(bool _runStream, int16_t _preset = 0) {
     }
 
     playSound(false);
+    volumeFadeStartPending = true;
     hostreq = true; // Force immediate connection establishment
     // muteflag = false; // sound on
     ini_block.newpreset = _preset;
@@ -277,9 +300,6 @@ bool runStream(bool _runStream, int16_t _preset = 0) {
 #endif
     showTextOnTFT(3, "Radio on");
 
-    playSound(true);
-    startVolumeFadeIn();
-
     return true;
   } else {
     dbgprint("Stopping stream (soft fade)");
@@ -289,7 +309,7 @@ bool runStream(bool _runStream, int16_t _preset = 0) {
 #endif
     showTextOnTFT(3, "Radio off");
 
-    if (datamode != STOPPED || volumeFadeActive) {
+    if (datamode != STOPPED || volumeFadeActive || volumeFadeStartPending) {
       startVolumeFadeOut(true);
     } else {
       finishStreamStop();

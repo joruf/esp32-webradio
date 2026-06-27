@@ -11,7 +11,7 @@ private:
   int8_t dreq_pin;      // Pin where DREQ line is connected
   int8_t shutdown_pin;  // Pin where the shutdown line is connected
   int8_t shutdownx_pin; // Pin where the shutdown (inversed) line is connected
-  uint8_t curvol;       // Current volume setting 0..100%
+  uint8_t curvol = 0xFF; // Current volume setting 0..100%, force first setVolume write
   const uint8_t vs1053_chunk_size = 32;
   // SCI Register
   const uint8_t SCI_MODE = 0x0;
@@ -86,6 +86,7 @@ public:
   // the last playChunk call.
   void setVolume(uint8_t vol); // Set the player volume.Level from 0-100,
   // higher is louder.
+  void setOutputEnabled(bool ena) { output_enable(ena); }
   void setTone(uint8_t *rtone); // Set the player baas/treble, 4 nibbles for
   // treble gain/freq and bass gain/freq
   inline uint8_t getVolume() const // Get the current volume setting.
@@ -277,7 +278,6 @@ void VS1053::setVolume(uint8_t vol) {
 
   if (vol != curvol) {
     curvol = vol;                         // Save for later use
-    output_enable(vol != 0);              // Enable/disable amplifier through shutdown pin(s)
     if (!okay) {
       return;
     }
@@ -306,7 +306,7 @@ void VS1053::startSong() {
     return;
   }
   sdi_send_fillers(10);
-  output_enable(true); // Enable amplifier through shutdown pin(s)
+  // Amplifier stays muted here; it is enabled by setVolume() when fade-in starts.
 }
 
 bool VS1053::playChunk(uint8_t *data, size_t len) {
