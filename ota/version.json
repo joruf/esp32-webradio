@@ -8,7 +8,7 @@
     {
       "version": "v2.30",
       "released": "2026-06-27",
-      "notes": "Extended anti-pop startup behavior for first boot playback by applying a longer one-time warmup gate before enabling audio output, while keeping normal restarts responsive. Reworked the Play button live visualization from JS class blinking to a CSS-driven animated icon effect and moved the stream kbps pill into the metadata panel heading on a single line."
+      "notes": "Reworked the Play button live visualization from JS class blinking to a CSS-driven animated icon effect and moved the stream kbps pill into the metadata panel heading on a single line."
     },
     {
       "version": "v2.29",

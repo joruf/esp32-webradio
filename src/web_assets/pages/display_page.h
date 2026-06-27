@@ -19,14 +19,14 @@ const char display_html[] PROGMEM = R"=====(
 <div id="body" class="container sound-page">
 			<header class="sound-page-header">
 				<h1>Display and behaviour</h1>
-				<p class="sound-page-lead">Tune dark mode, alarm fade and visual runtime features for display and stream handling.</p>
+				<p class="sound-page-lead">Tune dark mode and visual runtime features for display and stream handling.</p>
 			</header>
 			<div class="sound-studio">
 
 			<div id="display-settings" class="row panel panel-default sound-card">
 				<div class="panel-heading">Options</div>
 				<div class="panel-body">
-					<p class="config-help">Dark mode switches on automatically between the configured hours. VU meter and alarm fade can be adjusted here. Changes are saved immediately after each interaction.</p>
+					<p class="config-help">Dark mode switches on automatically between the configured hours. Changes are saved immediately after each interaction.</p>
 					<div class="display-settings-grid">
 					<div class="form-group display-setting-card">
 						<label for="feat-dark-start">Dark mode from</label>
@@ -36,11 +36,6 @@ const char display_html[] PROGMEM = R"=====(
 						<label for="feat-dark-end">Dark mode until</label>
 						<select class="form-control sound-select display-hour-select" id="feat-dark-end"></select>
 					</div>
-					</div>
-					<div class="form-group display-setting-card">
-						<label for="feat-alarm-fade">Alarm volume fade</label>
-						<input type="range" class="form-control" id="feat-alarm-fade" min="0" max="60" step="1" value="15">
-						<div class="config-help">Duration: <strong id="feat-alarm-fade-value">15 sec</strong></div>
 					</div>
 					<div class="checkbox display-toggle">
 						<label><input type="checkbox" id="feat-vu-meter" checked> Enable VU meter on TFT</label>

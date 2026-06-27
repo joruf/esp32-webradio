@@ -48,6 +48,11 @@ const char scheduler_html[] PROGMEM = R"=====(
 			<div class="row panel panel-default sound-card">
 				<div class="panel-heading">Alarm Schedules</div>
 				<div class="panel-body">
+					<div class="form-group display-setting-card">
+						<label for="feat-alarm-fade">Alarm volume fade</label>
+						<input type="range" class="form-control" id="feat-alarm-fade" min="0" max="60" step="1" value="15">
+						<div class="config-help">Duration: <strong id="feat-alarm-fade-value">15 sec</strong></div>
+					</div>
 					<p class="alarm-help">Configure alarm schedules below. Each alarm needs at least one weekday. Enter start and shut-off as <strong>hh:mm</strong> (click hours or minutes to edit each pair). Use <strong>Save Alarm</strong> or <strong>Remove Alarm</strong> to store changes; the result appears in the command log above.</p>
 					<div id="alarm-list"></div>
 					<button type="button" id="add-alarm" class="btn btn-primary"><span class="btn-icon" aria-hidden="true">&#10133;</span> Add Alarm</button>

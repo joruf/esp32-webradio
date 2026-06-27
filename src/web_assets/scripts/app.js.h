@@ -1941,26 +1941,6 @@ const char app_js[] PROGMEM = R"=====(
             return parsed;
         }
 
-        function normalizeDisplayFadeValue(value) {
-            var parsed = parseInt(value, 10);
-            if (isNaN(parsed)) {
-                return 15;
-            }
-            if (parsed < 0) {
-                return 0;
-            }
-            if (parsed > 60) {
-                return 60;
-            }
-            return parsed;
-        }
-
-        function updateDisplayFadeValueLabel() {
-            var fade = normalizeDisplayFadeValue($("#feat-alarm-fade").val());
-            $("#feat-alarm-fade").val(String(fade));
-            $("#feat-alarm-fade-value").text(fade + " sec");
-        }
-
         function validateDisplayDarkHours(showError) {
             var darkStart = normalizeDisplayHourValue($("#feat-dark-start").val(), 20);
             var darkEnd = normalizeDisplayHourValue($("#feat-dark-end").val(), 7);
@@ -1981,7 +1961,6 @@ const char app_js[] PROGMEM = R"=====(
                 return;
             }
 
-            updateDisplayFadeValueLabel();
             if (!validateDisplayDarkHours(showLog)) {
                 return;
             }
@@ -1995,17 +1974,7 @@ const char app_js[] PROGMEM = R"=====(
                 persistDisplaySettings(true);
             });
 
-        $(document)
-            .off("input.displayFade change.displayFade", "#feat-alarm-fade")
-            .on("input.displayFade", "#feat-alarm-fade", function() {
-                updateDisplayFadeValueLabel();
-            })
-            .on("change.displayFade", "#feat-alarm-fade", function() {
-                persistDisplaySettings(true);
-            });
-
         loadRadioConfig().always(function() {
-            updateDisplayFadeValueLabel();
             validateDisplayDarkHours(false);
         });
     }
@@ -2200,7 +2169,46 @@ const char app_js[] PROGMEM = R"=====(
             return;
         }
 
+        function normalizeAlarmFadeValue(value) {
+            var parsed = parseInt(value, 10);
+            if (isNaN(parsed)) {
+                return 15;
+            }
+            if (parsed < 0) {
+                return 0;
+            }
+            if (parsed > 60) {
+                return 60;
+            }
+            return parsed;
+        }
+
+        function updateAlarmFadeValueLabel() {
+            if (!$("#feat-alarm-fade").length) {
+                return;
+            }
+            var fade = normalizeAlarmFadeValue($("#feat-alarm-fade").val());
+            $("#feat-alarm-fade").val(String(fade));
+            $("#feat-alarm-fade-value").text(fade + " sec");
+        }
+
+        $(document)
+            .off("input.schedulerFade change.schedulerFade", "#feat-alarm-fade")
+            .on("input.schedulerFade", "#feat-alarm-fade", function() {
+                updateAlarmFadeValueLabel();
+            })
+            .on("change.schedulerFade", "#feat-alarm-fade", function() {
+                if (configFormLoading) {
+                    return;
+                }
+                updateAlarmFadeValueLabel();
+                saveDisplayFeatures({ silentLog: false });
+            });
+
         loadSchedulerAlarms();
+        loadRadioConfig().always(function() {
+            updateAlarmFadeValueLabel();
+        });
     }
 
     function initMaintenancePage() {
