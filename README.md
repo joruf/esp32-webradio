@@ -79,6 +79,40 @@ esp32-webradio/
 
 ---
 
+## Web UI Screenshots
+
+Captured from a live device at `http://192.168.178.33` (firmware `v2.32`) to document the current look and layout of each page.
+
+### Main navigation pages
+
+- **Webradio Dashboard** (`index.html`) – Live metadata, playback controls, stream input, preset list, and display toggles.  
+  ![Webradio Dashboard](docs/screenshots/webui/index.png)
+- **Scheduler** (`scheduler.html`) – Snooze timer and multi-alarm scheduling with weekday selection and fade duration.  
+  ![Scheduler](docs/screenshots/webui/scheduler.png)
+- **Configuration** (`config.html`) – WiFi priorities, clock settings, startup preset, watchdog option, presets, and GPIO mapping.  
+  ![Configuration](docs/screenshots/webui/config.png)
+- **Sound Settings** (`sound.html`) – Master output level and VS1053 treble/bass equalizer controls.  
+  ![Sound Settings](docs/screenshots/webui/sound.png)
+- **Display Settings** (`display.html`) – Dark mode schedule and TFT VU meter behavior toggles.  
+  ![Display Settings](docs/screenshots/webui/display.png)
+- **Maintenance** (`maintenance.html`) – Restart, erase storage, and raw JSON configuration editor.  
+  ![Maintenance](docs/screenshots/webui/maintenance.png)
+- **Diagnostics** (`diagnostics.html`) – Runtime/device JSON diagnostics and refresh control.  
+  ![Diagnostics](docs/screenshots/webui/diagnostics.png)
+- **OTA Update** (`ota.html`) – Online update check/install, local `.bin` upload, release history, and manifest URL settings.  
+  ![OTA Update](docs/screenshots/webui/ota.png)
+- **About** (`about.html`) – Project overview, feature summary, and source links.  
+  ![About](docs/screenshots/webui/about.png)
+
+### Additional UI pages
+
+- **Firmware Upgrade (legacy)** (`firmware.html`) – Legacy one-click firmware installer view.  
+  ![Firmware Upgrade](docs/screenshots/webui/firmware.png)
+- **MP3 Player** (`mp3play.html`) – SD-card track list with previous/next/random controls.  
+  ![MP3 Player](docs/screenshots/webui/mp3play.png)
+
+---
+
 ## Hardware Requirements
 
 | Component                       | Recommended Model / Remarks                              |
