@@ -336,6 +336,132 @@ static String readHttpPostBody(size_t maxLen) {
 }
 
 /**
+ * @brief Read a binary chunk from buffered/post stream data.
+ *
+ * @param buf Target buffer
+ * @param maxLen Maximum bytes to read
+ * @param deadline Absolute deadline in millis()
+ * @return size_t Number of bytes read
+ */
+static size_t httpReadPostChunk(uint8_t *buf, size_t maxLen, uint32_t deadline) {
+  size_t n = 0;
+  uint8_t b;
+
+  while (n < maxLen && httpReadTakeBuffered(&b)) {
+    buf[n++] = b;
+  }
+
+  while (n < maxLen && cmdclient.connected() && millis() < deadline) {
+    int avail = cmdclient.available();
+    if (avail <= 0) {
+      delay(1);
+      continue;
+    }
+    size_t toRead = (size_t)avail;
+    if (toRead > (maxLen - n)) {
+      toRead = maxLen - n;
+    }
+    int got = cmdclient.read(buf + n, toRead);
+    if (got > 0) {
+      n += (size_t)got;
+      break;
+    }
+    delay(1);
+  }
+
+  return n;
+}
+
+/**
+ * @brief Install firmware uploaded through HTTP POST body.
+ *
+ * Expects raw binary data (Content-Type: application/octet-stream) with
+ * Content-Length set by the client.
+ *
+ * @param contentLength Firmware length from Content-Length
+ * @param message Output message for JSON response
+ * @return true on successful write/verify, false otherwise
+ */
+static bool handleFirmwareUploadPost(uint32_t contentLength, String &message) {
+  uint8_t buf[1024];
+  size_t written = 0;
+  uint32_t noDataDeadline;
+
+  if (contentLength == 0) {
+    message = "Missing Content-Length";
+    return false;
+  }
+
+  if (!isOtaUpdateCapable((size_t)contentLength)) {
+    message = "Image does not fit OTA partition";
+    return false;
+  }
+
+  updatereq = false;
+  otastart();
+  stop_mp3client();
+  otaShowStartScreen((size_t)contentLength);
+  dspOtaDisplayPhase("Uploading...");
+  dspOtaDisplaySetTotalBytes((size_t)contentLength);
+
+  if (!Update.begin((size_t)contentLength)) {
+    message = String("Update.begin failed: ") + String(Update.errorString());
+    dspOtaDisplayFailed(Update.errorString());
+    return false;
+  }
+
+  timerStop(timer);
+  noDataDeadline = millis() + 60000UL;
+
+  while (written < (size_t)contentLength && cmdclient.connected()) {
+    size_t remaining = (size_t)contentLength - written;
+    size_t chunk = remaining > sizeof(buf) ? sizeof(buf) : remaining;
+    size_t got = httpReadPostChunk(buf, chunk, noDataDeadline);
+    if (got == 0) {
+      if (millis() >= noDataDeadline) {
+        break;
+      }
+      continue;
+    }
+
+    noDataDeadline = millis() + 60000UL;
+    size_t nw = Update.write(buf, got);
+    if (nw != got) {
+      timerStart(timer);
+      Update.abort();
+      message = String("Write failed: ") + String(Update.errorString());
+      dspOtaDisplayFailed(Update.errorString());
+      return false;
+    }
+
+    written += nw;
+    dspOtaDisplayProgress(written, (size_t)contentLength, "Uploading...");
+  }
+
+  timerStart(timer);
+  http_post_content_length = 0;
+  http_post_body_cache = "";
+
+  if (written != (size_t)contentLength) {
+    Update.abort();
+    message = String("Upload incomplete: ") + String((unsigned)written) + "/" + String((unsigned)contentLength);
+    dspOtaDisplayFailed("Upload incomplete");
+    return false;
+  }
+
+  if (!Update.end(true) || !Update.isFinished()) {
+    message = String("Finalize failed: ") + String(Update.errorString());
+    dspOtaDisplayFailed(Update.errorString());
+    return false;
+  }
+
+  dspOtaDisplayProgress(written, (size_t)contentLength, "Complete");
+  message = "Firmware uploaded successfully. Restarting...";
+  resetreq = true;
+  return true;
+}
+
+/**
  * @brief Update the preferences.
  *
  * Called from the web interface. Reads the values from the HTTP input,
@@ -713,7 +839,8 @@ void handlehttp() {
       // that's the end of the client HTTP request, so send a response:
       if (currentLine.length() == 0) {
         http_response_flag = reqseen; // Response required or not
-        if (reqseen && http_post_content_length > 0 && http_post_content_length <= RADIO_CONFIG_MAX_LEN) {
+        if (reqseen && !http_getcmd.startsWith("uploadfirmware") &&
+            http_post_content_length > 0 && http_post_content_length <= RADIO_CONFIG_MAX_LEN) {
           timerStop(timer);
           http_post_body_cache.reserve(http_post_content_length + 1);
           uint32_t targetLen = http_post_content_length;
@@ -803,6 +930,15 @@ void handlehttp() {
 
   if (http_getcmd.startsWith("getdiagnostics")) {
     sendHttpJsonResponse(buildDiagnosticsJson());
+    return;
+  }
+
+  if (http_getcmd.startsWith("uploadfirmware")) {
+    String uploadMessage;
+    bool ok = handleFirmwareUploadPost(http_post_content_length, uploadMessage);
+    String json = String("{\"ok\":") + (ok ? "true" : "false") + ",\"message\":\"" +
+                  jsonEscapeString(uploadMessage.c_str()) + "\"}";
+    sendHttpJsonResponse(json);
     return;
   }
 

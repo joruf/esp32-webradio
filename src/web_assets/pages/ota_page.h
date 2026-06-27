@@ -15,6 +15,8 @@ const char ota_html[] PROGMEM = R"=====(
 
 	<body itemscope itemtype="http://schema.org/WebPage">
 @include_nav@
+
+
 <div id="body" class="container sound-page">
 			<header class="sound-page-header">
 				<h1>OTA Update</h1>
@@ -44,6 +46,20 @@ const char ota_html[] PROGMEM = R"=====(
 			</div>
 
 			<div class="row panel panel-default sound-card">
+				<div class="panel-heading">Local firmware upload (.bin)</div>
+				<div class="panel-body">
+					<p class="config-help">Upload a local firmware <code>.bin</code> file directly from this device. The web radio restarts automatically after a successful upload.</p>
+					<div class="form-group">
+						<label for="ota-local-bin">Firmware file</label>
+						<input type="file" class="form-control" id="ota-local-bin" accept=".bin,application/octet-stream">
+					</div>
+					<div class="maintenance-actions">
+						<button type="button" id="ota-upload-btn" class="btn btn-primary"><span class="btn-icon" aria-hidden="true">&#128228;</span> Upload and install</button>
+					</div>
+				</div>
+			</div>
+
+			<div class="row panel panel-default sound-card">
 				<div class="panel-heading">Release history</div>
 				<div class="panel-body">
 					<p class="config-help">Changelog from the remote version manifest. Refreshed when you open this page or run <strong>Check for updates</strong>.</p>
@@ -66,6 +82,16 @@ const char ota_html[] PROGMEM = R"=====(
 					</div>
 				</div>
 			</div>
+			</div>
+		</div>
+		<div id="ota-progress-modal" class="ota-modal-backdrop" style="display:none;" aria-live="assertive">
+			<div class="ota-modal-card">
+				<div class="ota-modal-icon" id="ota-modal-icon" aria-hidden="true">&#128339;</div>
+				<h3 id="ota-modal-title">Please wait</h3>
+				<p id="ota-modal-message">Firmware update is being installed...</p>
+				<div class="maintenance-actions ota-modal-actions">
+					<button type="button" id="ota-modal-close" class="btn btn-primary">OK</button>
+				</div>
 			</div>
 		</div>
 

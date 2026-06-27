@@ -185,6 +185,52 @@ const char app_css[] PROGMEM = R"=====(
 		100% { opacity: 0.45; transform: translate(-50%, -50%) scale(0.7); }
 	}
 	.maintenance-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+	.ota-modal-backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 9999;
+		background: rgba(15, 20, 28, 0.7);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 18px;
+	}
+	.ota-modal-card {
+		width: min(460px, 100%);
+		background: #fff;
+		border-radius: 8px;
+		border: 1px solid #dde5f0;
+		box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+		padding: 18px 18px 14px 18px;
+	}
+	.ota-modal-card h3 {
+		margin: 0 0 8px 0;
+		font-size: 1.2em;
+	}
+	.ota-modal-card p {
+		margin: 0 0 14px 0;
+		line-height: 1.4;
+	}
+	.ota-modal-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2em;
+		height: 2em;
+		font-size: 1.4em;
+		border-radius: 999px;
+		margin-bottom: 10px;
+		background: #eef4ff;
+	}
+	.ota-modal-icon.is-waiting {
+		animation: ota-upload-tick 1s linear infinite;
+		transform-origin: 50% 55%;
+	}
+	.ota-modal-actions { justify-content: flex-end; }
+	@keyframes ota-upload-tick {
+		0% { transform: rotate(0deg); }
+		100% { transform: rotate(360deg); }
+	}
 	.ota-history-list {
 		list-style: none;
 		margin: 0;
@@ -412,6 +458,15 @@ const char app_css[] PROGMEM = R"=====(
 	body.theme-dark .ota-history-item { border-bottom-color: #444; }
 	body.theme-dark .ota-history-date { color: #9ecbff; }
 	body.theme-dark .ota-history-notes { color: #ddd; }
+	body.theme-dark .ota-modal-card {
+		background: #1f2630;
+		border-color: #38495d;
+		color: #e6edf7;
+	}
+	body.theme-dark .ota-modal-icon {
+		background: #2a394c;
+		color: #d6e6f7;
+	}
 	body.theme-dark .webradio-volume-value { color: #e0e0e0; }
 	body.theme-dark .webradio-live-pill { background: #2f2f2f; color: #ddd; }
 	body.theme-dark #play.is-live-playing .btn-icon::before {

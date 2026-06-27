@@ -8,12 +8,17 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.30",
+  "version": "v2.31",
   "released": "2026-06-27",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.30.bin",
-  "notes": "Startup audio smoothing and Web UI playback indicator refinement: reduced first-start pop/pfffftt artifacts with staged decoder warmup and updated the live stream indicator to a CSS-only effect that replaces the play icon while running, with inline metadata pill placement in the heading.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.31.bin",
+  "notes": "OTA UX and maintenance release: added local firmware .bin upload in ota.html, modal-based blocking progress dialogs for both local and online updates with automatic service recovery checks, and clarified scheduler placement by moving Alarm volume fade from display settings to scheduler.",
   "history": [
+    {
+      "version": "v2.31",
+      "released": "2026-06-27",
+      "notes": "Introduced local firmware upload via ota.html with direct installation, plus a unified modal workflow that blocks interactions during update and reports completion after the device service is reachable again. Applied the same wait/recovery UX to online OTA updates. Moved Alarm volume fade control from display page to scheduler page for better feature ownership."
+    },
     {
       "version": "v2.30",
       "released": "2026-06-27",
