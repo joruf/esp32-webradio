@@ -36,20 +36,17 @@ const char index_html[] PROGMEM = R"=====(
 			</header>
 			<div class="sound-studio">
 			<div class="row panel panel-default sound-card">
-				<div class="panel-heading">
-					Metadata
-					<small>
-						<span id="datelabel">DD.MM.YYYY</span>
-					</small>
+				<div class="panel-heading webradio-meta-heading">
+					<span class="webradio-meta-main">Metadata <small><span id="datelabel">DD.MM.YYYY</span></small></span>
+					<span class="webradio-live-meta">
+						<span class="webradio-live-pill" id="live-stream-kbps">Stream: 0 kbps</span>
+					</span>
 				</div>
 				<div class="panel-body">
 					<span id="statlabel" style="color: red;">Lade Sender...</span> |
 					<a id="youtubelink" href="#" target="_blank" style="color: blue; text-decoration: none;">
 							<span id="songlabel">Lade Titel...</span>
 					</a>
-					<div class="webradio-live-meta">
-						<span class="webradio-live-pill" id="live-stream-kbps">Stream: 0 kbps</span>
-					</div>
 					<div id="title-history" class="title-history-table" aria-live="polite">
 						<div class="title-history-empty">No songs recognized yet.</div>
 					</div>

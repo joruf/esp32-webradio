@@ -91,6 +91,13 @@ const char app_css[] PROGMEM = R"=====(
 	.webradio-control-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
 	.webradio-control-label { margin: 0; font-weight: bold; flex: 0 0 auto; }
 	.webradio-volume-value { flex: 0 0 auto; min-width: 2.8em; font-weight: bold; white-space: nowrap; }
+	.webradio-meta-heading {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		flex-wrap: nowrap;
+	}
+	.webradio-meta-main { display: inline-flex; align-items: baseline; gap: 6px; min-width: 0; }
 	.webradio-control-slider { flex: 1 1 140px; min-width: 100px; max-width: 320px; width: auto; margin: 0; }
 	.webradio-playback-actions { display: flex; flex-wrap: nowrap; gap: 8px; align-items: center; flex: 0 0 auto; }
 	.webradio-control-toolbar .btn { width: auto; min-width: 88px; flex: 0 0 auto; }
@@ -138,7 +145,7 @@ const char app_css[] PROGMEM = R"=====(
 		color: #fff;
 	}
 	.webradio-display-body { display: flex; flex-wrap: wrap; gap: 8px; }
-	.webradio-live-meta { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+	.webradio-live-meta { display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; vertical-align: middle; }
 	.webradio-live-pill {
 		display: inline-flex;
 		align-items: center;
@@ -149,8 +156,34 @@ const char app_css[] PROGMEM = R"=====(
 		background: #efefef;
 		color: #444;
 	}
-	#play.is-live-playing-a { background-color: #5cb85c; border-color: #4cae4c; color: #fff; }
-	#play.is-live-playing-b { background-color: #3f8f3f; border-color: #377f37; color: #fff; }
+	#play .btn-icon {
+		position: relative;
+		display: inline-block;
+		width: 1.05em;
+		text-align: center;
+	}
+	#play.is-live-playing .btn-icon {
+		color: transparent;
+	}
+	#play.is-live-playing .btn-icon::before {
+		content: "";
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		width: 0.78em;
+		height: 0.78em;
+		border-radius: 50%;
+		background:
+			radial-gradient(circle, rgba(255, 255, 255, 0.95) 0 20%, rgba(255, 255, 255, 0) 24%) center/100% 100% no-repeat,
+			radial-gradient(circle, rgba(255, 255, 255, 0.55) 0 45%, rgba(255, 255, 255, 0) 70%) center/100% 100% no-repeat;
+		transform: translate(-50%, -50%) scale(0.7);
+		animation: play-live-pulse 1.25s ease-in-out infinite;
+	}
+	@keyframes play-live-pulse {
+		0% { opacity: 0.45; transform: translate(-50%, -50%) scale(0.7); }
+		50% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+		100% { opacity: 0.45; transform: translate(-50%, -50%) scale(0.7); }
+	}
 	.maintenance-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 	.ota-history-list {
 		list-style: none;
@@ -381,8 +414,11 @@ const char app_css[] PROGMEM = R"=====(
 	body.theme-dark .ota-history-notes { color: #ddd; }
 	body.theme-dark .webradio-volume-value { color: #e0e0e0; }
 	body.theme-dark .webradio-live-pill { background: #2f2f2f; color: #ddd; }
-	body.theme-dark #play.is-live-playing-a { background-color: #3c8f4a; border-color: #32783e; color: #fff; }
-	body.theme-dark #play.is-live-playing-b { background-color: #2f6f3a; border-color: #285f31; color: #fff; }
+	body.theme-dark #play.is-live-playing .btn-icon::before {
+		background:
+			radial-gradient(circle, rgba(231, 255, 239, 0.98) 0 20%, rgba(231, 255, 239, 0) 24%) center/100% 100% no-repeat,
+			radial-gradient(circle, rgba(121, 243, 166, 0.58) 0 45%, rgba(121, 243, 166, 0) 70%) center/100% 100% no-repeat;
+	}
 	body.theme-dark input[type="range"] {
 		accent-color: #5b9bd5;
 	}
