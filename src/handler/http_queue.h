@@ -12,7 +12,7 @@
 
 bool sseStreamActive = false;
 uint32_t sseLastPushMs = 0;
-int8_t sseLastDatamode = -1;
+int8_t sseLastPlaybackState = -1;
 
 static WiFiClient httpPending[HTTP_PENDING_MAX];
 static uint8_t httpPendingCount = 0;
@@ -95,7 +95,7 @@ static void httpAttachSseClient(WiFiClient &client) {
   httpBeginSse(sseClient);
   sseStreamActive = true;
   sseLastPushMs = 0;
-  sseLastDatamode = -1;
+  sseLastPlaybackState = -1;
 }
 
 /**
@@ -109,16 +109,16 @@ static void httpServiceSse() {
     return;
   }
 
-  const int8_t currentDatamode = (int8_t)datamode;
-  const bool streamStateChanged = (currentDatamode != sseLastDatamode);
-  const uint32_t pushIntervalMs = (datamode == STOPPED) ? 10000UL : 2000UL;
+  const int8_t currentPlaybackState = (datamode == STOPPED) ? 0 : 1;
+  const bool playbackStateChanged = (currentPlaybackState != sseLastPlaybackState);
+  const uint32_t pushIntervalMs = 10000UL;
 
-  if (!streamStateChanged && (millis() - sseLastPushMs < pushIntervalMs)) {
+  if (!playbackStateChanged && (millis() - sseLastPushMs < pushIntervalMs)) {
     return;
   }
 
   sseLastPushMs = millis();
-  sseLastDatamode = currentDatamode;
+  sseLastPlaybackState = currentPlaybackState;
   String payload = buildLiveStatusJson();
   sseClient.print("data: ");
   sseClient.print(payload);

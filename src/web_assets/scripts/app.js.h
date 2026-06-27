@@ -3105,9 +3105,9 @@ const char app_js[] PROGMEM = R"=====(
         return $("#preset").length > 0;
     }
 
-    var LIVE_POLL_INTERVAL_ACTIVE_MS = 4000;
-    var LIVE_POLL_INTERVAL_IDLE_MS = 12000;
-    var LIVE_POLL_INTERVAL_HIDDEN_MS = 30000;
+    var LIVE_POLL_INTERVAL_ACTIVE_MS = 10000;
+    var LIVE_POLL_INTERVAL_IDLE_MS = 10000;
+    var LIVE_POLL_INTERVAL_HIDDEN_MS = 10000;
     var LIVE_POLL_ERROR_MAX_MS = 60000;
 
     var livePollInFlight = false;
