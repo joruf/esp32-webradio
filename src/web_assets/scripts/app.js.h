@@ -2279,6 +2279,7 @@ const char app_js[] PROGMEM = R"=====(
             setOtaActionButtonsEnabled(false);
             $("#ota-status-text").removeClass("text-success text-warning text-danger").text("Uploading local firmware...");
             showCommandLog("Uploading firmware: " + file.name);
+            showOtaUploadWait(true, "Please wait, local firmware is being uploaded...");
 
             fetch("/?uploadfirmware=1&_t=" + Date.now(), {
                 method: "POST",

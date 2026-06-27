@@ -19,6 +19,16 @@ static uint8_t dspOtaLastPercent = 255;
 static uint32_t dspOtaLastDrawMs = 0;
 
 /**
+ * @brief Force a full-screen black clear to remove any previous artifacts.
+ */
+inline void dspOtaClearFullScreen(void) {
+  if (!tft) {
+    return;
+  }
+  tft->fillScreen(BLACK);
+}
+
+/**
  * @brief Extract the version label from a FIRMWARE string (e.g. "v2.22 2026-06-15").
  *
  * @param firmware Full firmware string
@@ -212,7 +222,7 @@ inline void dspOtaDisplayBegin(const char *targetVersion, const char *currentFir
 
   enableBacklight(true);
   // Hard-clear the complete panel first to avoid remnants from the previous view.
-  tft->fillRect(0, 0, tft->width(), tft->height(), BLACK);
+  dspOtaClearFullScreen();
   dspOtaTotalBytes = totalBytes;
   dspOtaLastPercent = 255;
   dspOtaLastDrawMs = 0;
