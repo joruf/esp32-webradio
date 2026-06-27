@@ -50,6 +50,8 @@ String getContentType(String filename) {
  */
 void handleWebpage(const String &pagename) {
   String ct; // Content type
+  String etag;
+  String lastModified;
   const char *p;
   int l;                   // Size of requested page
   int TCPCHUNKSIZE = 1024; // Max number of bytes per write
@@ -137,7 +139,14 @@ void handleWebpage(const String &pagename) {
     }
 
     dbgprint("Length of page is %d", l);
-    cmdclient.print(httpheader(ct, 600)); // Send header (10 minutes cache)
+    lastModified = String(FIRMWARE);
+    etag = httpBuildWeakEtag(pagename, l);
+    if (httpIsAssetNotModified(etag, lastModified)) {
+      httpSendNotModified(etag, lastModified, 600);
+      cmdclient.flush();
+      return;
+    }
+    cmdclient.print(httpheader(ct, 600, etag, lastModified)); // Send header (10 minutes cache)
 
     if (l > 0 && !streamWebPage(cmdclient, p, l, ct, isDarkModeActive(), TCPCHUNKSIZE)) {
       dbgprint("HTTP client disconnected while sending %s", pagename.c_str());

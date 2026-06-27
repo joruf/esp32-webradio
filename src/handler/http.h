@@ -13,6 +13,8 @@ void saveDefaultConfig();
 #include "captive_portal.h"
 
 static String http_host_header = "";
+static String http_if_none_match = "";
+static String http_if_modified_since = "";
 static String http_post_body_cache = "";
 static uint8_t httpReadBuf[1024]; // HTTP input buffer shared with body reader
 static uint16_t httpReadPos = 0;    // Read position in httpReadBuf
@@ -30,6 +32,8 @@ static void resetHttpRequestState() {
   http_post_body_cache = "";
   http_response_flag = false;
   http_host_header = "";
+  http_if_none_match = "";
+  http_if_modified_since = "";
   httpReadResetBuffer();
 }
 
@@ -821,6 +825,8 @@ void handlehttp() {
   http_post_content_length = 0;
   http_getcmd = "";
   http_rqfile = "";
+  http_if_none_match = "";
+  http_if_modified_since = "";
 
   if (!cmdclient.connected()) // Action if client is connected
   {
@@ -873,6 +879,14 @@ void handlehttp() {
         if (currentLine.startsWith("Host:") || currentLine.startsWith("host:")) {
           http_host_header = currentLine.substring(5);
           http_host_header.trim();
+        }
+        if (currentLine.startsWith("If-None-Match:") || currentLine.startsWith("if-none-match:")) {
+          http_if_none_match = currentLine.substring(14);
+          http_if_none_match.trim();
+        }
+        if (currentLine.startsWith("If-Modified-Since:") || currentLine.startsWith("if-modified-since:")) {
+          http_if_modified_since = currentLine.substring(18);
+          http_if_modified_since.trim();
         }
         if (inx0) // GET or POST request?
         {
@@ -973,7 +987,9 @@ void handlehttp() {
  * @param cacheMaxAgeSec Cache lifetime in seconds, 0 disables caching
  * @return String Complete HTTP header
  */
-String httpheader(String contentstype, uint16_t cacheMaxAgeSec) {
+String httpheader(String contentstype, uint16_t cacheMaxAgeSec,
+                  const String &etag,
+                  const String &lastModified) {
   String header = String("HTTP/1.1 200 OK\nContent-type:") + contentstype +
                   String("\n"
                          "Server: " NAME "\n"
@@ -981,10 +997,79 @@ String httpheader(String contentstype, uint16_t cacheMaxAgeSec) {
                          "Cache-Control: ");
   if (cacheMaxAgeSec > 0) {
     header += String("max-age=") + String(cacheMaxAgeSec) + "\n";
-    header += String("Last-Modified: " FIRMWARE "\n\n");
+    if (etag.length() > 0) {
+      header += String("ETag: ") + etag + String("\n");
+    }
+    if (lastModified.length() > 0) {
+      header += String("Last-Modified: ") + lastModified + String("\n");
+    }
+    header += String("\n");
   } else {
     header += String("no-cache, no-store, must-revalidate\n"
                      "Pragma: no-cache\n\n");
   }
   return header;
+}
+
+/**
+ * @brief Build a weak ETag for static web assets.
+ *
+ * @param resourceName Requested asset name
+ * @param contentLength Asset content length in bytes
+ * @return String Weak ETag value wrapped in quotes
+ */
+static String httpBuildWeakEtag(const String &resourceName, int contentLength) {
+  String etag = String("W/\"") + FIRMWARE + String("-") + resourceName + String("-") +
+                String(contentLength) + String("\"");
+  etag.replace(" ", "_");
+  return etag;
+}
+
+/**
+ * @brief Check whether request cache validators match the current asset.
+ *
+ * @param etag Current asset ETag
+ * @param lastModified Current asset Last-Modified value
+ * @return true if cached response can be reused, false otherwise
+ */
+static bool httpIsAssetNotModified(const String &etag, const String &lastModified) {
+  if (http_if_none_match.length() > 0) {
+    if (http_if_none_match.indexOf(etag) >= 0 || http_if_none_match == "*") {
+      return true;
+    }
+  }
+  if (http_if_modified_since.length() > 0 && lastModified.length() > 0) {
+    if (http_if_modified_since == lastModified) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * @brief Send a 304 response when browser cache is still valid.
+ *
+ * @param etag Current asset ETag
+ * @param lastModified Current asset Last-Modified value
+ * @param cacheMaxAgeSec Cache lifetime in seconds
+ */
+static void httpSendNotModified(const String &etag,
+                                const String &lastModified,
+                                uint16_t cacheMaxAgeSec) {
+  cmdclient.print("HTTP/1.1 304 Not Modified\r\n");
+  cmdclient.print("Connection: close\r\n");
+  cmdclient.print("Cache-Control: max-age=");
+  cmdclient.print(cacheMaxAgeSec);
+  cmdclient.print("\r\n");
+  if (etag.length() > 0) {
+    cmdclient.print("ETag: ");
+    cmdclient.print(etag);
+    cmdclient.print("\r\n");
+  }
+  if (lastModified.length() > 0) {
+    cmdclient.print("Last-Modified: ");
+    cmdclient.print(lastModified);
+    cmdclient.print("\r\n");
+  }
+  cmdclient.print("\r\n");
 }
