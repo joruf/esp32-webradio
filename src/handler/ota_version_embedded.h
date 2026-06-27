@@ -8,12 +8,17 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.29",
+  "version": "v2.30",
   "released": "2026-06-27",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.29.bin",
-  "notes": "Audio startup noise reduction release: improved anti-pop stream start sequence with delayed amplifier enable and decoder warmup buffering, including an extended cold-boot warmup window for the first automatic preset start after power-on.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.30.bin",
+  "notes": "Startup audio smoothing and Web UI playback indicator refinement: reduced first-start pop/pfffftt artifacts with staged decoder warmup and updated the live stream indicator to a CSS-only effect that replaces the play icon while running, with inline metadata pill placement in the heading.",
   "history": [
+    {
+      "version": "v2.30",
+      "released": "2026-06-27",
+      "notes": "Extended anti-pop startup behavior for first boot playback by applying a longer one-time warmup gate before enabling audio output, while keeping normal restarts responsive. Reworked the Play button live visualization from JS class blinking to a CSS-driven animated icon effect and moved the stream kbps pill into the metadata panel heading on a single line."
+    },
     {
       "version": "v2.29",
       "released": "2026-06-27",
