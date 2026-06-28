@@ -2642,6 +2642,10 @@ const char app_js[] PROGMEM = R"=====(
         initDiagnosticsPage();
         initIndexPage();
         initNavActiveState();
+        if (isMp3StreamSessionActive()) {
+            markMp3StreamNavigationGrace(5000);
+            ensureMp3StreamLiveUpdates();
+        }
     });
 
     /**
@@ -2654,6 +2658,7 @@ const char app_js[] PROGMEM = R"=====(
 
     $("#stop").on("click", function() {
         console.log("stop");
+        clearMp3StreamSession();
         httpGet('stop');
     });
 
@@ -2667,7 +2672,11 @@ const char app_js[] PROGMEM = R"=====(
     });
 
     $("#preset").on("change", function() {
+        if (presetUiSyncInProgress) {
+            return;
+        }
         console.log("Preset Channel: "+this.value);
+        clearMp3StreamSession();
         renderIndexPresetCards();
         handlepreset(this.value);
     });
@@ -2708,23 +2717,6 @@ const char app_js[] PROGMEM = R"=====(
     $("#mp3track").on("click", function() {
         pickRandomMp3Track();
     });
-    $("#mp3-file-picker").on("change", function() {
-        if (this.files && this.files.length > 0) {
-            applyFileSelectionToStation(this.files[0]);
-        }
-    });
-    $("#mp3-folder-picker").on("change", function() {
-        fillFolderFileList(this.files || []);
-    });
-    $("#mp3-folder-files").on("change", function() {
-        if (!this.value) {
-            return;
-        }
-        applyRelativePathToStation(this.value, true);
-    });
-
-
-
     /**
     * MP3 Player
     */
@@ -2839,18 +2831,23 @@ const char app_js[] PROGMEM = R"=====(
             return;
         }
 
-        for (i = 0; i < select.options.length; i++) {
-            if (parseInt(select.options[i].value, 10) === target) {
-                select.selectedIndex = i;
-                found = true;
-                break;
+        presetUiSyncInProgress = true;
+        try {
+            for (i = 0; i < select.options.length; i++) {
+                if (parseInt(select.options[i].value, 10) === target) {
+                    select.selectedIndex = i;
+                    found = true;
+                    break;
+                }
             }
-        }
 
-        if (!found) {
-            select.selectedIndex = 0;
+            if (!found) {
+                select.selectedIndex = 0;
+            }
+            renderIndexPresetCards();
+        } finally {
+            presetUiSyncInProgress = false;
         }
-        renderIndexPresetCards();
     }
 
 
@@ -3123,8 +3120,249 @@ const char app_js[] PROGMEM = R"=====(
 
 
     /**
-     * mp3stream.html
+     * mp3stream.html — LAN stream session (persists across page navigation)
      */
+    var MP3_STREAM_SESSION_KEY = "mp3StreamSession";
+    var mp3StreamAdvanceTimer = null;
+    var mp3StreamSessionCache = null;
+    var mp3StreamNavGraceUntil = 0;
+    var presetUiSyncInProgress = false;
+
+    function markMp3StreamNavigationGrace(durationMs) {
+        mp3StreamNavGraceUntil = Date.now() + (durationMs || 5000);
+    }
+
+    function isMp3StreamNavigationGraceActive() {
+        return Date.now() < mp3StreamNavGraceUntil;
+    }
+
+    function createEmptyMp3StreamSession() {
+        return {
+            tracks: [],
+            currentIndex: -1,
+            currentUrl: "",
+            playlistActive: false,
+            baseUrl: "",
+            lastPlaying: false,
+            lanStreamActive: false
+        };
+    }
+
+    function loadMp3StreamSessionFromStorage() {
+        try {
+            var raw = sessionStorage.getItem(MP3_STREAM_SESSION_KEY);
+            if (!raw) {
+                return createEmptyMp3StreamSession();
+            }
+            var parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== "object") {
+                return createEmptyMp3StreamSession();
+            }
+            parsed.tracks = Array.isArray(parsed.tracks) ? parsed.tracks : [];
+            return parsed;
+        } catch (err) {
+            return createEmptyMp3StreamSession();
+        }
+    }
+
+    function getMp3StreamSession() {
+        if (!mp3StreamSessionCache) {
+            mp3StreamSessionCache = loadMp3StreamSessionFromStorage();
+        }
+        return mp3StreamSessionCache;
+    }
+
+    function saveMp3StreamSession(session) {
+        mp3StreamSessionCache = session || createEmptyMp3StreamSession();
+        try {
+            var hasActiveStream = !!(mp3StreamSessionCache.lanStreamActive && mp3StreamSessionCache.currentUrl);
+            var hasTrackList = !!(mp3StreamSessionCache.tracks && mp3StreamSessionCache.tracks.length);
+            if (!hasActiveStream && !hasTrackList) {
+                sessionStorage.removeItem(MP3_STREAM_SESSION_KEY);
+                return;
+            }
+            sessionStorage.setItem(MP3_STREAM_SESSION_KEY, JSON.stringify(mp3StreamSessionCache));
+        } catch (err) {
+            console.log("Could not persist MP3 stream session", err);
+        }
+    }
+
+    function clearMp3StreamSession() {
+        clearMp3StreamAdvanceTimer();
+        mp3StreamSessionCache = createEmptyMp3StreamSession();
+        try {
+            sessionStorage.removeItem(MP3_STREAM_SESSION_KEY);
+        } catch (err) {}
+    }
+
+    function isMp3StreamSessionActive() {
+        var session = getMp3StreamSession();
+        return !!(session.lanStreamActive && session.currentUrl);
+    }
+
+    function clearMp3StreamAdvanceTimer() {
+        if (mp3StreamAdvanceTimer) {
+            clearTimeout(mp3StreamAdvanceTimer);
+            mp3StreamAdvanceTimer = null;
+        }
+    }
+
+    function ensureMp3StreamLiveUpdates() {
+        if (!shouldRunLiveUpdates()) {
+            return;
+        }
+        if (!sseLiveSource && !livePollTimer && !livePollInFlight) {
+            startLiveUpdates();
+        }
+    }
+
+    function mp3StreamBuildTrackUrl(baseUrl, href) {
+        var base = normalizeBaseUrl(baseUrl);
+        var rel = String(href || "").replace(/^\/+/, "");
+        var parts = rel.split("/");
+        var encoded = [];
+        var i;
+        for (i = 0; i < parts.length; i++) {
+            if (!parts[i]) {
+                continue;
+            }
+            try {
+                encoded.push(encodeURIComponent(decodeURIComponent(parts[i])));
+            } catch (err) {
+                encoded.push(encodeURIComponent(parts[i]));
+            }
+        }
+        return base + encoded.join("/");
+    }
+
+    function mp3StreamDisplayTrackName(href) {
+        var name = String(href || "");
+        var slash = name.lastIndexOf("/");
+        if (slash >= 0) {
+            name = name.substring(slash + 1);
+        }
+        try {
+            return decodeURIComponent(name);
+        } catch (err) {
+            return name;
+        }
+    }
+
+    function notifyMp3StreamPagePlaybackUpdate(session, playing) {
+        if (typeof window.onMp3StreamPagePlaybackUpdate === "function") {
+            window.onMp3StreamPagePlaybackUpdate(session, playing);
+        }
+    }
+
+    function mp3StreamPlayUrl(url, options) {
+        var session = getMp3StreamSession();
+        var streamUrl = String(url || "").trim();
+        options = options || {};
+        if (!streamUrl) {
+            return;
+        }
+        session.currentUrl = streamUrl;
+        session.lanStreamActive = true;
+        if (options.index !== undefined && options.index !== null) {
+            session.currentIndex = parseInt(options.index, 10);
+        }
+        if (options.playlistActive !== undefined) {
+            session.playlistActive = !!options.playlistActive;
+        }
+        if (options.baseUrl) {
+            session.baseUrl = normalizeBaseUrl(options.baseUrl);
+        }
+        saveMp3StreamSession(session);
+
+        if (document.getElementById("station")) {
+            document.getElementById("station").value = streamUrl;
+        }
+        if (typeof setMp3PickerStatus === "function") {
+            setMp3PickerStatus("Starting stream...");
+        }
+        enqueueHttpGet("/?station=" + encodeURIComponent(streamUrl) + "&_t=" + Date.now());
+        ensureMp3StreamLiveUpdates();
+        notifyMp3StreamPagePlaybackUpdate(session, session.lastPlaying);
+    }
+
+    function mp3StreamPlayTrackAtIndex(index, playlistActive) {
+        var session = getMp3StreamSession();
+        if (index < 0 || index >= session.tracks.length) {
+            return;
+        }
+        mp3StreamPlayUrl(session.tracks[index].url, {
+            index: index,
+            playlistActive: playlistActive === true,
+            baseUrl: session.baseUrl
+        });
+    }
+
+    function mp3StreamStartPlayAll() {
+        var session = getMp3StreamSession();
+        if (!session.tracks.length) {
+            return false;
+        }
+        session.playlistActive = true;
+        saveMp3StreamSession(session);
+        mp3StreamPlayTrackAtIndex(0, true);
+        return true;
+    }
+
+    function mp3StreamSetTracksFromScan(baseUrl, files) {
+        var session = getMp3StreamSession();
+        var normalizedBase = normalizeBaseUrl(baseUrl);
+        session.baseUrl = normalizedBase;
+        session.tracks = (files || []).map(function (href) {
+            return {
+                href: href,
+                name: mp3StreamDisplayTrackName(href),
+                url: mp3StreamBuildTrackUrl(normalizedBase, href)
+            };
+        });
+        session.currentIndex = -1;
+        session.playlistActive = false;
+        saveMp3StreamSession(session);
+        notifyMp3StreamPagePlaybackUpdate(session, session.lastPlaying);
+        return session.tracks.length;
+    }
+
+    function scheduleMp3StreamPlaylistAdvance() {
+        clearMp3StreamAdvanceTimer();
+        mp3StreamAdvanceTimer = setTimeout(function () {
+            mp3StreamAdvanceTimer = null;
+            var session = getMp3StreamSession();
+            if (!session.playlistActive) {
+                return;
+            }
+            var next = session.currentIndex + 1;
+            if (next < session.tracks.length) {
+                mp3StreamPlayTrackAtIndex(next, true);
+            } else {
+                session.playlistActive = false;
+                saveMp3StreamSession(session);
+                if (typeof setMp3PickerStatus === "function") {
+                    setMp3PickerStatus("Playlist finished.");
+                }
+                notifyMp3StreamPagePlaybackUpdate(session, false);
+            }
+        }, 900);
+    }
+
+    function handleMp3StreamSessionLiveStatus(data) {
+        if (!isMp3StreamSessionActive()) {
+            return;
+        }
+        var session = getMp3StreamSession();
+        var playing = isLiveDataPlaying(data);
+        if (session.playlistActive && session.lastPlaying && !playing &&
+            !isMp3StreamNavigationGraceActive()) {
+            scheduleMp3StreamPlaylistAdvance();
+        }
+        session.lastPlaying = playing;
+        saveMp3StreamSession(session);
+        notifyMp3StreamPagePlaybackUpdate(session, playing);
+    }
+
     function trackreq(presctrl) {
         if (presctrl.value != "-1") {
             httpGet("mp3track=" + presctrl.value);
@@ -3327,10 +3565,12 @@ const char app_js[] PROGMEM = R"=====(
             if(linkElement && data.title) {
                     linkElement.href = "https://www.youtube.com/results?search_query=" + encodeURIComponent(data.title) + " lyrics";
             }
+
+            handleMp3StreamSessionLiveStatus(data);
     }
 
     function shouldRunLiveUpdates() {
-        return $("#preset").length > 0;
+        return $("#preset").length > 0 || $("#mp3-track-list").length > 0 || isMp3StreamSessionActive();
     }
 
     var LIVE_POLL_INTERVAL_ACTIVE_MS = 10000;
@@ -3464,6 +3704,8 @@ const char app_js[] PROGMEM = R"=====(
     });
 
     window.addEventListener("beforeunload", function() {
+        markMp3StreamNavigationGrace(6000);
+        saveMp3StreamSession(getMp3StreamSession());
         stopLivePolling();
         if (sseLiveSource) {
             sseLiveSource.close();
@@ -3471,7 +3713,16 @@ const char app_js[] PROGMEM = R"=====(
         }
     });
 
+    window.addEventListener("pagehide", function() {
+        markMp3StreamNavigationGrace(6000);
+        saveMp3StreamSession(getMp3StreamSession());
+    });
+
     window.onload = function() {
+            getMp3StreamSession();
+            if (isMp3StreamSessionActive()) {
+                markMp3StreamNavigationGrace(5000);
+            }
             if (!shouldRunLiveUpdates()) {
                 syncThemeFromServer();
             }
@@ -3479,9 +3730,7 @@ const char app_js[] PROGMEM = R"=====(
             if (!shouldRunLiveUpdates()) {
                 return;
             }
-            if (!sseLiveSource && !livePollTimer && !livePollInFlight) {
-                startLiveUpdates();
-            }
+            ensureMp3StreamLiveUpdates();
     };
 
     /** Send snooze timer to the ESP32 API using jQuery */

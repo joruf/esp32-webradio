@@ -746,8 +746,86 @@ const char app_css[] PROGMEM = R"=====(
 	.mp3-play-btn:hover,
 	.mp3-play-btn:focus { background: #2a6496; border-color: #204d74; color: #fff; }
 	.mp3-play-btn .btn-icon { margin-right: 4px; }
+
+	.mp3-action-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px;
+		align-items: center;
+		margin-top: 10px;
+	}
+	.mp3-scan-btn { min-width: 120px; }
+	.mp3-play-all-btn:disabled {
+		opacity: 0.55;
+		cursor: not-allowed;
+	}
+
+	.mp3-track-list {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		margin-top: 8px;
+	}
+	.mp3-track-empty {
+		padding: 14px 12px;
+		border: 1px dashed #ccc;
+		border-radius: 4px;
+		color: #777;
+		text-align: center;
+		font-size: 0.95em;
+	}
+	.mp3-track-item {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		width: 100%;
+		padding: 10px 12px;
+		border: 1px solid #ddd;
+		border-radius: 4px;
+		background: #fafafa;
+		color: #333;
+		text-align: left;
+		cursor: pointer;
+		transition: border-color 0.15s ease, background 0.15s ease;
+	}
+	.mp3-track-item:hover,
+	.mp3-track-item:focus {
+		border-color: #337ab7;
+		background: #f0f7fd;
+		outline: none;
+	}
+	.mp3-track-item.is-active {
+		border-color: #337ab7;
+		background: #e8f2fb;
+	}
+	.mp3-track-item.is-playing {
+		border-color: #2e6da4;
+		box-shadow: inset 3px 0 0 #337ab7;
+	}
+	.mp3-track-play {
+		flex-shrink: 0;
+		width: 1.2em;
+		color: #337ab7;
+	}
+	.mp3-track-item.is-playing .mp3-track-play {
+		color: #2e6da4;
+	}
+	.mp3-track-item.is-playing .mp3-track-play::before {
+		content: "\25B6";
+	}
+	.mp3-track-name {
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
 	@media (max-width: 600px) {
 		.mp3-stream-row { flex-direction: column; }
+		.mp3-action-row { flex-direction: column; align-items: stretch; }
+		.mp3-scan-btn,
+		.mp3-play-all-btn { width: 100%; }
 	}
 
 	body.theme-dark .mp3-help { color: #aaa; }
@@ -781,6 +859,31 @@ const char app_css[] PROGMEM = R"=====(
 	body.theme-dark .mp3-now-url { color: #7eb8e8; }
 	body.theme-dark .mp3-now-url:not(.is-set) { color: #888; }
 	body.theme-dark .mp3-now-status { color: #aaa; }
+	body.theme-dark .mp3-track-empty {
+		border-color: #555;
+		color: #aaa;
+		background: rgba(255, 255, 255, 0.02);
+	}
+	body.theme-dark .mp3-track-item {
+		background: #242424;
+		border-color: #444;
+		color: #e0e0e0;
+	}
+	body.theme-dark .mp3-track-item:hover,
+	body.theme-dark .mp3-track-item:focus {
+		background: #2a3340;
+		border-color: #5b8fc9;
+	}
+	body.theme-dark .mp3-track-item.is-active {
+		background: #243040;
+		border-color: #5b8fc9;
+	}
+	body.theme-dark .mp3-track-item.is-playing {
+		border-color: #7eb8e8;
+		box-shadow: inset 3px 0 0 #7eb8e8;
+	}
+	body.theme-dark .mp3-track-play { color: #7eb8e8; }
+	body.theme-dark .mp3-track-item.is-playing .mp3-track-play { color: #9cccf0; }
 
 	.notification-stack {
 		position: fixed;

@@ -22,7 +22,7 @@ const char mp3stream_html[] PROGMEM = R"=====(
 
 		<link rel="stylesheet" type="text/css" href="app.css" />
 
-		<title>Webradio - MP3 Player</title>
+		<title>Webradio - MP3 Stream</title>
 	</head>
 
 	<body itemscope itemtype="http://schema.org/WebPage">
@@ -30,38 +30,28 @@ const char mp3stream_html[] PROGMEM = R"=====(
 
 <div id="body" class="container sound-page mp3-page">
 	<header class="sound-page-header">
-		<h1>MP3 Player</h1>
+		<h1>MP3 Stream</h1>
 		<p class="sound-page-lead">Stream MP3 files from your smartphone or PC to the webradio over your local network.</p>
 	</header>
 
 	<div class="sound-studio">
 
-		<section class="panel panel-default sound-card mp3-now-card">
-			<div class="panel-heading sound-card-heading">
-				<span class="sound-card-icon" aria-hidden="true">&#9835;</span>
-				<div class="sound-card-heading-text">
-					<strong>Current stream</strong>
-					<span class="sound-card-sub">The URL currently sent to the radio</span>
-				</div>
-			</div>
-			<div class="panel-body">
-				<div id="mp3-now-url" class="mp3-now-url">No stream selected yet</div>
-				<p id="mp3-picker-status" class="mp3-now-status">Choose a file and set a Base URL to begin.</p>
-			</div>
-		</section>
-
 		<section class="panel panel-default sound-card">
 			<div class="panel-heading sound-card-heading">
 				<span class="sound-card-icon" aria-hidden="true">&#127760;</span>
 				<div class="sound-card-heading-text">
-					<strong><span class="mp3-step-badge">1</span> Media server Base URL</strong>
-					<span class="sound-card-sub">Run a small HTTP server on your smartphone/PC and enter its folder root once.</span>
+					<strong><span class="mp3-step-badge">1</span> Media server</strong>
+					<span class="sound-card-sub">Run a small HTTP server on your smartphone/PC and scan the folder for MP3 files.</span>
 				</div>
 			</div>
 			<div class="panel-body">
 				<label class="mp3-field-label" for="mp3-base-url">Base URL of your media server</label>
-				<input id="mp3-base-url" class="form-control mp3-input" placeholder="http://192.168.1.20:8000/music/">
-				<p class="mp3-help">Example: open a terminal in your music folder, then run <button type="button" class="mp3-copy-cmd" data-copy-cmd="python3 -m http.server 8000" title="Click to copy command">python3 -m http.server 8000</button> and paste it there. The Base URL above is filled in automatically.</p>
+				<input id="mp3-base-url" class="form-control mp3-input" placeholder="http://192.168.178.35:8000/">
+				<div class="mp3-action-row">
+					<button id="mp3-scan-btn" class="btn btn-primary mp3-scan-btn" type="button">Scan folder</button>
+					<button id="mp3-play-all-btn" class="btn mp3-play-btn mp3-play-all-btn" type="button" disabled><span class="btn-icon" aria-hidden="true">&#9654;</span> Play all</button>
+				</div>
+				<p class="mp3-help">Example: open a terminal in your music folder, then run <button type="button" class="mp3-copy-cmd" data-copy-cmd="python3 -m http.server 8000" title="Click to copy command">python3 -m http.server 8000</button> and paste the Base URL above. It is filled in automatically.</p>
 			</div>
 		</section>
 
@@ -69,76 +59,61 @@ const char mp3stream_html[] PROGMEM = R"=====(
 			<div class="panel-heading sound-card-heading">
 				<span class="sound-card-icon" aria-hidden="true">&#127925;</span>
 				<div class="sound-card-heading-text">
-					<strong><span class="mp3-step-badge">2</span> Choose your music</strong>
-					<span class="sound-card-sub">Pick a single MP3 or a whole folder, then play any track.</span>
+					<strong><span class="mp3-step-badge">2</span> Available tracks</strong>
+					<span class="sound-card-sub">Click a track to start streaming. The currently playing file is highlighted.</span>
 				</div>
 			</div>
 			<div class="panel-body">
-				<div class="mp3-mode">
-					<input type="radio" name="mp3-mode" id="mp3-mode-file" class="mp3-mode-radio" checked>
-					<input type="radio" name="mp3-mode" id="mp3-mode-folder" class="mp3-mode-radio">
-
-					<div class="mp3-mode-tabs" role="tablist">
-						<label class="mp3-mode-tab" for="mp3-mode-file"><span aria-hidden="true">&#127925;</span> Single file</label>
-						<label class="mp3-mode-tab" for="mp3-mode-folder"><span aria-hidden="true">&#128193;</span> Folder</label>
-					</div>
-
-					<div class="mp3-mode-panels">
-						<div class="mp3-mode-panel mp3-mode-panel-file">
-							<div class="mp3-picker">
-								<span class="mp3-picker-icon" aria-hidden="true">&#127925;</span>
-								<div class="mp3-picker-title">Choose one MP3 or M3U file</div>
-								<div class="mp3-picker-sub">The file name appears on the radio display and playback starts immediately.</div>
-								<input id="mp3-file-picker" class="mp3-file-input" type="file" accept=".mp3,.m3u,audio/mpeg,audio/mp3,audio/x-mpegurl,application/vnd.apple.mpegurl">
-							</div>
-						</div>
-
-						<div class="mp3-mode-panel mp3-mode-panel-folder">
-							<div class="mp3-picker">
-								<span class="mp3-picker-icon" aria-hidden="true">&#128193;</span>
-								<div class="mp3-picker-title">Choose a complete folder</div>
-								<div class="mp3-picker-sub">Every MP3/M3U file inside is listed below. Click one to start the stream.</div>
-								<input id="mp3-folder-picker" class="mp3-file-input" type="file" webkitdirectory directory multiple accept=".mp3,.m3u,audio/mpeg,audio/mp3,audio/x-mpegurl,application/vnd.apple.mpegurl">
-							</div>
-							<label class="mp3-field-label" for="mp3-folder-files">Files in selected folder</label>
-							<select id="mp3-folder-files" class="form-control mp3-filelist" size="8">
-								<option value="">Select a file from folder...</option>
-							</select>
-						</div>
-					</div>
+				<p id="mp3-picker-status" class="mp3-now-status">Enter a Base URL and scan the folder to list MP3 files.</p>
+				<div id="mp3-track-list" class="mp3-track-list" role="list">
+					<div class="mp3-track-empty">No tracks loaded yet.</div>
 				</div>
-			</div>
-		</section>
-
-		<section class="panel panel-default sound-card">
-			<div class="panel-heading sound-card-heading">
-				<span class="sound-card-icon" aria-hidden="true">&#9654;</span>
-				<div class="sound-card-heading-text">
-					<strong><span class="mp3-step-badge">3</span> Stream URL &amp; playback</strong>
-					<span class="sound-card-sub">Verify the generated URL, then start the stream on the radio.</span>
-				</div>
-			</div>
-			<div class="panel-body">
-				<label class="mp3-field-label" for="station">MP3 or M3U URL</label>
-				<div class="mp3-stream-row">
-					<input id="station" class="form-control mp3-input mp3-stream-input" placeholder="http://192.168.1.20:8000/music/song.mp3">
-					<button id="setstat" class="btn mp3-play-btn" type="button"><span class="btn-icon" aria-hidden="true">&#9654;</span> START STREAM</button>
-				</div>
-				<p class="mp3-help">Local paths such as <code>C:\Music\song.mp3</code> cannot be played directly. The file or playlist must be reachable over HTTP in your local network.</p>
 			</div>
 		</section>
 
 	</div>
 </div>
 
+<input id="station" type="hidden" value="">
+
 	<script src="app.js"></script>
 	<script>
 	(function () {
-		var stationEl = document.getElementById("station");
-		var nowUrlEl = document.getElementById("mp3-now-url");
 		var baseEl = document.getElementById("mp3-base-url");
-		var pickers = [document.getElementById("mp3-file-picker"), document.getElementById("mp3-folder-picker")];
+		var scanBtn = document.getElementById("mp3-scan-btn");
+		var playAllBtn = document.getElementById("mp3-play-all-btn");
+		var trackListEl = document.getElementById("mp3-track-list");
 		var MEDIA_SERVER_PORT = 8000;
+		var scanInFlight = false;
+
+		function setStatus(message, isError) {
+			if (typeof setMp3PickerStatus === "function") {
+				setMp3PickerStatus(message);
+				return;
+			}
+			var statusEl = document.getElementById("mp3-picker-status");
+			if (statusEl) {
+				statusEl.textContent = String(message || "");
+				statusEl.classList.toggle("is-error", !!isError);
+			}
+		}
+
+		function normalizeBase(baseUrl) {
+			if (typeof normalizeBaseUrl === "function") {
+				return normalizeBaseUrl(baseUrl);
+			}
+			var normalized = String(baseUrl || "").trim();
+			if (!normalized) {
+				return "";
+			}
+			if (!/^https?:\/\//i.test(normalized)) {
+				normalized = "http://" + normalized;
+			}
+			if (normalized.charAt(normalized.length - 1) !== "/") {
+				normalized += "/";
+			}
+			return normalized;
+		}
 
 		function copyTextToClipboard(text) {
 			if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -188,49 +163,172 @@ const char mp3stream_html[] PROGMEM = R"=====(
 			});
 		});
 
-		// Prefill the base URL with the requesting device's own IP so the media server URL is ready to use.
 		if (baseEl && !String(baseEl.value || "").trim()) {
-			fetch("/?clientip&_t=" + Date.now())
-				.then(function (response) { return response.json(); })
-				.then(function (data) {
-					if (data && data.ip && !String(baseEl.value || "").trim()) {
-						baseEl.value = "http://" + data.ip + ":" + MEDIA_SERVER_PORT + "/";
-					}
-				})
-				.catch(function () {});
+			var session = typeof getMp3StreamSession === "function" ? getMp3StreamSession() : null;
+			if (session && session.baseUrl) {
+				baseEl.value = session.baseUrl;
+			} else {
+				fetch("/?clientip&_t=" + Date.now())
+					.then(function (response) { return response.json(); })
+					.then(function (data) {
+						if (data && data.ip && !String(baseEl.value || "").trim()) {
+							baseEl.value = "http://" + data.ip + ":" + MEDIA_SERVER_PORT + "/";
+						}
+					})
+					.catch(function () {});
+			}
 		}
 
-		function refreshNowUrl() {
-			if (!nowUrlEl) {
+		function updateTrackHighlight(session, isPlaying) {
+			if (!trackListEl || !session) {
 				return;
 			}
-			var value = stationEl ? String(stationEl.value || "").trim() : "";
-			if (value) {
-				nowUrlEl.textContent = value;
-				nowUrlEl.classList.add("is-set");
-			} else {
-				nowUrlEl.textContent = "No stream selected yet";
-				nowUrlEl.classList.remove("is-set");
+			var items = trackListEl.querySelectorAll(".mp3-track-item");
+			var i;
+			for (i = 0; i < items.length; i++) {
+				var item = items[i];
+				var index = parseInt(item.getAttribute("data-index"), 10);
+				var isActive = index === session.currentIndex;
+				item.classList.toggle("is-active", isActive);
+				item.classList.toggle("is-playing", isActive && !!isPlaying);
 			}
 		}
 
-		if (stationEl) {
-			stationEl.addEventListener("input", refreshNowUrl);
-			stationEl.addEventListener("change", refreshNowUrl);
+		function renderTrackList(session) {
+			if (!trackListEl) {
+				return;
+			}
+			session = session || (typeof getMp3StreamSession === "function" ? getMp3StreamSession() : { tracks: [], currentIndex: -1 });
+			trackListEl.innerHTML = "";
+			if (!session.tracks.length) {
+				trackListEl.innerHTML = '<div class="mp3-track-empty">No tracks loaded yet.</div>';
+				if (playAllBtn) {
+					playAllBtn.disabled = true;
+				}
+				updateTrackHighlight(session, false);
+				return;
+			}
+
+			session.tracks.forEach(function (track, index) {
+				var button = document.createElement("button");
+				button.type = "button";
+				button.className = "mp3-track-item";
+				button.setAttribute("role", "listitem");
+				button.setAttribute("data-index", String(index));
+				button.setAttribute("data-url", track.url);
+				button.innerHTML = '<span class="mp3-track-play btn-icon" aria-hidden="true">&#9654;</span><span class="mp3-track-name"></span>';
+				button.querySelector(".mp3-track-name").textContent = track.name;
+				button.addEventListener("click", function () {
+					if (typeof mp3StreamPlayTrackAtIndex === "function") {
+						mp3StreamPlayTrackAtIndex(index, false);
+					}
+				});
+				trackListEl.appendChild(button);
+			});
+
+			if (playAllBtn) {
+				playAllBtn.disabled = false;
+			}
+			updateTrackHighlight(session, session.lastPlaying);
 		}
-		// app.js writes the station value on its own change handlers; read it afterwards.
-		pickers.forEach(function (picker) {
-			if (picker) {
-				picker.addEventListener("change", function () { window.setTimeout(refreshNowUrl, 0); });
+
+		window.onMp3StreamPagePlaybackUpdate = function (session, playing) {
+			updateTrackHighlight(session, playing);
+		};
+
+		function restorePageFromSession() {
+			var session = typeof getMp3StreamSession === "function" ? getMp3StreamSession() : null;
+			if (!session) {
+				renderTrackList({ tracks: [], currentIndex: -1 });
+				return;
 			}
-		});
-		document.addEventListener("change", function (e) {
-			if (e.target && e.target.id === "mp3-folder-files") {
-				window.setTimeout(refreshNowUrl, 0);
+			if (baseEl && session.baseUrl && !String(baseEl.value || "").trim()) {
+				baseEl.value = session.baseUrl;
 			}
-		});
-		window.setInterval(refreshNowUrl, 1000);
-		refreshNowUrl();
+			renderTrackList(session);
+			if (session.tracks.length) {
+				setStatus(session.tracks.length + " MP3 file(s) loaded. Playback continues in the background.");
+			}
+			if (typeof ensureMp3StreamLiveUpdates === "function") {
+				ensureMp3StreamLiveUpdates();
+			}
+		}
+
+		function scanMediaServer() {
+			var baseUrl;
+			if (scanInFlight) {
+				return;
+			}
+			baseUrl = normalizeBase(baseEl ? baseEl.value : "");
+			if (!baseUrl) {
+				setStatus("Enter the Base URL of your media server first.", true);
+				return;
+			}
+
+			scanInFlight = true;
+			if (scanBtn) {
+				scanBtn.disabled = true;
+				scanBtn.textContent = "Scanning...";
+			}
+			setStatus("Checking connection and scanning folder...");
+
+			fetch("/?mediadir=" + encodeURIComponent(baseUrl) + "&_t=" + Date.now())
+				.then(function (response) { return response.json(); })
+				.then(function (data) {
+					if (!data || data.ok !== true) {
+						setStatus((data && data.error) || "Could not scan folder.", true);
+						return;
+					}
+					if (!data.files || !data.files.length) {
+						setStatus((data && data.message) || "No MP3 files found in this folder.", true);
+						return;
+					}
+					if (typeof mp3StreamSetTracksFromScan === "function") {
+						mp3StreamSetTracksFromScan(baseUrl, data.files);
+					}
+					renderTrackList(typeof getMp3StreamSession === "function" ? getMp3StreamSession() : null);
+					setStatus(data.files.length + " MP3 file(s) found. Click a track to play.");
+					if (typeof showNotification === "function") {
+						showNotification("Found " + data.files.length + " MP3 file(s).", { type: "success" });
+					}
+				})
+				.catch(function () {
+					setStatus("Scan failed. Check the Base URL and make sure the server is running.", true);
+				})
+				.finally(function () {
+					scanInFlight = false;
+					if (scanBtn) {
+						scanBtn.disabled = false;
+						scanBtn.textContent = "Scan folder";
+					}
+				});
+		}
+
+		if (scanBtn) {
+			scanBtn.addEventListener("click", scanMediaServer);
+		}
+		if (playAllBtn) {
+			playAllBtn.addEventListener("click", function () {
+				var session = typeof getMp3StreamSession === "function" ? getMp3StreamSession() : null;
+				if (!session || !session.tracks.length) {
+					setStatus("No tracks available. Scan the folder first.", true);
+					return;
+				}
+				if (typeof mp3StreamStartPlayAll === "function") {
+					mp3StreamStartPlayAll();
+				}
+			});
+		}
+		if (baseEl) {
+			baseEl.addEventListener("keydown", function (event) {
+				if (event.key === "Enter") {
+					event.preventDefault();
+					scanMediaServer();
+				}
+			});
+		}
+
+		restorePageFromSession();
 	})();
 	</script>
 	</body>

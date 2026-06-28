@@ -11,6 +11,7 @@ void saveDefaultConfig();
 
 #include "http_queue.h"
 #include "captive_portal.h"
+#include "media_probe.h"
 
 static String http_host_header = "";
 static String http_if_none_match = "";
@@ -946,6 +947,14 @@ void handlehttp() {
   if (http_getcmd.startsWith("clientip")) {
     String clientIp = cmdclient.remoteIP().toString();
     sendHttpJsonResponse(String("{\"ip\":\"") + jsonEscapeString(clientIp.c_str()) + "\"}");
+    return;
+  }
+
+  // Proxy-scan a LAN http.server directory listing for MP3 files
+  if (http_getcmd.startsWith("mediadir")) {
+    String baseUrl = mediaProbeQueryParam(http_getcmd, "mediadir");
+    baseUrl = mediaProbeUrlDecode(baseUrl);
+    sendHttpJsonResponse(buildMediaDirectoryProbeJson(baseUrl));
     return;
   }
 
