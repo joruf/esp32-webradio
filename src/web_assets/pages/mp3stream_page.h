@@ -15,6 +15,7 @@ const char mp3stream_html[] PROGMEM = R"=====(
 <html prefix="og: http://purl.org/dc/elements/1.1/" lang="en-EN">
 	<head>
 		<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<!--
 		<link rel="icon" href="favicon.ico" type="image/x-icon">
 		<link rel="icon" href="favicon.ico" type="image/png">
@@ -29,60 +30,59 @@ const char mp3stream_html[] PROGMEM = R"=====(
 @include_nav@
 
 <div id="body" class="container sound-page mp3-page">
-	<header class="sound-page-header">
-		<h1>MP3 Stream</h1>
-		<p class="sound-page-lead">Stream MP3 files from your smartphone or PC to the webradio over your local network.</p>
-	</header>
+			<header class="sound-page-header">
+				<h1>MP3 Stream</h1>
+				<p class="sound-page-lead">Stream MP3 files from your smartphone or PC to the webradio over your local network.</p>
+			</header>
+			<div class="sound-studio">
 
-	<div class="sound-studio">
-
-		<section class="panel panel-default sound-card">
-			<div class="panel-heading sound-card-heading">
-				<span class="sound-card-icon" aria-hidden="true">&#127760;</span>
-				<div class="sound-card-heading-text">
-					<strong><span class="mp3-step-badge">1</span> Media server</strong>
-					<span class="sound-card-sub">Run a small HTTP server on your smartphone/PC and scan the folder for MP3 files.</span>
+			<div class="row panel panel-default sound-card">
+				<div class="panel-heading sound-card-heading">
+					<span class="sound-card-icon" aria-hidden="true">&#127760;</span>
+					<div class="sound-card-heading-text">
+						<strong><span class="mp3-step-badge">1</span> Media server</strong>
+						<span class="sound-card-sub">Run a small HTTP server on your smartphone/PC and scan the folder for MP3 files.</span>
+					</div>
+				</div>
+				<div class="panel-body">
+					<label class="mp3-field-label" for="mp3-base-url">Base URL of your media server</label>
+					<input id="mp3-base-url" class="form-control mp3-input" placeholder="http://192.168.178.35:8000/">
+					<div class="mp3-action-row">
+						<button id="mp3-server-test-btn" class="btn btn-default mp3-server-test-btn" type="button">Check Server</button>
+						<button id="mp3-scan-btn" class="btn btn-primary mp3-scan-btn" type="button">Scan folder</button>
+						<button id="mp3-play-all-btn" class="btn mp3-play-btn mp3-play-all-btn" type="button" disabled><span class="btn-icon" aria-hidden="true">&#9654;</span> Play all</button>
+					</div>
+					<p class="mp3-help">Example: open a terminal in your music folder, then run <button type="button" class="mp3-copy-cmd" data-copy-cmd="python3 -m http.server 8000" title="Click to copy command">python3 -m http.server 8000</button> and paste the Base URL above. It is filled in automatically.</p>
 				</div>
 			</div>
-			<div class="panel-body">
-				<label class="mp3-field-label" for="mp3-base-url">Base URL of your media server</label>
-				<input id="mp3-base-url" class="form-control mp3-input" placeholder="http://192.168.178.35:8000/">
-				<div class="mp3-action-row">
-					<button id="mp3-server-test-btn" class="btn btn-default mp3-server-test-btn" type="button">Check Server</button>
-					<button id="mp3-scan-btn" class="btn btn-primary mp3-scan-btn" type="button">Scan folder</button>
-					<button id="mp3-play-all-btn" class="btn mp3-play-btn mp3-play-all-btn" type="button" disabled><span class="btn-icon" aria-hidden="true">&#9654;</span> Play all</button>
-				</div>
-				<p class="mp3-help">Example: open a terminal in your music folder, then run <button type="button" class="mp3-copy-cmd" data-copy-cmd="python3 -m http.server 8000" title="Click to copy command">python3 -m http.server 8000</button> and paste the Base URL above. It is filled in automatically.</p>
-			</div>
-		</section>
 
-		<section class="panel panel-default sound-card">
-			<div class="panel-heading sound-card-heading">
-				<span class="sound-card-icon" aria-hidden="true">&#127925;</span>
-				<div class="sound-card-heading-text">
-					<strong><span class="mp3-step-badge">2</span> Available tracks</strong>
-					<span class="sound-card-sub">Click a track to start streaming. The currently playing file is highlighted.</span>
+			<div class="row panel panel-default sound-card">
+				<div class="panel-heading sound-card-heading">
+					<span class="sound-card-icon" aria-hidden="true">&#127925;</span>
+					<div class="sound-card-heading-text">
+						<strong><span class="mp3-step-badge">2</span> Available tracks</strong>
+						<span class="sound-card-sub">Click a track to start streaming. The currently playing file is highlighted.</span>
+					</div>
+				</div>
+				<div class="panel-body">
+					<div class="webradio-control-toolbar mp3-volume-toolbar">
+						<label for="mp3-volume" class="webradio-control-label">Volume</label>
+						<span class="webradio-volume-value"><span id="mp3-volume-value">0</span>%</span>
+						<input type="range" class="form-control webradio-control-slider" id="mp3-volume" min="0" max="100" step="1">
+					</div>
+					<p id="mp3-picker-status" class="mp3-now-status">Enter a Base URL and scan the folder to list MP3 files.</p>
+					<div id="mp3-track-list" class="mp3-track-list" role="list">
+						<div class="mp3-track-empty">No tracks loaded yet.</div>
+					</div>
 				</div>
 			</div>
-			<div class="panel-body">
-				<div class="webradio-control-toolbar mp3-volume-toolbar">
-					<label for="mp3-volume" class="webradio-control-label">Volume</label>
-					<span class="webradio-volume-value"><span id="mp3-volume-value">0</span>%</span>
-					<input type="range" class="form-control webradio-control-slider" id="mp3-volume" min="0" max="100" step="1">
-				</div>
-				<p id="mp3-picker-status" class="mp3-now-status">Enter a Base URL and scan the folder to list MP3 files.</p>
-				<div id="mp3-track-list" class="mp3-track-list" role="list">
-					<div class="mp3-track-empty">No tracks loaded yet.</div>
-				</div>
-			</div>
-		</section>
 
-	</div>
-</div>
+			</div>
+		</div>
 
 <input id="station" type="hidden" value="">
 
-	<script src="app.js"></script>
+		<script src="app.js"></script>
 	<script>
 	(function () {
 		var baseEl = document.getElementById("mp3-base-url");

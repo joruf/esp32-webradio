@@ -8,12 +8,17 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.34",
+  "version": "v2.35",
   "released": "2026-06-28",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.34.bin",
-  "notes": "MP3 Stream page redesign: scan LAN folder via ESP32 proxy (?mediadir=), track list with Play all, sessionStorage keeps playback across Web UI navigation, and firmware reconnects interrupted LAN streams before Content-Length is complete.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.35.bin",
+  "notes": "MP3 Stream page responsive layout: viewport meta tag and index.html-style panel structure for smartphones; mobile CSS for full-width action buttons, volume slider, and help text wrapping.",
   "history": [
+    {
+      "version": "v2.35",
+      "released": "2026-06-28",
+      "notes": "MP3 Stream page responsive layout: viewport meta tag and index.html-style panel structure for smartphones; mobile CSS for full-width action buttons, volume slider, and help text wrapping."
+    },
     {
       "version": "v2.34",
       "released": "2026-06-28",

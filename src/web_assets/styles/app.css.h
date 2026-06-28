@@ -604,6 +604,7 @@ const char app_css[] PROGMEM = R"=====(
 		font-size: 0.85em;
 		line-height: 1.5;
 		color: #777;
+		word-break: break-word;
 	}
 	.mp3-help code {
 		padding: 1px 6px;
@@ -839,12 +840,20 @@ const char app_css[] PROGMEM = R"=====(
 		white-space: nowrap;
 	}
 
-	@media (max-width: 600px) {
+	@media (max-width: 767px) {
+		.mp3-page .webradio-control-toolbar { flex-direction: column; align-items: stretch; }
+		.mp3-page .webradio-control-slider { max-width: none; width: 100%; }
 		.mp3-stream-row { flex-direction: column; }
 		.mp3-action-row { flex-direction: column; align-items: stretch; }
 		.mp3-scan-btn,
 		.mp3-server-test-btn,
 		.mp3-play-all-btn { width: 100%; }
+		.mp3-copy-cmd {
+			display: inline-block;
+			max-width: 100%;
+			margin-top: 4px;
+			word-break: break-all;
+		}
 	}
 
 	body.theme-dark .mp3-help { color: #aaa; }
