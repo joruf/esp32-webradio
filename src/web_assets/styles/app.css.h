@@ -162,10 +162,12 @@ const char app_css[] PROGMEM = R"=====(
 		width: 1.05em;
 		text-align: center;
 	}
-	#play.is-live-playing .btn-icon {
+	#play.is-live-playing .btn-icon,
+	.mp3-track-item.is-playing .mp3-track-play {
 		color: transparent;
 	}
-	#play.is-live-playing .btn-icon::before {
+	#play.is-live-playing .btn-icon::before,
+	.mp3-track-item.is-playing .mp3-track-play::before {
 		content: "";
 		position: absolute;
 		left: 50%;
@@ -469,7 +471,8 @@ const char app_css[] PROGMEM = R"=====(
 	}
 	body.theme-dark .webradio-volume-value { color: #e0e0e0; }
 	body.theme-dark .webradio-live-pill { background: #2f2f2f; color: #ddd; }
-	body.theme-dark #play.is-live-playing .btn-icon::before {
+	body.theme-dark #play.is-live-playing .btn-icon::before,
+	body.theme-dark .mp3-track-item.is-playing .mp3-track-play::before {
 		background:
 			radial-gradient(circle, rgba(231, 255, 239, 0.98) 0 20%, rgba(231, 255, 239, 0) 24%) center/100% 100% no-repeat,
 			radial-gradient(circle, rgba(121, 243, 166, 0.58) 0 45%, rgba(121, 243, 166, 0) 70%) center/100% 100% no-repeat;
@@ -781,6 +784,9 @@ const char app_css[] PROGMEM = R"=====(
 		gap: 8px;
 		margin-top: 8px;
 	}
+	.mp3-volume-toolbar {
+		margin-bottom: 12px;
+	}
 	.mp3-track-empty {
 		padding: 14px 12px;
 		border: 1px dashed #ccc;
@@ -818,15 +824,12 @@ const char app_css[] PROGMEM = R"=====(
 		box-shadow: inset 3px 0 0 #337ab7;
 	}
 	.mp3-track-play {
+		position: relative;
+		display: inline-block;
 		flex-shrink: 0;
-		width: 1.2em;
+		width: 1.05em;
+		text-align: center;
 		color: #337ab7;
-	}
-	.mp3-track-item.is-playing .mp3-track-play {
-		color: #2e6da4;
-	}
-	.mp3-track-item.is-playing .mp3-track-play::before {
-		content: "\25B6";
 	}
 	.mp3-track-name {
 		flex: 1;
@@ -901,7 +904,6 @@ const char app_css[] PROGMEM = R"=====(
 		box-shadow: inset 3px 0 0 #7eb8e8;
 	}
 	body.theme-dark .mp3-track-play { color: #7eb8e8; }
-	body.theme-dark .mp3-track-item.is-playing .mp3-track-play { color: #9cccf0; }
 
 	.notification-stack {
 		position: fixed;

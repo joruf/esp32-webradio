@@ -2436,26 +2436,43 @@ const char app_js[] PROGMEM = R"=====(
             });
     }
 
-    function bindIndexVolumeSlider() {
-        if (!$("#index-volume").length) {
+    function bindVolumeSlider(sliderSelector, valueSelector) {
+        var slider = $(sliderSelector);
+        if (!slider.length) {
             return;
         }
 
-        var slider = $("#index-volume");
-        var indexVolumeSync = false;
-
-        slider.off("input.indexVolume change.indexVolume")
-            .on("input.indexVolume", function() {
-                if (indexVolumeSync) {
-                    return;
-                }
-                $("#index-volume-value").text($(this).val());
+        slider.off("input.volumeSlider change.volumeSlider")
+            .on("input.volumeSlider", function() {
+                $(valueSelector).text($(this).val());
                 httpGet("volume=" + $(this).val(), { silent: true });
             });
     }
 
+    function syncVolumeSlider(sliderId, valueId, volume) {
+        var slider = document.getElementById(sliderId);
+        if (!slider || volume === undefined) {
+            return;
+        }
+        if (parseInt(slider.value, 10) !== parseInt(volume, 10)) {
+            slider.value = volume;
+            var valueEl = document.getElementById(valueId);
+            if (valueEl) {
+                valueEl.innerHTML = volume;
+            }
+        }
+    }
+
+    function bindIndexVolumeSlider() {
+        bindVolumeSlider("#index-volume", "#index-volume-value");
+    }
+
     function initIndexPage() {
         bindIndexVolumeSlider();
+    }
+
+    function initMp3StreamPage() {
+        bindVolumeSlider("#mp3-volume", "#mp3-volume-value");
     }
 
     function loadRadioConfig() {
@@ -2641,6 +2658,7 @@ const char app_js[] PROGMEM = R"=====(
         initMaintenancePage();
         initDiagnosticsPage();
         initIndexPage();
+        initMp3StreamPage();
         initNavActiveState();
         if (isMp3StreamSessionActive()) {
             markMp3StreamNavigationGrace(5000);
@@ -3541,15 +3559,8 @@ const char app_js[] PROGMEM = R"=====(
                 }
             }
 
-            if (document.getElementById("index-volume") && data.volume !== undefined) {
-                var slider = document.getElementById("index-volume");
-                if (parseInt(slider.value, 10) !== parseInt(data.volume, 10)) {
-                    slider.value = data.volume;
-                    if(document.getElementById("index-volume-value")) {
-                        document.getElementById("index-volume-value").innerHTML = data.volume;
-                    }
-                }
-            }
+            syncVolumeSlider("index-volume", "index-volume-value", data.volume);
+            syncVolumeSlider("mp3-volume", "mp3-volume-value", data.volume);
             if (document.getElementById("sound-volume") && data.volume !== undefined) {
                 setSoundVolumeUi(data.volume);
             }
