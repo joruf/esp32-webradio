@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Embed HTML partials into PROGMEM page headers before PlatformIO builds.
+Generate PROGMEM web asset headers before PlatformIO builds.
 
 - nav_menu.html is the editable navigation source (pure HTML).
-- Each *_page.h contains @include_nav@ inside its R\"=====(...)=====\" block.
-- pre-build: placeholder -> nav HTML (for compilation)
-- post-build: nav HTML -> placeholder (keeps git sources editable)
+- scripts/embed_web_assets.py writes partials/nav_menu.h (single PROGMEM copy).
+- Page headers in src/web_assets/pages/ keep @include_nav@; the HTTP handler
+  injects web_nav_menu_html at serve time (no duplicated nav in flash).
 """
 
 from __future__ import annotations
@@ -16,9 +16,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PARTIALS_DIR = ROOT / "src" / "web_assets" / "partials"
 PAGES_DIR = ROOT / "src" / "web_assets" / "pages"
-
-NAV_PLACEHOLDER = "@include_nav@"
 NAV_HTML = PARTIALS_DIR / "nav_menu.html"
+NAV_HEADER = PARTIALS_DIR / "nav_menu.h"
+NAV_PLACEHOLDER = "@include_nav@"
 
 
 def normalize_html(content: str) -> str:
@@ -39,34 +39,41 @@ def load_nav_html() -> str:
     return content
 
 
-def stitch_nav_into_pages(nav_html: str) -> None:
-    """Replace @include_nav@ in all page headers with the navigation HTML."""
+def generate_nav_header(nav_html: str) -> None:
+    """Write nav_menu.h with a single PROGMEM navigation string."""
+    header = (
+        "// Auto-generated from partials/nav_menu.html — do not edit manually.\n"
+        "#ifndef WEB_NAV_MENU_H\n"
+        "#define WEB_NAV_MENU_H\n"
+        "\n"
+        f'const char web_nav_menu_html[] PROGMEM = R"=====({nav_html})=====";\n'
+        "\n"
+        "#endif\n"
+    )
+    NAV_HEADER.write_text(header, encoding="utf-8")
+    print(f"embed_web_assets: generated {NAV_HEADER.relative_to(ROOT)}")
+
+
+def verify_page_placeholders() -> None:
+    """Ensure every page header still contains the nav placeholder."""
     for page_path in sorted(PAGES_DIR.glob("*_page.h")):
         text = page_path.read_text(encoding="utf-8")
         if NAV_PLACEHOLDER not in text:
-            continue
-        page_path.write_text(text.replace(NAV_PLACEHOLDER, nav_html), encoding="utf-8")
-        print(f"embed_web_assets: stitched nav into {page_path.relative_to(ROOT)}")
-
-
-def restore_nav_placeholders(nav_html: str) -> None:
-    """Restore @include_nav@ placeholders after a build."""
-    for page_path in sorted(PAGES_DIR.glob("*_page.h")):
-        text = page_path.read_text(encoding="utf-8")
-        if nav_html not in text:
-            continue
-        page_path.write_text(text.replace(nav_html, NAV_PLACEHOLDER), encoding="utf-8")
-        print(f"embed_web_assets: restored placeholder in {page_path.relative_to(ROOT)}")
+            raise ValueError(
+                f"{page_path.relative_to(ROOT)} is missing {NAV_PLACEHOLDER!r}"
+            )
 
 
 def main() -> None:
-    command = sys.argv[1] if len(sys.argv) > 1 else "stitch"
+    command = sys.argv[1] if len(sys.argv) > 1 else "generate"
     nav_html = load_nav_html()
 
-    if command == "stitch":
-        stitch_nav_into_pages(nav_html)
-    elif command == "restore":
-        restore_nav_placeholders(nav_html)
+    if command == "generate":
+        verify_page_placeholders()
+        generate_nav_header(nav_html)
+        print(
+            "embed_web_assets: pages keep @include_nav@; firmware expands it at HTTP serve time."
+        )
     else:
         raise SystemExit(f"Unknown command: {command}")
 

@@ -140,7 +140,7 @@ void handleWebpage(const String &pagename) {
 
     dbgprint("Length of page is %d", l);
     lastModified = String(FIRMWARE);
-    etag = httpBuildWeakEtag(pagename, l);
+    etag = httpBuildWeakEtag(pagename, expandedHtmlLength(p, l));
     if (httpIsAssetNotModified(etag, lastModified)) {
       httpSendNotModified(etag, lastModified, 600);
       cmdclient.flush();
