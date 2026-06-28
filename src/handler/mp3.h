@@ -39,6 +39,32 @@ bool checkHeaderLine(const char *str) {
   return false; // End of string without colon
 }
 
+/**
+ * @brief Check whether host points to a finite MP3 file URL.
+ *
+ * @param streamHost Stream host/path without scheme
+ * @return true if URL looks like a single .mp3 file
+ */
+static bool isFiniteMp3FileUrl(const String &streamHost) {
+  String normalized = streamHost;
+  int inx;
+
+  normalized.trim();
+  normalized.toLowerCase();
+
+  inx = normalized.indexOf("?");
+  if (inx >= 0) {
+    normalized = normalized.substring(0, inx);
+  }
+
+  inx = normalized.indexOf("#");
+  if (inx >= 0) {
+    normalized = normalized.substring(0, inx);
+  }
+
+  return normalized.endsWith(".mp3");
+}
+
 #include "mp3_stream_parser.h"
 
 /**
@@ -100,6 +126,10 @@ void mp3loop() {
         dbgprint("End of playlist seen");
         datamode = STOPPED;
         ini_block.newpreset++;
+      } else if (!mp3client.connected() && isFiniteMp3FileUrl(host)) {
+        dbgprint("End of finite MP3 stream detected, stopping playback");
+        hostreq = false;
+        datamode = STOPREQD;
       }
     }
 

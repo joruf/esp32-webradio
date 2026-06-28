@@ -1,10 +1,15 @@
 {
-  "version": "v2.32",
-  "released": "2026-06-27",
+  "version": "v2.33",
+  "released": "2026-06-28",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.32.bin",
-  "notes": "Improved OTA reliability and UX: static WebUI assets now use ETag/Last-Modified with conditional 304 responses, local OTA upload shows progress modal from upload start through install, and OTA TFT screen performs a full black clear to prevent leftover graphics.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.33.bin",
+  "notes": "New MP3 Stream page (mp3stream.html): play MP3 files from your PC or phone over the local network with a guided UI, auto-detected media server Base URL, copy-to-clipboard for the python3 HTTP server command, immediate playback on file or folder selection, and fixed URL decoding for encoded stream paths.",
   "history": [
+    {
+      "version": "v2.33",
+      "released": "2026-06-28",
+      "notes": "New MP3 Stream page (mp3stream.html): play MP3 files from your PC or phone over the local network with a guided UI, auto-detected media server Base URL, copy-to-clipboard for the python3 HTTP server command, immediate playback on file or folder selection, and fixed URL decoding for encoded stream paths."
+    },
     {
       "version": "v2.32",
       "released": "2026-06-27",

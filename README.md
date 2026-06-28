@@ -63,7 +63,7 @@ esp32-webradio/
   - Long press / triple click (configurable)
 - **Rich Web Interface** – Built with Bootstrap 3, jQuery and a JSON API.  
   - Real‑time metadata (station name, song title) via SSE (`/?events`) or polling  
-  - Pages: Webradio, Scheduler, Configuration, Sound, Display, OTA Update, Maintenance, About, Diagnostics  
+  - Pages: Webradio, **MP3 Stream** (LAN playback from PC/phone), Scheduler, Configuration, Sound, Display, OTA Update, Maintenance, About, Diagnostics  
   - Volume, tone control (bass/treble gain & frequency)  
   - Preset management (add, edit, delete, drag-and-drop reorder)  
   - Snooze timer & alarm scheduler (weekdays, multiple alarms)
@@ -81,12 +81,14 @@ esp32-webradio/
 
 ## Web UI Screenshots
 
-Captured from a live device at `http://192.168.178.33` (firmware `v2.32`) to document the current look and layout of each page.
+Captured from a live device at `http://192.168.178.33` (firmware `v2.33`) to document the current look and layout of each page.
 
 ### Main navigation pages
 
 - **Webradio Dashboard** (`index.html`) – Live metadata, playback controls, stream input, preset list, and display toggles.  
   ![Webradio Dashboard](docs/screenshots/webui/index.png)
+- **MP3 Stream** (`mp3stream.html`) – Stream MP3 files from your PC or phone over the local network (see [MP3 Stream – play your own music](#mp3-stream--play-your-own-music) below).  
+  ![MP3 Stream](docs/screenshots/webui/mp3stream.png)
 - **Scheduler** (`scheduler.html`) – Snooze timer and multi-alarm scheduling with weekday selection and fade duration.  
   ![Scheduler](docs/screenshots/webui/scheduler.png)
 - **Configuration** (`config.html`) – WiFi priorities, clock settings, startup preset, watchdog option, presets, and GPIO mapping.  
@@ -108,8 +110,64 @@ Captured from a live device at `http://192.168.178.33` (firmware `v2.32`) to doc
 
 - **Firmware Upgrade (legacy)** (`firmware.html`) – Legacy one-click firmware installer view.  
   ![Firmware Upgrade](docs/screenshots/webui/firmware.png)
-- **MP3 Player** (`mp3play.html`) – SD-card track list with previous/next/random controls.  
-  ![MP3 Player](docs/screenshots/webui/mp3play.png)
+
+---
+
+## MP3 Stream – play your own music
+
+The **MP3 Stream** page (`mp3stream.html`) lets you play MP3 files that live on your **computer or smartphone** through the webradio speakers.  
+The webradio does **not** read files directly from your hard drive. Instead, your PC/phone briefly acts as a small **music server**, and the ESP32 streams the file over your home Wi‑Fi — just like an internet radio station, but entirely on your local network.
+
+### What you need
+
+| Requirement | Why |
+|-------------|-----|
+| ESP32 webradio on your Wi‑Fi | Receives the stream and plays it through the VS1053 |
+| PC, laptop, or phone on the **same Wi‑Fi** | Must reach the media server URL |
+| MP3 files in one folder | e.g. `~/Music` or `~/Downloads` |
+| **Python 3** on the device that serves the files (most Linux/macOS PCs; Windows with Python installed) | Runs the built-in mini web server |
+
+> **Important:** Paths like `C:\Music\song.mp3` or files picked in the browser **cannot** be played directly. The file must be reachable as an **HTTP URL** (e.g. `http://192.168.178.35:8000/song.mp3`).
+
+### Step-by-step (for beginners)
+
+1. **Open the MP3 Stream page** in your browser: `http://<radio-ip>/mp3stream.html`  
+   (Replace `<radio-ip>` with the address shown on the webradio display or in your router.)
+
+2. **Prepare your music folder on the PC/phone** that will serve the files.  
+   Example: put MP3s in `Downloads` or create a folder `Music`.
+
+3. **Start a small web server** in that folder:
+   - Open a terminal / command prompt.
+   - Go to the music folder, e.g. `cd ~/Downloads`
+   - Run: `python3 -m http.server 8000`  
+   - Leave this window open while you listen. The server stops when you close it.
+
+   On the MP3 Stream page you can **click** the blue `python3 -m http.server 8000` hint to **copy the command** to the clipboard, then paste it into your terminal.
+
+4. **Check the Base URL** (step 1 on the page).  
+   The field **Media server Base URL** is filled in automatically with your device’s IP, e.g.  
+   `http://192.168.178.35:8000/`  
+   If it is empty, enter `http://<your-pc-ip>:8000/` (same IP as the computer running Python, port **8000**).
+
+5. **Choose music** (step 2):
+   - **Single file** – pick one MP3; playback starts immediately and the **file name appears on the radio display**.
+   - **Folder** – pick a folder; all MP3s are listed; **click a title** to start that stream immediately.
+
+6. **Verify and start** (step 3): the page builds the full stream URL (e.g. `http://192.168.178.35:8000/MySong.mp3`). Press **START STREAM** if you entered the URL manually.
+
+### Typical problems
+
+| Symptom | Fix |
+|---------|-----|
+| No sound | Is `python3 -m http.server 8000` still running? Is the Base URL IP your **PC’s** IP (not the ESP32’s)? |
+| Wrong IP in Base URL | Edit the field to `http://YOUR-PC-IP:8000/` |
+| File not found (404) | Start the Python server **inside** the folder that contains the MP3 |
+| Spaces/special characters in file names | Use the file/folder picker on the page — it encodes the URL correctly |
+
+### Technical note
+
+The webradio requests `GET /?station=<url>` internally. Special characters in URLs are decoded in firmware so encoded paths (e.g. `%20` for spaces, `%5B` for `[`) work reliably.
 
 ---
 

@@ -942,6 +942,13 @@ void handlehttp() {
     return;
   }
 
+  // Sends the IP address of the requesting client (used to prefill the media server base URL)
+  if (http_getcmd.startsWith("clientip")) {
+    String clientIp = cmdclient.remoteIP().toString();
+    sendHttpJsonResponse(String("{\"ip\":\"") + jsonEscapeString(clientIp.c_str()) + "\"}");
+    return;
+  }
+
   if (http_getcmd.startsWith("getdiagnostics")) {
     sendHttpJsonResponse(buildDiagnosticsJson());
     return;

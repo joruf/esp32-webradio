@@ -28,6 +28,7 @@ const char firmware_html[] PROGMEM = R"=====(
 	
 	<body itemscope itemtype="http://schema.org/WebPage">	
 @include_nav@
+
 <div id="body" class="container sound-page">
 			<header class="sound-page-header">
 				<h1>Firmware Upgrade</h1>

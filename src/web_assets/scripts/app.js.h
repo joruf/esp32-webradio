@@ -2699,6 +2699,30 @@ const char app_js[] PROGMEM = R"=====(
             setstat();
         });
 
+    $("#downpreset").on("click", function() {
+        stepMp3Track(-1);
+    });
+    $("#uppreset").on("click", function() {
+        stepMp3Track(1);
+    });
+    $("#mp3track").on("click", function() {
+        pickRandomMp3Track();
+    });
+    $("#mp3-file-picker").on("change", function() {
+        if (this.files && this.files.length > 0) {
+            applyFileSelectionToStation(this.files[0]);
+        }
+    });
+    $("#mp3-folder-picker").on("change", function() {
+        fillFolderFileList(this.files || []);
+    });
+    $("#mp3-folder-files").on("change", function() {
+        if (!this.value) {
+            return;
+        }
+        applyRelativePathToStation(this.value, true);
+    });
+
 
 
     /**
@@ -2836,13 +2860,160 @@ const char app_js[] PROGMEM = R"=====(
         enqueueHttpGet("/?" + id + "=" + value + "&_t=" + Date.now(), options);
     }
 
-    
     function setstat() {
         var stationEl = document.getElementById("station");
+        var stationUrl;
         if (!stationEl) {
             return;
         }
-        enqueueHttpGet("/?station=" + encodeURIComponent(stationEl.value) + "&_t=" + Date.now());
+        stationUrl = String(stationEl.value || "").trim();
+        if (!stationUrl) {
+            setMp3PickerStatus("No stream URL set. Choose a file and set a Base URL first.");
+            return;
+        }
+        if (!isLikelyPlayableStationInput(stationUrl)) {
+            setMp3PickerStatus("Invalid stream URL. Use a full HTTP URL, e.g. http://192.168.1.20:8000/music/song.mp3");
+            return;
+        }
+        setMp3PickerStatus("Starting stream...");
+        enqueueHttpGet("/?station=" + encodeURIComponent(stationUrl) + "&_t=" + Date.now());
+    }
+
+    function isLikelyPlayableStationInput(value) {
+        var s = String(value || "").trim().toLowerCase();
+        if (!s) {
+            return false;
+        }
+        if (s.indexOf("http://") === 0 || s.indexOf("https://") === 0 || s.indexOf("localhost/") === 0 || s.indexOf("ihr/") === 0) {
+            return true;
+        }
+        if (s.indexOf("/") > 0 && (s.indexOf(".") >= 0 || s.indexOf(":") >= 0)) {
+            return true;
+        }
+        return false;
+    }
+
+    function normalizeBaseUrl(baseUrl) {
+        var normalized = String(baseUrl || "").trim();
+        if (!normalized) {
+            return "";
+        }
+        if (!/^https?:\/\//i.test(normalized)) {
+            normalized = "http://" + normalized;
+        }
+        if (normalized.charAt(normalized.length - 1) !== "/") {
+            normalized += "/";
+        }
+        return normalized;
+    }
+
+    function setMp3PickerStatus(message) {
+        var statusEl = document.getElementById("mp3-picker-status");
+        if (!statusEl) {
+            return;
+        }
+        statusEl.textContent = String(message || "");
+    }
+
+    function deriveBaseUrlFromStation() {
+        var stationEl = document.getElementById("station");
+        var stationUrl = String(stationEl ? stationEl.value : "").trim();
+        var protocolPos;
+        var lastSlash;
+        if (!/^https?:\/\//i.test(stationUrl)) {
+            return "";
+        }
+        protocolPos = stationUrl.indexOf("://");
+        if (protocolPos < 0) {
+            return "";
+        }
+        lastSlash = stationUrl.lastIndexOf("/");
+        if (lastSlash <= protocolPos + 2) {
+            return "";
+        }
+        return stationUrl.substring(0, lastSlash + 1);
+    }
+
+    function encodeRelativePath(path) {
+        var clean = String(path || "").replace(/\\/g, "/").replace(/^\/+/, "");
+        var parts = clean.split("/");
+        var encoded = [];
+        var i;
+        for (i = 0; i < parts.length; i++) {
+            if (parts[i]) {
+                encoded.push(encodeURIComponent(parts[i]));
+            }
+        }
+        return encoded.join("/");
+    }
+
+    function applyRelativePathToStation(relativePath, autoStart) {
+        var baseEl = document.getElementById("mp3-base-url");
+        var stationEl = document.getElementById("station");
+        var baseUrl;
+        var encodedPath;
+        if (!stationEl) {
+            return;
+        }
+        baseUrl = normalizeBaseUrl(baseEl ? baseEl.value : "");
+        if (!baseUrl) {
+            baseUrl = normalizeBaseUrl(deriveBaseUrlFromStation());
+            if (baseEl && baseUrl) {
+                baseEl.value = baseUrl;
+            }
+        }
+        encodedPath = encodeRelativePath(relativePath);
+        if (!encodedPath) {
+            return;
+        }
+        if (!baseUrl) {
+            setMp3PickerStatus("Base URL missing. Set 'Base URL of your smartphone/PC media server' to create a playable stream URL.");
+            return;
+        }
+        stationEl.value = baseUrl + encodedPath;
+        setMp3PickerStatus("Selected file mapped to stream URL.");
+        if (autoStart && /^https?:\/\//i.test(String(stationEl.value || "").trim())) {
+            setstat();
+        }
+    }
+
+    function applyFileSelectionToStation(file) {
+        var stationEl = document.getElementById("station");
+        if (!file) {
+            return;
+        }
+        applyRelativePathToStation(file.webkitRelativePath || file.name || "", true);
+    }
+
+    function fillFolderFileList(fileList) {
+        var select = document.getElementById("mp3-folder-files");
+        var i;
+        var path;
+        var option;
+        if (!select) {
+            return;
+        }
+        select.innerHTML = "";
+        option = document.createElement("OPTION");
+        option.value = "";
+        option.text = "Select a file from folder...";
+        select.add(option);
+        setMp3PickerStatus("");
+        for (i = 0; i < fileList.length; i++) {
+            path = String(fileList[i].webkitRelativePath || fileList[i].name || "");
+            if (!path || (!/\.mp3$/i.test(path) && !/\.m3u$/i.test(path))) {
+                continue;
+            }
+            option = document.createElement("OPTION");
+            option.value = path;
+            option.text = path;
+            select.add(option);
+        }
+        if (select.options.length <= 1) {
+            setMp3PickerStatus("No MP3/M3U files found in selected folder.");
+        } else {
+            setMp3PickerStatus("Folder loaded. Choose one file from the list.");
+        }
     }
 
 
@@ -2952,12 +3123,69 @@ const char app_js[] PROGMEM = R"=====(
 
 
     /**
-     * mp3play.html
+     * mp3stream.html
      */
     function trackreq(presctrl) {
         if (presctrl.value != "-1") {
             httpGet("mp3track=" + presctrl.value);
         }
+    }
+
+    function getPlayableTrackOptions(select) {
+        var options = [];
+        var i;
+        if (!select) {
+            return options;
+        }
+        for (i = 0; i < select.options.length; i++) {
+            if (select.options[i].value && select.options[i].value !== "-1") {
+                options.push(select.options[i]);
+            }
+        }
+        return options;
+    }
+
+    function stepMp3Track(delta) {
+        var select = document.getElementById("seltrack");
+        var options = getPlayableTrackOptions(select);
+        var currentIndex = -1;
+        var targetIndex;
+        var i;
+        if (!select || options.length === 0) {
+            return;
+        }
+        for (i = 0; i < options.length; i++) {
+            if (String(options[i].value) === String(select.value)) {
+                currentIndex = i;
+                break;
+            }
+        }
+        if (currentIndex < 0) {
+            currentIndex = 0;
+        } else {
+            targetIndex = currentIndex + delta;
+            if (targetIndex < 0) {
+                currentIndex = options.length - 1;
+            } else if (targetIndex >= options.length) {
+                currentIndex = 0;
+            } else {
+                currentIndex = targetIndex;
+            }
+        }
+        select.value = options[currentIndex].value;
+        trackreq(select);
+    }
+
+    function pickRandomMp3Track() {
+        var select = document.getElementById("seltrack");
+        var options = getPlayableTrackOptions(select);
+        var randomIndex;
+        if (!select || options.length === 0) {
+            return;
+        }
+        randomIndex = Math.floor(Math.random() * options.length);
+        select.value = options[randomIndex].value;
+        trackreq(select);
     }
 
 

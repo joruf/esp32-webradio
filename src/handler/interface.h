@@ -75,9 +75,9 @@ void handleWebpage(const String &pagename) {
     if (pagename == "/" || pagename.indexOf("index.html") >= 0) {
       p = index_html;
       l = sizeof(index_html) - 1; // We have to reduce the length to get the right char length
-    } else if (pagename.indexOf("mp3play.html") >= 0) {
-      p = mp3play_html;
-      l = sizeof(mp3play_html) - 1;
+    } else if (pagename.indexOf("mp3stream.html") >= 0) {
+      p = mp3stream_html;
+      l = sizeof(mp3stream_html) - 1;
     } else if (pagename.indexOf("sound.html") >= 0) {
       p = sound_html;
       l = sizeof(sound_html) - 1;
@@ -159,6 +159,43 @@ void handleWebpage(const String &pagename) {
 }
 
 /**
+ * @brief Decode percent-encoded sequences (%XX) in a value to plain bytes.
+ *
+ * Reverses one layer of the web UI's JavaScript encodeURIComponent(). In
+ * contrast to form decoding, a literal '+' is preserved because
+ * encodeURIComponent() never emits '+' as a space substitute (it uses %20).
+ *
+ * @param text Percent-encoded input string
+ * @return String Decoded result string
+ */
+static String urlDecodeValue(const String &text) {
+  String decoded;
+  size_t i = 0;
+
+  decoded.reserve(text.length());
+  while (i < text.length()) {
+    char c = text[i];
+    if ((c == '%') && (i + 2 < text.length())) {
+      char h1 = text[i + 1];
+      char h2 = text[i + 2];
+      if (isxdigit((unsigned char)h1) && isxdigit((unsigned char)h2)) {
+        char tmp[3];
+        tmp[0] = h1;
+        tmp[1] = h2;
+        tmp[2] = '\0';
+        decoded += (char)strtol(tmp, nullptr, 16);
+        i += 3;
+        continue;
+      }
+    }
+    decoded += c;
+    i++;
+  }
+
+  return decoded;
+}
+
+/**
  * @brief Parses a command with a possible "=" separator (wrapper function).
  *
  * Searches for an equals sign in the command. If present, the command is split
@@ -230,6 +267,9 @@ const char *analyzeCmd(const char *par, const char *val) {
   argument.toLowerCase();                 // Force to lower case
   value = String(val);                    // Get the specified value
   chomp(value);                           // Remove comment and extra spaces
+  if (argument == "station") {            // Web UI sends the URL via encodeURIComponent()
+    value = urlDecodeValue(value);        // Decode %XX back to a usable stream URL
+  }
   ivalue = value.toInt();                 // Also as an integer
   ivalue = abs(ivalue);                   // Make positive
   relative = argument.indexOf("up") == 0; // + relative setting?

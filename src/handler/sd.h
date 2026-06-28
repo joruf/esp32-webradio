@@ -1,5 +1,4 @@
 
-
 //**************************************************************************************************
 //                                      S S C O N V *
 //**************************************************************************************************
@@ -156,7 +155,7 @@ String getSDfilename(String nodeID) {
 // will be sent to the web UI if parameter "send" is true. *
 //**************************************************************************************************
 int listsdtracks(const char *dirname, int level = 0, bool send = true) {
-  const uint16_t SD_MAXDEPTH = 4;           // Maximum depts.  Note: see mp3play_html.
+  const uint16_t SD_MAXDEPTH = 4;           // Maximum depts.  Note: see mp3stream_html.
   static uint16_t fcount, oldfcount;        // Total number of files
   static uint16_t SD_node[SD_MAXDEPTH + 1]; // Node ISs, max levels deep
   static String SD_outbuf;                  // Output buffer for cmdclient
@@ -234,7 +233,7 @@ int listsdtracks(const char *dirname, int level = 0, bool send = true) {
         }
         if (send) // Need to add to string for web UI?
         {
-          SD_outbuf += tmpstr +                // Form line for mp3play_html page
+          SD_outbuf += tmpstr +                // Form line for mp3stream_html page
                        utf8ascii(file.name() + // Filename starts after directoryname
                                  ldirname) +
                        String("\n");
@@ -380,6 +379,7 @@ bool connecttofile() {
   handle_ID3(path);                    // See if there are ID3 tags in this file
   mp3filelength = mp3file.available(); // Get length
   releaseSPI();                        // Release SPI bus
+
   if (!mp3file) {
     dbgprint("Error opening file %s", path.c_str()); // No luck
     return false;

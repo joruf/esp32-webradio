@@ -15,7 +15,7 @@
  */
 
 #include "web_assets/pages/index_page.h"
-#include "web_assets/pages/mp3play_page.h"
+#include "web_assets/pages/mp3stream_page.h"
 #include "web_assets/pages/sound_page.h"
 #include "web_assets/pages/config_page.h"
 #include "web_assets/pages/scheduler_page.h"

@@ -8,12 +8,17 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.32",
-  "released": "2026-06-27",
+  "version": "v2.33",
+  "released": "2026-06-28",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.32.bin",
-  "notes": "Improved OTA reliability and UX: static WebUI assets now use ETag/Last-Modified with conditional 304 responses, local OTA upload shows progress modal from upload start through install, and OTA TFT screen performs a full black clear to prevent leftover graphics.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.33.bin",
+  "notes": "New MP3 Stream page (mp3stream.html): play MP3 files from your PC or phone over the local network with a guided UI, auto-detected media server Base URL, copy-to-clipboard for the python3 HTTP server command, immediate playback on file or folder selection, and fixed URL decoding for encoded stream paths.",
   "history": [
+    {
+      "version": "v2.33",
+      "released": "2026-06-28",
+      "notes": "New MP3 Stream page (mp3stream.html): play MP3 files from your PC or phone over the local network with a guided UI, auto-detected media server Base URL, copy-to-clipboard for the python3 HTTP server command, immediate playback on file or folder selection, and fixed URL decoding for encoded stream paths."
+    },
     {
       "version": "v2.32",
       "released": "2026-06-27",
@@ -27,7 +32,7 @@ const char ota_version_embedded_json[] PROGMEM = R"=====(
     {
       "version": "v2.30",
       "released": "2026-06-27",
-      "notes": "Extended anti-pop startup behavior for first boot playback by applying a longer one-time warmup gate before enabling audio output, while keeping normal restarts responsive. Reworked the Play button live visualization from JS class blinking to a CSS-driven animated icon effect and moved the stream kbps pill into the metadata panel heading on a single line."
+      "notes": "Reworked the Play button live visualization from JS class blinking to a CSS-driven animated icon effect and moved the stream kbps pill into the metadata panel heading on a single line."
     },
     {
       "version": "v2.29",

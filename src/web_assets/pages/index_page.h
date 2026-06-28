@@ -8,7 +8,7 @@
 	<div class="panel-body">
 	</div>
 </div>
-					<li><a href="mp3play.html"><span class="btn btn-primary"><img class="icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABo...............==" /> MP3 Player</span></a></li>
+					<li><a href="mp3stream.html"><span class="btn btn-primary"><img class="icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABo...............==" /> MP3 Player</span></a></li>
  */
 
 const char index_html[] PROGMEM = R"=====(
@@ -29,6 +29,7 @@ const char index_html[] PROGMEM = R"=====(
 	
 	<body itemscope itemtype="http://schema.org/WebPage">	
 @include_nav@
+
 <div id="body" class="container sound-page">
 			<header class="sound-page-header">
 				<h1>Webradio</h1>

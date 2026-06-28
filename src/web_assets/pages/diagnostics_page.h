@@ -10,6 +10,7 @@ const char diagnostics_html[] PROGMEM = R"=====(
 	</head>
 	<body>
 @include_nav@
+
 <div id="body" class="container sound-page">
 			<header class="sound-page-header">
 				<h1>Diagnostics</h1>

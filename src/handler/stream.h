@@ -293,6 +293,87 @@ static void parseHostString(const String &host, String &hostwoext, uint16_t &por
 }
 
 /**
+ * @brief Decode URL-encoded path parts (%xx and +) to plain text.
+ *
+ * @param text URL encoded text
+ * @return String Decoded text
+ */
+static String decodeUrlText(const String &text) {
+  String decoded = "";
+  size_t i = 0;
+
+  decoded.reserve(text.length());
+  while (i < text.length()) {
+    char c = text[i];
+    if ((c == '%') && (i + 2 < text.length())) {
+      char h1 = text[i + 1];
+      char h2 = text[i + 2];
+      if (isxdigit((unsigned char)h1) && isxdigit((unsigned char)h2)) {
+        char tmp[3];
+        char *endptr = nullptr;
+        long value;
+        tmp[0] = h1;
+        tmp[1] = h2;
+        tmp[2] = '\0';
+        value = strtol(tmp, &endptr, 16);
+        if (endptr != nullptr && *endptr == '\0') {
+          decoded += (char)value;
+          i += 3;
+          continue;
+        }
+      }
+    }
+    if (c == '+') {
+      decoded += ' ';
+    } else {
+      decoded += c;
+    }
+    i++;
+  }
+
+  return decoded;
+}
+
+/**
+ * @brief Build a display title from an MP3 URL path.
+ *
+ * @param extension URL path including optional query
+ * @return String Decoded filename without .mp3 extension
+ */
+static String extractMp3TitleFromExtension(const String &extension) {
+  String path = extension;
+  String filename = "";
+  int inx;
+
+  inx = path.indexOf("?");
+  if (inx >= 0) {
+    path = path.substring(0, inx);
+  }
+
+  inx = path.indexOf("#");
+  if (inx >= 0) {
+    path = path.substring(0, inx);
+  }
+
+  inx = path.lastIndexOf("/");
+  if (inx >= 0) {
+    filename = path.substring(inx + 1);
+  } else {
+    filename = path;
+  }
+
+  filename.trim();
+  if (filename.length() < 5 || !filename.endsWith(".mp3")) {
+    return String("");
+  }
+
+  filename.remove(filename.length() - 4); // Remove ".mp3"
+  filename = decodeUrlText(filename);
+  filename.trim();
+  return filename;
+}
+
+/**
  * @brief Handle M3U playlist request.
  */
 static void handlePlaylistRequest() {
@@ -333,6 +414,7 @@ bool connectToWebradioServer() {
   String hostwoext;
   uint16_t port = 80;
   String extension = "/";
+  String mp3Title;
 
   stop_mp3client();
   dbgprint("Connect to new host %s", host.c_str());
@@ -353,6 +435,12 @@ bool connectToWebradioServer() {
 
   // Parse host components
   parseHostString(host, hostwoext, port, extension);
+  mp3Title = extractMp3TitleFromExtension(extension);
+  if (mp3Title.length() > 0) {
+    icyname = "MP3 Stream";
+    showTextOnTFT(2, icyname.c_str());
+    showStreamDataOnTFT(mp3Title.c_str(), true);
+  }
 
   dbgprint("Connect to %s on port %d, extension %s", hostwoext.c_str(), port, extension.c_str());
 #if !defined(BLUETFT)

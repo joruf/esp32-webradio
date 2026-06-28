@@ -13,8 +13,9 @@ const char display_html[] PROGMEM = R"=====(
 		<title>Webradio - Display and behaviour</title>
 	</head>
 
-	<body itemscope itemtype="http://schema.org/WebPage">
+	<body itemscope itemtype="http://schema.org/WebPage">	
 @include_nav@
+
 
 
 <div id="body" class="container sound-page">

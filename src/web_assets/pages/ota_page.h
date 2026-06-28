@@ -13,8 +13,9 @@ const char ota_html[] PROGMEM = R"=====(
 		<title>Webradio - OTA Update</title>
 	</head>
 
-	<body itemscope itemtype="http://schema.org/WebPage">
+	<body itemscope itemtype="http://schema.org/WebPage">	
 @include_nav@
+
 
 
 <div id="body" class="container sound-page">
