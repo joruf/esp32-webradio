@@ -2209,7 +2209,7 @@ const char app_js[] PROGMEM = R"=====(
 
         function startOtaRecoveryWaitFlow(waitStatusText, startLogText, timeoutResultText) {
             showOtaUploadResult("", "");
-            showOtaUploadWait(true, "Please wait, firmware update is being installed...");
+            showOtaUploadWait(true, "Firmware update is being installed...");
             $("#ota-status-text").removeClass("text-success text-danger").addClass("text-warning")
                 .text(waitStatusText || "Waiting for device to restart...");
             if (startLogText) {
@@ -2279,7 +2279,7 @@ const char app_js[] PROGMEM = R"=====(
             setOtaActionButtonsEnabled(false);
             $("#ota-status-text").removeClass("text-success text-warning text-danger").text("Uploading local firmware...");
             showCommandLog("Uploading firmware: " + file.name);
-            showOtaUploadWait(true, "Please wait, local firmware is being uploaded...");
+            showOtaUploadWait(true, "Local firmware is being uploaded...");
 
             fetch("/?uploadfirmware=1&_t=" + Date.now(), {
                 method: "POST",
