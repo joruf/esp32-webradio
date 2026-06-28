@@ -4,9 +4,9 @@
 // BASE64 Glyphicons: https://andrew.hedges.name/experiments/glyphicons/
 /*
 <div class="panel panel-default">
-	<div class="panel-heading">Webradio Control</div>
-	<div class="panel-body">
-	</div>
+  <div class="panel-heading">Webradio Control</div>
+  <div class="panel-body">
+  </div>
 </div>
  */
 
@@ -48,6 +48,7 @@ const char mp3stream_html[] PROGMEM = R"=====(
 				<label class="mp3-field-label" for="mp3-base-url">Base URL of your media server</label>
 				<input id="mp3-base-url" class="form-control mp3-input" placeholder="http://192.168.178.35:8000/">
 				<div class="mp3-action-row">
+					<button id="mp3-server-test-btn" class="btn btn-default mp3-server-test-btn" type="button">Check Server</button>
 					<button id="mp3-scan-btn" class="btn btn-primary mp3-scan-btn" type="button">Scan folder</button>
 					<button id="mp3-play-all-btn" class="btn mp3-play-btn mp3-play-all-btn" type="button" disabled><span class="btn-icon" aria-hidden="true">&#9654;</span> Play all</button>
 				</div>
@@ -80,6 +81,8 @@ const char mp3stream_html[] PROGMEM = R"=====(
 	<script>
 	(function () {
 		var baseEl = document.getElementById("mp3-base-url");
+		var serverTestBtn = document.getElementById("mp3-server-test-btn");
+		var serverLinkEl = document.getElementById("mp3-server-link");
 		var scanBtn = document.getElementById("mp3-scan-btn");
 		var playAllBtn = document.getElementById("mp3-play-all-btn");
 		var trackListEl = document.getElementById("mp3-track-list");
@@ -113,6 +116,36 @@ const char mp3stream_html[] PROGMEM = R"=====(
 				normalized += "/";
 			}
 			return normalized;
+		}
+
+		function updateServerTestLink() {
+			var baseUrl = normalizeBase(baseEl ? baseEl.value : "");
+			if (!serverLinkEl) {
+				return baseUrl;
+			}
+			if (!baseUrl) {
+				serverLinkEl.href = "#";
+				serverLinkEl.textContent = "enter Base URL above";
+				serverLinkEl.classList.add("is-disabled");
+				serverLinkEl.setAttribute("aria-disabled", "true");
+				serverLinkEl.setAttribute("tabindex", "-1");
+				return "";
+			}
+			serverLinkEl.href = baseUrl;
+			serverLinkEl.textContent = baseUrl;
+			serverLinkEl.classList.remove("is-disabled");
+			serverLinkEl.setAttribute("aria-disabled", "false");
+			serverLinkEl.removeAttribute("tabindex");
+			return baseUrl;
+		}
+
+		function openServerInNewTab() {
+			var baseUrl = updateServerTestLink();
+			if (!baseUrl) {
+				setStatus("Enter the Base URL of your media server first.", true);
+				return;
+			}
+			window.open(baseUrl, "_blank", "noopener,noreferrer");
 		}
 
 		function copyTextToClipboard(text) {
@@ -173,11 +206,13 @@ const char mp3stream_html[] PROGMEM = R"=====(
 					.then(function (data) {
 						if (data && data.ip && !String(baseEl.value || "").trim()) {
 							baseEl.value = "http://" + data.ip + ":" + MEDIA_SERVER_PORT + "/";
+							updateServerTestLink();
 						}
 					})
 					.catch(function () {});
 			}
 		}
+		updateServerTestLink();
 
 		function updateTrackHighlight(session, isPlaying) {
 			if (!trackListEl || !session) {
@@ -245,6 +280,7 @@ const char mp3stream_html[] PROGMEM = R"=====(
 			if (baseEl && session.baseUrl && !String(baseEl.value || "").trim()) {
 				baseEl.value = session.baseUrl;
 			}
+			updateServerTestLink();
 			renderTrackList(session);
 			if (session.tracks.length) {
 				setStatus(session.tracks.length + " MP3 file(s) loaded. Playback continues in the background.");
@@ -307,6 +343,9 @@ const char mp3stream_html[] PROGMEM = R"=====(
 		if (scanBtn) {
 			scanBtn.addEventListener("click", scanMediaServer);
 		}
+		if (serverTestBtn) {
+			serverTestBtn.addEventListener("click", openServerInNewTab);
+		}
 		if (playAllBtn) {
 			playAllBtn.addEventListener("click", function () {
 				var session = typeof getMp3StreamSession === "function" ? getMp3StreamSession() : null;
@@ -320,6 +359,8 @@ const char mp3stream_html[] PROGMEM = R"=====(
 			});
 		}
 		if (baseEl) {
+			baseEl.addEventListener("input", updateServerTestLink);
+			baseEl.addEventListener("change", updateServerTestLink);
 			baseEl.addEventListener("keydown", function (event) {
 				if (event.key === "Enter") {
 					event.preventDefault();

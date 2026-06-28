@@ -755,6 +755,21 @@ const char app_css[] PROGMEM = R"=====(
 		margin-top: 10px;
 	}
 	.mp3-scan-btn { min-width: 120px; }
+	.mp3-server-test-btn { min-width: 120px; }
+	.mp3-server-link-row {
+		margin: 10px 0 0;
+		font-size: 0.95em;
+		color: #666;
+	}
+	.mp3-server-link {
+		word-break: break-all;
+	}
+	.mp3-server-link.is-disabled {
+		color: #999;
+		pointer-events: none;
+		text-decoration: none;
+		cursor: default;
+	}
 	.mp3-play-all-btn:disabled {
 		opacity: 0.55;
 		cursor: not-allowed;
@@ -825,10 +840,13 @@ const char app_css[] PROGMEM = R"=====(
 		.mp3-stream-row { flex-direction: column; }
 		.mp3-action-row { flex-direction: column; align-items: stretch; }
 		.mp3-scan-btn,
+		.mp3-server-test-btn,
 		.mp3-play-all-btn { width: 100%; }
 	}
 
 	body.theme-dark .mp3-help { color: #aaa; }
+	body.theme-dark .mp3-server-link-row { color: #aaa; }
+	body.theme-dark .mp3-server-link.is-disabled { color: #888; }
 	body.theme-dark .mp3-help code { background: rgba(255, 255, 255, 0.1); }
 	body.theme-dark .mp3-copy-cmd {
 		background: rgba(126, 184, 232, 0.12);
