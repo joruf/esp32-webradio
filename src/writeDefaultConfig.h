@@ -100,6 +100,9 @@ void saveDefaultConfig() {
   nvsAddValue("clk_dst", "1");    // +1 Stunde Sommerzeit
   dbgprint("BOOT:   Time server saved");
   migrateToRadioConfig();
+  if (nvsCommit() != ESP_OK) {
+    dbgprint("BOOT: WARNING - NVS commit after default config failed");
+  }
   dbgprint("BOOT: Default configuration stored successfully");
 }
 

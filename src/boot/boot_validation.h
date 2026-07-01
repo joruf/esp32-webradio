@@ -54,68 +54,119 @@ static bool hasAnyPresetInNvs() {
 }
 
 /**
- * @brief Validate the current NVS configuration.
+ * @brief Check whether at least one valid WiFi entry exists in NVS.
  *
- * @param reason Output text describing the validation failure
- * @return true if configuration is usable
+ * @return true if a wifi_XX entry with SSID/password format was found
  */
-static bool validateNvsConfig(String &reason) {
-  if (!nvsKeyExists("wifi_00")) {
-    reason = "missing wifi_00";
-    return false;
-  }
+static bool hasAnyValidWifiInNvs() {
+  char key[10];
+  uint8_t i;
 
-  if (!isValidWifiEntry(nvsGetValue("wifi_00"))) {
-    reason = "invalid wifi_00 format (expected SSID/password)";
-    return false;
-  }
-
-  if (!nvsKeyExists("preset")) {
-    reason = "missing active preset key";
-    return false;
-  }
-
-  if (!hasAnyPresetInNvs()) {
-    reason = "no radio presets found";
-    return false;
-  }
-
-  if (!nvsKeyExists("volume")) {
-    reason = "missing volume key";
-    return false;
-  }
-
-  if (!nvsKeyExists("clk_server")) {
-    reason = "missing time server key";
-    return false;
-  }
-
-  if (nvsKeyExists("alrm_config")) {
-    String alarmJson = nvsGetAlarmConfig();
-    if (!isValidAlarmConfigJson(alarmJson)) {
-      reason = "invalid alrm_config JSON";
-      return false;
-    }
-  } else if (nvsKeyExists(RADIO_CONFIG_NVS_KEY)) {
-    String radioJson = nvsGetRadioConfig();
-    if (!isValidRadioConfigJson(radioJson)) {
-      reason = "invalid radio_config JSON";
-      return false;
+  for (i = 0; i < 100; i++) {
+    sprintf(key, "wifi_%02d", i);
+    if (nvsKeyExists(key) && isValidWifiEntry(nvsGetValue(key))) {
+      return true;
     }
   }
 
-  return true;
+  return false;
 }
 
 /**
- * @brief Validate NVS on boot and restore defaults if configuration is missing
- *        or corrupted.
+ * @brief Determine whether NVS is too broken to boot the radio.
+ *
+ * Factory defaults are written only when there is no usable WiFi configuration.
+ *
+ * @param reason Output text describing why boot is impossible
+ * @return true if configuration cannot be recovered without a factory reset
+ */
+static bool isConfigUnrecoverable(String &reason) {
+  if (countNvsKeys() == 0) {
+    reason = "empty NVS";
+    return true;
+  }
+
+  if (!hasAnyValidWifiInNvs()) {
+    reason = "no valid WiFi credentials";
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * @brief Repair missing or invalid non-critical NVS keys without erasing user data.
+ *
+ * @param actions Output text listing repaired items (for logging)
+ */
+static void repairNvsConfig(String &actions) {
+  bool repaired = false;
+
+  if (!nvsKeyExists("volume")) {
+    nvsAddValue("volume", "72");
+    repaired = true;
+    actions += " volume";
+  }
+
+  if (!nvsKeyExists("clk_server")) {
+    nvsAddValue("clk_server", "pool.ntp.org");
+    nvsAddValue("clk_offset", "1");
+    nvsAddValue("clk_dst", "1");
+    repaired = true;
+    actions += " clock";
+  }
+
+  if (!nvsKeyExists("preset")) {
+    nvsAddValue("preset", "0");
+    repaired = true;
+    actions += " preset";
+  }
+
+  if (!hasAnyPresetInNvs()) {
+    nvsAddValue("preset_00", "icecast.omroep.nl:80/radio1-bb-mp3 # 0 - Default");
+    repaired = true;
+    actions += " presets";
+  }
+
+  if (nvsKeyExists(ALRM_CONFIG_NVS_KEY)) {
+    String alarmJson = nvsGetAlarmConfig();
+    if (!isValidAlarmConfigJson(alarmJson)) {
+      nvsOpen();
+      if (nvs_erase_key(nvshandle, ALRM_CONFIG_NVS_KEY) == ESP_OK) {
+        repaired = true;
+        actions += " alrm_config";
+      }
+    }
+  }
+
+  if (nvsKeyExists(RADIO_CONFIG_NVS_KEY)) {
+    String radioJson = nvsGetRadioConfig();
+    if (!isValidRadioConfigJson(radioJson)) {
+      nvsOpen();
+      if (nvs_erase_key(nvshandle, RADIO_CONFIG_NVS_KEY) == ESP_OK) {
+        repaired = true;
+        actions += " radio_config";
+      }
+    }
+  }
+
+  if (repaired && nvsCommit() == ESP_OK) {
+    fillkeylist();
+  }
+}
+
+/**
+ * @brief Validate NVS on boot.
+ *
+ * Writes factory defaults only when the device cannot boot (empty NVS or no valid
+ * WiFi credentials). Individual invalid keys are repaired in place instead of
+ * wiping the full configuration.
  */
 void checkAndInitConfig() {
   String reason;
 
-  if (!nvsKeyExists("wifi_00")) {
-    dbgprint("BOOT: No NVS configuration found (first start or reset)");
+  if (isConfigUnrecoverable(reason)) {
+    dbgprint("BOOT: NVS not bootable (%s), writing factory defaults", reason.c_str());
     restoreDefaultConfig();
     dbgprint("BOOT: Default configuration written, restarting...");
     delay(1000);
@@ -123,13 +174,9 @@ void checkAndInitConfig() {
     return;
   }
 
-  if (!validateNvsConfig(reason)) {
-    dbgprint("BOOT: Invalid NVS configuration detected: %s", reason.c_str());
-    restoreDefaultConfig();
-    dbgprint("BOOT: Default configuration restored, restarting...");
-    delay(1000);
-    ESP.restart();
-    return;
+  repairNvsConfig(reason);
+  if (reason.length() > 0) {
+    dbgprint("BOOT: Repaired NVS without factory reset:%s", reason.c_str());
   }
 
   dbgprint("BOOT: NVS configuration validation passed");

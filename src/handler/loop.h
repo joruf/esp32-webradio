@@ -60,7 +60,7 @@ void IRAM_ATTR timer10sec() {
     {
 
       if (morethanonce > 10) { // No! Happened too many times?
-        ESP.restart();         // Reset the CPU, probably no return
+        resetreq = true; // Restart from main loop (safe for NVS)
       }
 
       if (datamode & (PLAYLISTDATA | PLAYLISTINIT | PLAYLISTHEADER)) { // In playlist mode?

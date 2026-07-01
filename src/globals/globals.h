@@ -63,7 +63,7 @@ extern String playlist;
 extern bool hostreq;
 extern bool reqtone;
 extern bool muteflag;
-extern bool resetreq;
+extern volatile bool resetreq;
 extern bool updatereq;
 extern bool NetworkFound;
 extern String networks;

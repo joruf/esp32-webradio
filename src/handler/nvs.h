@@ -144,6 +144,7 @@ void nvsAutoSave() {
   nvsAddValue("tonehf", String(ini_block.rtone[1])); // Save current tonehf
   nvsAddValue("tonela", String(ini_block.rtone[2])); // Save current tonela
   nvsAddValue("tonelf", String(ini_block.rtone[3])); // Save current tonelf
+  nvsCommit();
 }
 
 /**

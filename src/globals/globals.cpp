@@ -50,7 +50,7 @@ String playlist;                       // The URL of the specified playlist
 bool hostreq = false;                  // Request for new host
 bool reqtone = false;                  // New tone setting requested
 bool muteflag = false;                 // Mute output
-bool resetreq = false;                 // Request to reset the ESP32
+volatile bool resetreq = false;        // Request to reset the ESP32
 bool updatereq = false;                // Request to update software from remote host
 bool NetworkFound = false;             // True if WiFi network connected
 String networks;                       // Found networks in the surrounding
