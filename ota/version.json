@@ -3,12 +3,12 @@
   "released": "2026-07-02",
   "repository": "https://github.com/joruf/esp32-webradio",
   "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.37.bin",
-  "notes": "OTA can now install any listed firmware release including older ones (downgrade) directly from the release history on the OTA page; online volume (Web UI sliders) now changes only in 5-step increments to match the rotary encoder, enforced both in the browser and on the device.",
+  "notes": "OTA page can now install a specific release (including older ones = downgrade) picked from a list that is auto-detected online from the repository releases folder, so only firmware images that really exist are offered. Manual .bin uploads now show a brick-risk warning and are validated (minimum/maximum size, ESP32 0xE9 image signature and chip type) both in the browser and on the device before flashing. Online volume (Web UI sliders) now changes only in 5-step increments to match the rotary encoder, enforced in the browser and on the device.",
   "history": [
     {
       "version": "v2.37",
       "released": "2026-07-02",
-      "notes": "OTA can now install any listed firmware release including older ones (downgrade) directly from the release history on the OTA page; online volume (Web UI sliders) now changes only in 5-step increments to match the rotary encoder, enforced both in the browser and on the device."
+      "notes": "OTA page can now install a specific release (including older ones = downgrade) picked from a list that is auto-detected online from the repository releases folder, so only firmware images that really exist are offered. Manual .bin uploads now show a brick-risk warning and are validated (minimum/maximum size, ESP32 0xE9 image signature and chip type) both in the browser and on the device before flashing. Online volume (Web UI sliders) now changes only in 5-step increments to match the rotary encoder, enforced in the browser and on the device."
     },
     {
       "version": "v2.36",

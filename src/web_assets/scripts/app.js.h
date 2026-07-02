@@ -2020,6 +2020,7 @@ const char app_js[] PROGMEM = R"=====(
             return;
         }
 
+        otaMaxSize = parseInt(data.ota_max_size, 10) || 0;
         var current = parseFirmwareString(data.current_firmware);
         $("#ota-current-version").text(current.version);
         $("#ota-current-date").text(current.date);
@@ -2046,6 +2047,104 @@ const char app_js[] PROGMEM = R"=====(
         $("#ota-install-btn").data("ota-install-enabled", !!data.update_available);
         $("#ota-install-btn").prop("disabled", !data.update_available);
         renderOtaVersionHistory(data.history, current.version);
+        loadAvailableReleases(data.bin_url, current.version);
+    }
+
+    var otaReleaseVersions = [];
+    var otaReleaseRepoSig = "";
+    var otaMaxSize = 0; // Size of the target OTA partition in bytes (from the device)
+
+    function parseRepoFromBinUrl(binUrl) {
+        // Expected: https://raw.githubusercontent.com/<owner>/<repo>/<branch>/<dir...>/<file>.bin
+        var m = /^https?:\/\/raw\.githubusercontent\.com\/([^/]+)\/([^/]+)\/([^/]+)\/(.+)\/[^/]+$/.exec(binUrl || "");
+        if (!m) {
+            return null;
+        }
+        return { owner: m[1], repo: m[2], branch: m[3], dir: m[4] };
+    }
+
+    function renderReleaseOptions(currentVersion) {
+        var select = document.getElementById("ota-version-select");
+        if (!select) {
+            return;
+        }
+        if (!otaReleaseVersions.length) {
+            return;
+        }
+        select.innerHTML = "";
+        otaReleaseVersions.forEach(function(v) {
+            var opt = document.createElement("option");
+            opt.value = v;
+            opt.textContent = v + (v === currentVersion ? " (installed)" : "");
+            select.appendChild(opt);
+        });
+        select.disabled = false;
+        $("#ota-version-install-btn").prop("disabled", false);
+    }
+
+    function loadAvailableReleases(binUrl, currentVersion) {
+        var select = document.getElementById("ota-version-select");
+        if (!select) {
+            return;
+        }
+        var status = $("#ota-version-picker-status");
+        var installBtn = $("#ota-version-install-btn");
+
+        function fail(message) {
+            otaReleaseVersions = [];
+            select.innerHTML = "<option value=''>" + message + "</option>";
+            select.disabled = true;
+            installBtn.prop("disabled", true);
+            status.text(message);
+        }
+
+        var repo = parseRepoFromBinUrl(binUrl);
+        if (!repo) {
+            fail("No repository info available - use local upload below.");
+            return;
+        }
+
+        var sig = repo.owner + "/" + repo.repo + "@" + repo.branch + ":" + repo.dir;
+        if (sig === otaReleaseRepoSig && otaReleaseVersions.length) {
+            // Already fetched this repo; just refresh the "installed" marker.
+            renderReleaseOptions(currentVersion);
+            status.text(otaReleaseVersions.length + " firmware image(s) available online.");
+            return;
+        }
+
+        var api = "https://api.github.com/repos/" + repo.owner + "/" + repo.repo +
+                  "/contents/" + repo.dir + "?ref=" + encodeURIComponent(repo.branch);
+        status.text("Searching repository for available firmware...");
+        fetch(api)
+            .then(function(r) {
+                if (!r.ok) {
+                    throw new Error("HTTP " + r.status);
+                }
+                return r.json();
+            })
+            .then(function(files) {
+                var versions = [];
+                (files || []).forEach(function(f) {
+                    var mm = /^esp32_webradio_(v[0-9]+\.[0-9]+)\.bin$/.exec(f.name || "");
+                    if (mm) {
+                        versions.push(mm[1]);
+                    }
+                });
+                versions.sort(function(a, b) {
+                    return parseFloat(b.slice(1)) - parseFloat(a.slice(1));
+                });
+                if (!versions.length) {
+                    fail("No firmware images found online - use local upload below.");
+                    return;
+                }
+                otaReleaseVersions = versions;
+                otaReleaseRepoSig = sig;
+                renderReleaseOptions(currentVersion);
+                status.text(versions.length + " firmware image(s) available online.");
+            })
+            .catch(function(err) {
+                fail("Could not search the repository (" + err + ") - use local upload below.");
+            });
     }
 
     function renderOtaVersionHistory(history, currentVersion) {
@@ -2067,14 +2166,8 @@ const char app_js[] PROGMEM = R"=====(
             if (entry.released) {
                 head.append($("<span class='ota-history-date'></span>").text(entry.released));
             }
-            if (entry.version) {
-                if (entry.version === currentVersion) {
-                    head.append($("<span class='ota-history-current'></span>").text("installed"));
-                } else {
-                    head.append($("<button type='button' class='btn btn-default btn-xs ota-history-install'></button>")
-                        .attr("data-version", entry.version)
-                        .text("Install"));
-                }
+            if (entry.version && entry.version === currentVersion) {
+                head.append($("<span class='ota-history-current'></span>").text("installed"));
             }
             item.append(head);
             if (entry.notes) {
@@ -2214,6 +2307,9 @@ const char app_js[] PROGMEM = R"=====(
             $("#ota-upload-btn").prop("disabled", !enabled);
             var installWasEnabled = $("#ota-install-btn").data("ota-install-enabled") === true;
             $("#ota-install-btn").prop("disabled", !enabled || !installWasEnabled);
+            var hasReleases = otaReleaseVersions.length > 0;
+            $("#ota-version-install-btn").prop("disabled", !enabled || !hasReleases);
+            $("#ota-version-select").prop("disabled", !enabled || !hasReleases);
         }
 
         function startOtaRecoveryWaitFlow(waitStatusText, startLogText, timeoutResultText) {
@@ -2267,10 +2363,12 @@ const char app_js[] PROGMEM = R"=====(
                 });
         });
 
-        $("#ota-version-history").off("click.otaHistoryInstall")
-            .on("click.otaHistoryInstall", ".ota-history-install", function() {
-                var version = $(this).attr("data-version");
+        $("#ota-version-install-btn").off("click.otaVersionInstall")
+            .on("click.otaVersionInstall", function() {
+                var select = document.getElementById("ota-version-select");
+                var version = select ? select.value : "";
                 if (!version) {
+                    showCommandLog("Please select a firmware version first.", { type: "error" });
                     return;
                 }
                 if (!window.confirm("Install firmware " + version + " now? This can be an older release (downgrade). Do not disconnect power during the update.")) {
@@ -2296,23 +2394,43 @@ const char app_js[] PROGMEM = R"=====(
                     });
             });
 
-        $("#ota-upload-btn").off("click.otaUpload").on("click.otaUpload", function() {
-            var input = document.getElementById("ota-local-bin");
-            if (!input || !input.files || input.files.length === 0) {
-                showCommandLog("Please select a .bin file first.", { type: "error" });
+        function validateFirmwareFile(file, callback) {
+            var minSize = 262144; // ~256 KB; real firmware is ~1.6 MB
+            if (file.size < minSize) {
+                callback("file is too small (" + file.size + " bytes) to be a valid firmware image");
                 return;
             }
-
-            var file = input.files[0];
-            if (!/\.bin$/i.test(file.name || "")) {
-                showCommandLog("Selected file is not a .bin firmware image.", { type: "error" });
+            if (otaMaxSize > 0 && file.size > otaMaxSize) {
+                callback("file is too large (" + file.size + " bytes) for the device OTA partition (" + otaMaxSize + " bytes)");
                 return;
             }
-
-            if (!window.confirm("Upload and install firmware from local file now? Do not disconnect power during upload.")) {
+            if (typeof FileReader === "undefined" || !file.slice) {
+                callback(null); // Browser cannot pre-read; rely on device-side checks
                 return;
             }
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var bytes = new Uint8Array(e.target.result || new ArrayBuffer(0));
+                if (bytes.length < 1 || bytes[0] !== 0xE9) {
+                    callback("this is not a valid ESP32 firmware image (missing 0xE9 signature)");
+                    return;
+                }
+                if (bytes.length >= 14) {
+                    var chipId = bytes[12] | (bytes[13] << 8);
+                    if (chipId !== 0) {
+                        callback("this firmware was built for a different chip (chip id " + chipId + "), not the ESP32");
+                        return;
+                    }
+                }
+                callback(null);
+            };
+            reader.onerror = function() {
+                callback("could not read the selected file for validation");
+            };
+            reader.readAsArrayBuffer(file.slice(0, 16));
+        }
 
+        function performFirmwareUpload(file) {
             showOtaUploadResult("", "");
             setOtaActionButtonsEnabled(false);
             $("#ota-status-text").removeClass("text-success text-warning text-danger").text("Uploading local firmware...");
@@ -2350,6 +2468,39 @@ const char app_js[] PROGMEM = R"=====(
                         "Could not confirm update completion automatically. Please refresh and check firmware version."
                     );
                 });
+        }
+
+        $("#ota-upload-btn").off("click.otaUpload").on("click.otaUpload", function() {
+            var input = document.getElementById("ota-local-bin");
+            if (!input || !input.files || input.files.length === 0) {
+                showCommandLog("Please select a .bin file first.", { type: "error" });
+                return;
+            }
+
+            var file = input.files[0];
+            if (!/\.bin$/i.test(file.name || "")) {
+                showCommandLog("Selected file is not a .bin firmware image.", { type: "error" });
+                return;
+            }
+
+            validateFirmwareFile(file, function(err) {
+                if (err) {
+                    var rejectMsg = "Firmware rejected: " + err + ". Uploading it could make the device unbootable, so the upload was cancelled.";
+                    showOtaUploadResult(rejectMsg, "error");
+                    showCommandLog(rejectMsg, { type: "error" });
+                    return;
+                }
+
+                var warning = "You are about to flash a LOCAL firmware file:\n\n" +
+                    file.name + " (" + file.size + " bytes)\n\n" +
+                    "WARNING: Flashing a wrong, outdated or unsuitable image can make the device UNBOOTABLE and may require a USB reflash to recover.\n\n" +
+                    "Only continue if this .bin was built for THIS ESP32 web radio. Do not disconnect power during the update.\n\nProceed with the upload?";
+                if (!window.confirm(warning)) {
+                    return;
+                }
+
+                performFirmwareUpload(file);
+            });
         });
     }
 

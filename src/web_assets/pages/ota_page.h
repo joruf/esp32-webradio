@@ -46,10 +46,28 @@ const char ota_html[] PROGMEM = R"=====(
 				</div>
 			</div>
 
+			<div id="ota-version-picker" class="row panel panel-default sound-card">
+				<div class="panel-heading">Install a specific release</div>
+				<div class="panel-body">
+					<p class="config-help">The list below is detected online from the repository folder <code>ota/releases/</code> and only contains firmware images that actually exist. Selecting an older version downgrades the device. Do not unplug power during the update.</p>
+					<div class="form-group">
+						<label for="ota-version-select">Available firmware</label>
+						<select class="form-control" id="ota-version-select" disabled>
+							<option value="">Loading available releases...</option>
+						</select>
+					</div>
+					<div class="maintenance-actions">
+						<button type="button" id="ota-version-install-btn" class="btn btn-warning" disabled><span class="btn-icon" aria-hidden="true">&#11015;</span> Install selected version</button>
+					</div>
+					<p id="ota-version-picker-status" class="config-row-meta">-</p>
+				</div>
+			</div>
+
 			<div class="row panel panel-default sound-card">
 				<div class="panel-heading">Local firmware upload (.bin)</div>
 				<div class="panel-body">
 					<p class="config-help">Upload a local firmware <code>.bin</code> file directly from this device. The web radio restarts automatically after a successful upload.</p>
+					<p class="ota-upload-warning"><strong>&#9888; Warning:</strong> Only upload a firmware image that was built for <strong>this device (ESP32 web radio)</strong>. Uploading a wrong version, a file for a different chip, or any unsuitable/corrupted <code>.bin</code> can make the device unbootable and may require a USB reflash to recover. The file is validated before flashing (ESP32 image signature, chip type and size), but these checks cannot guarantee full compatibility - proceed only if you are sure.</p>
 					<div class="form-group">
 						<label for="ota-local-bin">Firmware file</label>
 						<input type="file" class="form-control" id="ota-local-bin" accept=".bin,application/octet-stream">

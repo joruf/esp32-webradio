@@ -7,6 +7,7 @@
 #define OTA_CHECK_H
 
 #include <HTTPClient.h>
+#include <esp_ota_ops.h>
 #include "config/features_config.h"
 #include "audio/title_history.h"
 #include "ota_version_embedded.h"
@@ -104,7 +105,10 @@ public:
     json += JsonUtil::escape(latestBinUrl_.c_str());
     json += "\",\"ota_check_url\":\"";
     json += JsonUtil::escape(features.ota_check_url.c_str());
-    json += "\",\"history\":";
+    json += "\",\"ota_max_size\":";
+    const esp_partition_t *otaPart = esp_ota_get_next_update_partition(NULL);
+    json += String(otaPart ? (uint32_t)otaPart->size : 0UL);
+    json += ",\"history\":";
     json += versionHistoryJson_.length() ? versionHistoryJson_ : "[]";
     json += "}";
     return json;
@@ -139,38 +143,20 @@ public:
   }
 
   /**
-   * @brief Check whether a version label is present in the loaded manifest.
-   *
-   * @param version Version label (e.g. "v2.30")
-   * @return true when the version is the latest or appears in the history list
-   */
-  bool isKnownVersion(const String &version) const {
-    if (version.length() == 0) {
-      return false;
-    }
-    if (version == latestVersion_) {
-      return true;
-    }
-    // History is serialized compactly (no spaces), so a direct token search is
-    // both cheap and reliable here.
-    String needle = "\"version\":\"" + version + "\"";
-    return versionHistoryJson_.indexOf(needle) >= 0;
-  }
-
-  /**
-   * @brief Build the firmware bin URL for a specific manifest version.
+   * @brief Build the firmware bin URL for a specific release version.
    *
    * Derives the URL from the latest bin_url template by replacing the latest
-   * version token with the requested one. Only versions present in the manifest
-   * are accepted, so arbitrary URLs cannot be installed. This enables installing
-   * older releases (downgrade) in addition to the newest one.
+   * version token with the requested one. The available versions are discovered
+   * online by the Web UI (repository listing), so this only needs to construct
+   * the URL for a valid version label pointing at the same releases folder.
+   * This enables installing older releases (downgrade) in addition to the newest.
    *
    * @param version Target version label (e.g. "v2.30")
-   * @return String Bin URL, or empty string if the version is unknown/underivable
+   * @return String Bin URL, or empty string if the version cannot be derived
    */
   String binUrlForVersion(const String &version) const {
-    if (!isKnownVersion(version)) {
-      return "";
+    if (version.length() == 0 || !version.startsWith("v")) {
+      return ""; // Guard against empty/garbage version tokens
     }
     if (version == latestVersion_) {
       return latestBinUrl_;
@@ -179,10 +165,10 @@ public:
       return "";
     }
     if (latestBinUrl_.indexOf(latestVersion_) < 0) {
-      return "";
+      return ""; // Template does not contain the version token to swap
     }
     String url = latestBinUrl_;
-    url.replace(latestVersion_, version);
+    url.replace(latestVersion_, version); // Same releases folder, different file
     return url;
   }
 

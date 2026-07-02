@@ -397,6 +397,14 @@ static bool handleFirmwareUploadPost(uint32_t contentLength, String &message) {
     return false;
   }
 
+  // A real firmware image for this device is ~1.6 MB. Anything tiny is certainly
+  // not a valid application image (e.g. a bootloader, partition table, or a
+  // completely unrelated file) and must be rejected before touching flash.
+  if (contentLength < 262144UL) {
+    message = "File too small to be a valid firmware image";
+    return false;
+  }
+
   if (!isOtaUpdateCapable((size_t)contentLength)) {
     message = "Image does not fit OTA partition";
     return false;
@@ -418,6 +426,8 @@ static bool handleFirmwareUploadPost(uint32_t contentLength, String &message) {
   timerStop(timer);
   noDataDeadline = millis() + 60000UL;
 
+  bool headerChecked = false; // Validate the ESP32 image header on the first chunk
+
   while (written < (size_t)contentLength && cmdclient.connected()) {
     size_t remaining = (size_t)contentLength - written;
     size_t chunk = remaining > sizeof(buf) ? sizeof(buf) : remaining;
@@ -427,6 +437,31 @@ static bool handleFirmwareUploadPost(uint32_t contentLength, String &message) {
         break;
       }
       continue;
+    }
+
+    // Verify the firmware header before writing anything to flash. The ESP32
+    // application image starts with magic byte 0xE9 and carries a chip_id at
+    // offset 12-13 (0x0000 = ESP32). This catches non-ESP32 files and images
+    // built for a different chip family before they can brick the device.
+    if (!headerChecked) {
+      if (buf[0] != 0xE9) {
+        timerStart(timer);
+        Update.abort();
+        message = "Not a valid ESP32 firmware image (bad magic byte)";
+        dspOtaDisplayFailed("Invalid image");
+        return false;
+      }
+      if (got >= 14) {
+        uint16_t chipId = (uint16_t)buf[12] | ((uint16_t)buf[13] << 8);
+        if (chipId != 0x0000) {
+          timerStart(timer);
+          Update.abort();
+          message = "Firmware built for a different chip (not ESP32)";
+          dspOtaDisplayFailed("Wrong chip");
+          return false;
+        }
+      }
+      headerChecked = true;
     }
 
     noDataDeadline = millis() + 60000UL;

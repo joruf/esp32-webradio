@@ -255,10 +255,22 @@ const char app_css[] PROGMEM = R"=====(
 		color: #666;
 		font-weight: normal;
 	}
-	.ota-history-install {
-		margin-left: 10px;
-		padding: 2px 10px;
-		font-size: 0.8em;
+	.ota-upload-warning {
+		margin: 8px 0 12px 0;
+		padding: 10px 12px;
+		border: 1px solid #e0a800;
+		border-left: 4px solid #e0a800;
+		border-radius: 4px;
+		background: #fff8e1;
+		color: #7a5c00;
+		font-size: 0.9em;
+		line-height: 1.4;
+	}
+	body.theme-dark .ota-upload-warning {
+		background: #3a2f00;
+		border-color: #b8860b;
+		border-left-color: #b8860b;
+		color: #ffd977;
 	}
 	.ota-history-current {
 		margin-left: 10px;
