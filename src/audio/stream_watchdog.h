@@ -6,7 +6,7 @@
 #ifndef STREAM_WATCHDOG_H
 #define STREAM_WATCHDOG_H
 
-#include "features_config.h"
+#include "config/features_config.h"
 #include "globals/globals.h"
 #include "globals/app_prototypes.h"
 

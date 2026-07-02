@@ -6,10 +6,10 @@
 #ifndef LIVE_STATUS_H
 #define LIVE_STATUS_H
 
-#include "features_config.h"
-#include "title_history.h"
-#include "vu_meter.h"
-#include "stream_watchdog.h"
+#include "config/features_config.h"
+#include "audio/title_history.h"
+#include "audio/vu_meter.h"
+#include "audio/stream_watchdog.h"
 #include "ota_check.h"
 #include <esp_ota_ops.h>
 #include <esp_chip_info.h>

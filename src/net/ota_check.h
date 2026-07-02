@@ -7,8 +7,8 @@
 #define OTA_CHECK_H
 
 #include <HTTPClient.h>
-#include "features_config.h"
-#include "title_history.h"
+#include "config/features_config.h"
+#include "audio/title_history.h"
 #include "ota_version_embedded.h"
 
 /**

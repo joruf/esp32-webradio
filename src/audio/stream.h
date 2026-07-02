@@ -126,7 +126,7 @@ static void formatStreamTitle(char *streamtitle) {
 
 #if defined(BLUETFT)
 #  include "display/dsp_dashboard.h"
-#  include "handler/wifi_display.h"
+#  include "net/wifi_display.h"
 #endif
 
 /**
@@ -644,7 +644,7 @@ static void handleVs1053VolumeAndTone() {
   if (!claimSPI("hspec")) {
     return;
   }
-  vs1053player->setVolume(getOutputVolume());
+  vs1053player->setVolume(getChipVolume()); // Map external 0-100 to audible 40-100
 
   if (reqtone) {
     reqtone = false;
@@ -659,6 +659,14 @@ static void handleVs1053VolumeAndTone() {
  *        Runs once per spftask iteration.
  */
 void handleRenderData() {
+  // While a firmware update is running, the OTA screen (drawn from loop()) owns
+  // the TFT and the SPI bus. Skip all rendering and VS1053 SPI access here so we
+  // do not draw the dashboard over the OTA progress screen (which would cause
+  // artifacts and overwrite the size/ETA lines) or corrupt the shared SPI bus.
+  if (otaActive) {
+    return;
+  }
+
   // 1. Time and alarm (no SPI)
   handleTimeAndAlarmUpdate();
 

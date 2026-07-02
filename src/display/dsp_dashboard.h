@@ -13,7 +13,7 @@
  */
 
 #include "globals/globals.h"
-#include "handler/features_config.h"
+#include "config/features_config.h"
 
 extern int32_t sleeptimer_ms;
 extern int bitrate;
@@ -427,7 +427,12 @@ inline void dspDashboardDrawVolume(uint8_t volume) {
   }
 
   snprintf(label, sizeof(label), "%u", (unsigned)volume);
-  dsp_fillRect(0, 116, DSP_GUTTER_W, 10, BLACK);
+  // The gutter is only wide enough for two digits, so the value 100 spills one
+  // digit into the content column. Clear the full three-digit width (otherwise a
+  // leftover "0" stays behind when going from 100 to a two-digit value) and
+  // restore the vertical divider pixel column wiped by the wider clear.
+  dsp_fillRect(0, 116, DSP_FONT_W * 3U + 2U, 10, BLACK);
+  dsp_fillRect(DSP_GUTTER_W - 1U, 116, 1, 10, DSP_COL_LINE);
   dsp_setTextColor(DSP_COL_VOL);
   dsp_setTextSize(1);
   dsp_setCursor(1, 118);

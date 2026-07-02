@@ -11,7 +11,7 @@ void saveDefaultConfig();
 
 #include "http_queue.h"
 #include "captive_portal.h"
-#include "media_probe.h"
+#include "audio/media_probe.h"
 
 static String http_host_header = "";
 static String http_if_none_match = "";

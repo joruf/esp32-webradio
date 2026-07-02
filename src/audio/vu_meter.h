@@ -9,7 +9,7 @@
 #ifndef VU_METER_H
 #define VU_METER_H
 
-#include "features_config.h"
+#include "config/features_config.h"
 
 uint8_t getOutputVolume(void);
 

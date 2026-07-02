@@ -119,8 +119,11 @@ static void otaShowStartScreen(size_t totalBytes) {
  */
 void otastart() {
   dbgprint("OTA update Started");
-  otaActive = true; // Pause the stream producer task (shares mp3client/WiFi/CPU)
-  delay(60);        // Give mp3StreamTask time to observe the flag before mp3client is touched
+  otaActive = true; // Pause the stream producer AND the spftask renderer (shared mp3client/SPI/TFT)
+  // Wait longer than one spftask cycle (100 ms) so any in-flight dashboard draw
+  // finishes and releases the SPI bus before the OTA screen takes over. This
+  // prevents artifacts from two tasks drawing to the TFT at the same time.
+  delay(160);
 }
 
 /**

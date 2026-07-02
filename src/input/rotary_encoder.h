@@ -141,7 +141,8 @@ void checkRotaryEncoder() {
 
   switch (enc_menu_mode) {
     case VOLUME:
-      ini_block.reqvol = constrain(ini_block.reqvol + rotationcount, 0, 100);
+      // Each detent changes the user-facing volume by 5 steps (0-100 range).
+      ini_block.reqvol = constrain(ini_block.reqvol + rotationcount * 5, 0, 100);
       muteflag = false;
       nvsRequestSettingsSave(); // Persist the new volume shortly after the change
       break;

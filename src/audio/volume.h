@@ -1,3 +1,5 @@
+#include "VolumeMapper.h"
+
 /** Duration in ms for soft volume fade on play start/stop. */
 static const uint32_t VOLUME_FADE_MS = 1000;
 
@@ -27,6 +29,30 @@ uint8_t getOutputVolume(void) {
   }
 
   return ini_block.reqvol;
+}
+
+/**
+ * @brief Returns the mapped volume to program into the VS1053 right now.
+ *
+ * Mirrors getOutputVolume() (fade- and mute-aware) but maps the user-facing
+ * value into the audible chip range. True silence (mute or a fade that is
+ * currently at zero) is preserved as chip volume 0.
+ *
+ * @return uint8_t Chip volume (0 for silence, otherwise VolumeMapper::kChipFloor-100)
+ */
+uint8_t getChipVolume(void) {
+  if (muteflag) {
+    return 0;
+  }
+
+  if (volumeFadeActive) {
+    if (volumeFadeCurrent == 0) {
+      return 0;
+    }
+    return VolumeMapper::mapExternalToChip(volumeFadeCurrent);
+  }
+
+  return VolumeMapper::mapExternalToChip(ini_block.reqvol);
 }
 
 /**

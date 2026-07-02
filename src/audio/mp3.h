@@ -65,7 +65,7 @@ static bool isFiniteMp3FileUrl(const String &streamHost) {
   return normalized.endsWith(".mp3");
 }
 
-#include "mp3_stream_parser.h"
+#include "audio_stream_parser.h"
 
 /**
  * @desc	Called from the main loop() for the mp3 functions.

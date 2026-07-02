@@ -7,7 +7,7 @@
 #define WIFI_SIGNAL_H
 
 #include <WiFi.h>
-#include "title_history.h"
+#include "audio/title_history.h"
 
 #define WIFI_SIGNAL_CACHE_MS 15000
 #define WIFI_SCAN_CACHE_MAX 32

@@ -1,10 +1,11 @@
-#ifndef MP3_STREAM_PARSER_H
-#define MP3_STREAM_PARSER_H
+#ifndef AUDIO_STREAM_PARSER_H
+#define AUDIO_STREAM_PARSER_H
 
 /**
+ * @file audio_stream_parser.h
  * @brief Parses HTTP stream bytes (headers, metadata, playlists, MP3 data).
  */
-class Mp3StreamParser {
+class AudioStreamParser {
 public:
   void handleByte(uint8_t b) {
 
@@ -352,170 +353,6 @@ public:
   }
 }
 
-/**
- * @desc	Called from the main loop() for the mp3 functions.
- * 			A connection to an MP3 server is active and we are ready
- * to receive data. Normally there is about 2 to 4 kB available in the data
- * stream.  This depends on the sender.
- * */
-void mp3loop() {
-  uint32_t maxchunk; // Max number of bytes to read
-  int res = 0;       // Result reading from mp3 stream
-  uint32_t av = 0;   // Available in stream
-  String nodeID;     // Next nodeID of track on SD
-  uint32_t timing;   // Startime and duration this function
-  uint32_t qspace;   // Free space in data queue
-
-  // Try to keep the Queue to playStreamFromQueue filled up by adding as much
-  // bytes as possible Check if playing
-  if (datamode & (INIT | HEADER | DATA | METADATA | PLAYLISTINIT | PLAYLISTHEADER | PLAYLISTDATA)) {
-    timing = millis();                           // Start time this function
-    maxchunk = sizeof(tmpbuff);                  // Reduce byte count for this mp3loop()
-    if (vs1053Available) {
-      qspace = uxQueueSpacesAvailable(dataqueue) * // Compute free space in data queue
-               sizeof(qdata_struct);
-    } else {
-      qspace = maxchunk;
-    }
-
-    if (localfile) {      // If playing file from SD card
-      av = mp3filelength; // Bytes left in file
-
-      // Reduce byte count for this mp3loop()
-      if (av < maxchunk) {
-        maxchunk = av;
-      }
-
-      if (maxchunk > qspace) { // Check if there is enough space in queue
-        maxchunk = qspace;     // No, limit to free queue space
-      }
-
-      if (maxchunk) {                          // Check if there is anything to read
-        if (!claimSPI("sdread")) {
-          return;
-        }
-        res = mp3file.read(tmpbuff, maxchunk); // Read a block of data
-        releaseSPI();                          // Release SPI bus
-        mp3filelength -= res;                  // Number of bytes left
-      }
-    } else {                      // Play next
-      av = mp3client.available(); // Available from stream
-
-      if (av < maxchunk) { // Limit read size
-        maxchunk = av;
-      }
-
-      if (maxchunk > qspace) { // Check if there is enough space in queue
-        maxchunk = qspace;     // No, limit to free queue space
-      }
-
-      // Check if there is anything to read
-      if (maxchunk) {
-        res = mp3client.read(tmpbuff, maxchunk); // Read a number of bytes from the stream
-        streamWatchdogFeed((uint16_t)res);
-        vuMeterFeed((uint16_t)res);
-      } else {
-        if (datamode == PLAYLISTDATA) { // If End of playlist
-          playlist_num = 0;             // And reset
-          dbgprint("End of playlist seen");
-          datamode = STOPPED;
-          ini_block.newpreset++; // Go to next preset
-        }
-      }
-    }
-
-    for (int i = 0; i < res; i++) {
-      handleNextDataByteFromServer(tmpbuff[i]); // Handle one byte
-    }
-
-    timing = millis() - timing;                // Duration this function
-    if (timing > max_mp3loop_time) {           // New maximum found
-      max_mp3loop_time = timing;               // set new maximum
-      dbgprint("Duration mp3loop %d", timing); // and report it
-    }
-  }
-
-  if (datamode == STOPREQD) { // If STOP requested
-    dbgprint("STOP requested");
-    if (localfile) {
-      if (claimSPI("close")) {
-        mp3file.close();
-        releaseSPI();
-      }
-    } else {
-      stop_mp3client(); // Disconnect if still connected
-    }
-
-    chunked = false;                     // Not longer chunked
-    datacount = 0;                       // Reset datacount
-    outqp = outchunk.buf;                // and pointer
-    queueFunctionForPlayTask(QSTOPSONG); // Queue a request to stop the song
-    metaint = 0;                         // No metaint known now
-    datamode = STOPPED;                  // state becomes STOPPED
-    mbitrate = 0;
-    bitrate = 0;
-    return;
-  }
-
-  if (localfile) {         // If playing from SD-Card
-    if (datamode & DATA) { // Test if playing
-                           // End of mp3 data
-      if (av == 0) {
-        datamode = STOPREQD; // End of local mp3-file detected
-        nodeID = selectnextSDnode(SD_currentnode,
-                                  +1); // Select the next file on SD
-        host = getSDfilename(nodeID);
-        hostreq = true; // Request this host
-      }
-    }
-  }
-
-  if (ini_block.newpreset != currentpreset) { // If New station or next from playlist requested
-    if (datamode != STOPPED) {                // If still busy stop the request
-      datamode = STOPREQD;
-    } else {
-      if (playlist_num) { // If playing from playlist
-
-        // retrieve URL of playlist
-        playlist_num += ini_block.newpreset - currentpreset; // Next entry in playlist
-        ini_block.newpreset = currentpreset;                 // Stay at current preset
-      } else {
-        host = nvsGetHostFromPref(); // Lookup preset in preferences
-        chomp(host);                 // Get rid of part after "#"
-      }
-
-      dbgprint("New preset/file requested (%d/%d) from %s", ini_block.newpreset, playlist_num, host.c_str());
-
-      if (host != "") { // if Preset in ini-file
-        hostreq = true; // Force this station as new preset
-      } else {
-        // This preset is not available, return to preset 0, will be handled in
-        // next mp3loop()
-        dbgprint("No host for this preset");
-        ini_block.newpreset = 0; // Wrap to first station
-      }
-    }
-  }
-
-  if (hostreq) { // New preset or station
-    hostreq = false;
-    currentpreset = ini_block.newpreset; // Remember current preset
-    // Find out if this URL is on localhost (SD).
-    localfile = (host.indexOf("localhost/") >= 0);
-    if (localfile) {         // If playing file from localhost
-      if (connecttofile()) { // open mp3-file
-        datamode = DATA;     // Start in DATA mode
-      }
-    } else {
-      if (host.startsWith("ihr/")) { // If iHeartRadio station requested
-        host = host.substring(4);    // remove "ihr/"
-        host = xmlgethost(host);     // Parse the xml to get the host
-      }
-
-      connectToWebradioServer(); // Switch to new host
-    }
-  }
-  }
 
 private:
   int chunkSizeHex_ = 0;
@@ -527,10 +364,10 @@ private:
   bool playlistHttpsRedirect_ = false;
 };
 
-static Mp3StreamParser mp3StreamParser;
+static AudioStreamParser audioStreamParser;
 
 inline void handleNextDataByteFromServer(uint8_t b) {
-  mp3StreamParser.handleByte(b);
+  audioStreamParser.handleByte(b);
 }
 
-#endif
+#endif /* AUDIO_STREAM_PARSER_H */

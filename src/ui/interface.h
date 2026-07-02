@@ -1,5 +1,5 @@
-#include "features_config.h"
-#include "web_theme_serve.h"
+#include "config/features_config.h"
+#include "net/web_theme_serve.h"
 
 /**
  * @brief Returns the content type of a file based on its file extension.
