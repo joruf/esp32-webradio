@@ -101,6 +101,7 @@ extern bool reqtone;
 extern bool muteflag;
 extern volatile bool resetreq;        // Request to reset the ESP32
 extern bool updatereq;
+extern String pendingOtaBinUrl;
 extern volatile bool otaActive;       // True while OTA/firmware update is running
 extern bool NetworkFound;
 extern String networks;

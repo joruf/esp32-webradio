@@ -2045,10 +2045,10 @@ const char app_js[] PROGMEM = R"=====(
         $("#ota-status-text").text(statusText);
         $("#ota-install-btn").data("ota-install-enabled", !!data.update_available);
         $("#ota-install-btn").prop("disabled", !data.update_available);
-        renderOtaVersionHistory(data.history);
+        renderOtaVersionHistory(data.history, current.version);
     }
 
-    function renderOtaVersionHistory(history) {
+    function renderOtaVersionHistory(history, currentVersion) {
         var list = $("#ota-version-history");
         if (!list.length) {
             return;
@@ -2066,6 +2066,15 @@ const char app_js[] PROGMEM = R"=====(
             head.append($("<strong></strong>").text(entry.version || "-"));
             if (entry.released) {
                 head.append($("<span class='ota-history-date'></span>").text(entry.released));
+            }
+            if (entry.version) {
+                if (entry.version === currentVersion) {
+                    head.append($("<span class='ota-history-current'></span>").text("installed"));
+                } else {
+                    head.append($("<button type='button' class='btn btn-default btn-xs ota-history-install'></button>")
+                        .attr("data-version", entry.version)
+                        .text("Install"));
+                }
             }
             item.append(head);
             if (entry.notes) {
@@ -2258,6 +2267,35 @@ const char app_js[] PROGMEM = R"=====(
                 });
         });
 
+        $("#ota-version-history").off("click.otaHistoryInstall")
+            .on("click.otaHistoryInstall", ".ota-history-install", function() {
+                var version = $(this).attr("data-version");
+                if (!version) {
+                    return;
+                }
+                if (!window.confirm("Install firmware " + version + " now? This can be an older release (downgrade). Do not disconnect power during the update.")) {
+                    return;
+                }
+                showOtaUploadResult("", "");
+                $("#ota-status-text").removeClass("text-success text-warning text-danger")
+                    .text("Starting install of " + version + "...");
+                fetch("/?installversion=" + encodeURIComponent(version) + "&_t=" + Date.now())
+                    .then(function() {
+                        startOtaRecoveryWaitFlow(
+                            "Installing " + version + ". Waiting for device restart...",
+                            "Install of " + version + " started. Waiting for restart...",
+                            "Install of " + version + " was triggered, but service recovery timed out. Please verify firmware version manually."
+                        );
+                    })
+                    .catch(function() {
+                        startOtaRecoveryWaitFlow(
+                            "Install of " + version + " triggered. Waiting for device restart...",
+                            "Install of " + version + " request sent. Waiting for restart...",
+                            "Install of " + version + " request was sent, but service recovery timed out. Please verify firmware version manually."
+                        );
+                    });
+            });
+
         $("#ota-upload-btn").off("click.otaUpload").on("click.otaUpload", function() {
             var input = document.getElementById("ota-local-bin");
             if (!input || !input.files || input.files.length === 0) {
@@ -2430,10 +2468,27 @@ const char app_js[] PROGMEM = R"=====(
 
         $("#sound-volume").off("input.soundVolume change.soundVolume")
             .on("input.soundVolume", function() {
-                var level = $(this).val();
+                var level = roundVolumeToStep($(this).val());
+                $(this).val(level);
                 setSoundVolumeUi(level);
                 httpGet("volume=" + level, { silent: true });
             });
+    }
+
+    function roundVolumeToStep(value) {
+        var step = 5;
+        var v = parseInt(value, 10);
+        if (isNaN(v)) {
+            return 0;
+        }
+        var snapped = Math.round(v / step) * step;
+        if (snapped < 0) {
+            snapped = 0;
+        }
+        if (snapped > 100) {
+            snapped = 100;
+        }
+        return snapped;
     }
 
     function bindVolumeSlider(sliderSelector, valueSelector) {
@@ -2444,8 +2499,10 @@ const char app_js[] PROGMEM = R"=====(
 
         slider.off("input.volumeSlider change.volumeSlider")
             .on("input.volumeSlider", function() {
-                $(valueSelector).text($(this).val());
-                httpGet("volume=" + $(this).val(), { silent: true });
+                var level = roundVolumeToStep($(this).val());
+                $(this).val(level);
+                $(valueSelector).text(level);
+                httpGet("volume=" + level, { silent: true });
             });
     }
 

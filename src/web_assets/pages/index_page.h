@@ -61,7 +61,7 @@ const char index_html[] PROGMEM = R"=====(
 					<div class="webradio-control-toolbar">
 						<label for="index-volume" class="webradio-control-label">Volume</label>
 						<span class="webradio-volume-value"><span id="index-volume-value">0</span>%</span>
-						<input type="range" class="form-control webradio-control-slider" id="index-volume" min="0" max="100" step="1">
+						<input type="range" class="form-control webradio-control-slider" id="index-volume" min="0" max="100" step="5">
 						<div class="webradio-playback-actions">
 							<button id="play" type="button" class="btn btn-success"><span class="btn-icon" aria-hidden="true">&#9654;</span> Play</button>
 							<button id="stop" type="button" class="btn btn-danger"><span class="btn-icon" aria-hidden="true">&#9209;</span> Stop</button>

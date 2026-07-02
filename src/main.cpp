@@ -139,10 +139,18 @@ void loop() {
     enableBacklight(true);
     otaCheckForUpdate(true);
 
+    String requestedBinUrl = pendingOtaBinUrl; // Specific release chosen in the Web UI (may be older)
+    pendingOtaBinUrl = "";                      // Consume the request
+
     if (displaytype == T_NEXTION) // NEXTION in use?
     {
       updated = update_software("lstmodn", // update NEXTION image from remote image
                                 UPDATEHOST, TFTFILE);
+    } else if (requestedBinUrl.length() > 0) {
+      // Install the explicitly requested firmware version (supports downgrade).
+      // Do not fall back to the legacy host so an older release is not silently
+      // replaced by the latest one.
+      updated = updateFirmwareFromUrl(requestedBinUrl);
     } else {
       if (otaChecker.latestBinUrl().length() > 0) {
         updated = updateFirmwareFromUrl(otaChecker.latestBinUrl());

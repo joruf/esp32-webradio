@@ -240,8 +240,28 @@ uint8_t getVolume() {
   // vs1053player->getVolume();
 }
 
+/** Volume granularity for user-initiated (online/encoder) changes. */
+static const uint8_t VOLUME_STEP = 5;
+
 /**
- * @brief Sets the absolute volume level.
+ * @brief Snap a volume value to the nearest VOLUME_STEP multiple (0-100).
+ *
+ * Keeps every user-facing volume change quantized to 5-step increments,
+ * regardless of the client (Web UI, companion app, or serial/API).
+ *
+ * @param volume Raw volume value 0-100
+ * @return uint8_t Volume rounded to the nearest multiple of VOLUME_STEP
+ */
+static uint8_t roundVolumeToStep(uint8_t volume) {
+  uint16_t snapped = ((uint16_t)volume + (VOLUME_STEP / 2)) / VOLUME_STEP * VOLUME_STEP;
+  if (snapped > 100) {
+    snapped = 100;
+  }
+  return (uint8_t)snapped;
+}
+
+/**
+ * @brief Sets the absolute volume level (snapped to 5-step increments).
  *
  * Updates the global volume setting if the provided value is within valid bounds.
  *
@@ -254,16 +274,16 @@ bool setVolume(uint8_t volume) {
     return false;
   }
 
-  ini_block.reqvol = volume;
+  ini_block.reqvol = roundVolumeToStep(volume);
   nvsRequestSettingsSave(); // Persist the new volume shortly after the change
   return true;
 }
 
 /**
- * @brief Adjusts the volume by a specified relative amount.
+ * @brief Adjusts the volume by a specified relative amount (snapped to 5-step increments).
  *
  * Adds the given delta to the current volume. The result is constrained
- * to the range [0, 100].
+ * to the range [0, 100] and rounded to the nearest VOLUME_STEP multiple.
  *
  * @param delta The value to add (positive to increase, negative to decrease)
  * @return uint8_t The new volume level
@@ -271,7 +291,7 @@ bool setVolume(uint8_t volume) {
 uint8_t adjustVolume(int8_t delta) {
   int16_t newVolume = (int16_t)ini_block.reqvol + delta;
 
-  ini_block.reqvol = (uint8_t)constrain(newVolume, 0, 100);
+  ini_block.reqvol = roundVolumeToStep((uint8_t)constrain(newVolume, 0, 100));
   nvsRequestSettingsSave(); // Persist the new volume shortly after the change
 
   return ini_block.reqvol;

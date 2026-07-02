@@ -120,6 +120,7 @@ bool reqtone = false;                  // New tone setting requested
 bool muteflag = false;                 // Mute output
 volatile bool resetreq = false;        // Request to reset the ESP32
 bool updatereq = false;                // Request to update software from remote host
+String pendingOtaBinUrl;               // Specific firmware bin URL to install (e.g. chosen older release)
 volatile bool otaActive = false;       // True while OTA/firmware update is running
 bool NetworkFound = false;             // True if WiFi network connected
 String networks;                       // Found networks in the surrounding

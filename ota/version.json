@@ -1,10 +1,15 @@
 {
-  "version": "v2.36",
+  "version": "v2.37",
   "released": "2026-07-02",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.36.bin",
-  "notes": "Stability and structure release: user volume 0-100 now maps onto the audible VS1053 range with 5-step encoder increments and immediate persistent save; fixed leftover third digit in the TFT volume readout; OTA update screen no longer shows artifacts and reliably shows size and estimated time (dashboard rendering is paused during flashing); thread-safe stream metadata, non-blocking client stop, HTTP read fix; enlarged app partitions and reorganized source into domain folders.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.37.bin",
+  "notes": "OTA can now install any listed firmware release including older ones (downgrade) directly from the release history on the OTA page; online volume (Web UI sliders) now changes only in 5-step increments to match the rotary encoder, enforced both in the browser and on the device.",
   "history": [
+    {
+      "version": "v2.37",
+      "released": "2026-07-02",
+      "notes": "OTA can now install any listed firmware release including older ones (downgrade) directly from the release history on the OTA page; online volume (Web UI sliders) now changes only in 5-step increments to match the rotary encoder, enforced both in the browser and on the device."
+    },
     {
       "version": "v2.36",
       "released": "2026-07-02",

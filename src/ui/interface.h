@@ -434,7 +434,19 @@ const char *analyzeCmd(const char *par, const char *val) {
   } else if (argument.startsWith("update")) // Update request
   {
     otaChecker.check(true);
+    pendingOtaBinUrl = ""; // Latest release
     updatereq = true;
+  } else if (argument == "installversion") // Install a specific (possibly older) release
+  {
+    otaChecker.check(false); // Ensure a manifest is loaded (embedded fallback)
+    String binUrl = otaChecker.binUrlForVersion(value);
+    if (binUrl.length() > 0) {
+      pendingOtaBinUrl = binUrl;
+      updatereq = true;
+      snprintf(reply, sizeof(reply), "Installing firmware %s", value.c_str());
+    } else {
+      snprintf(reply, sizeof(reply), "Unknown firmware version: %s", value.c_str());
+    }
   } else if (argument == "test") // Test command
   {
     if (localfile) {

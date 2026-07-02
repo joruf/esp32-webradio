@@ -68,7 +68,7 @@ const char mp3stream_html[] PROGMEM = R"=====(
 					<div class="webradio-control-toolbar mp3-volume-toolbar">
 						<label for="mp3-volume" class="webradio-control-label">Volume</label>
 						<span class="webradio-volume-value"><span id="mp3-volume-value">0</span>%</span>
-						<input type="range" class="form-control webradio-control-slider" id="mp3-volume" min="0" max="100" step="1">
+						<input type="range" class="form-control webradio-control-slider" id="mp3-volume" min="0" max="100" step="5">
 					</div>
 					<p id="mp3-picker-status" class="mp3-now-status">Enter a Base URL and scan the folder to list MP3 files.</p>
 					<div id="mp3-track-list" class="mp3-track-list" role="list">

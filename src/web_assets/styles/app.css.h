@@ -255,6 +255,18 @@ const char app_css[] PROGMEM = R"=====(
 		color: #666;
 		font-weight: normal;
 	}
+	.ota-history-install {
+		margin-left: 10px;
+		padding: 2px 10px;
+		font-size: 0.8em;
+	}
+	.ota-history-current {
+		margin-left: 10px;
+		font-size: 0.8em;
+		font-weight: normal;
+		color: #2e7d32;
+	}
+	body.theme-dark .ota-history-current { color: #7bd88f; }
 	.ota-history-notes {
 		font-size: 0.9em;
 		line-height: 1.4;
