@@ -19,8 +19,10 @@ WiFiClient cmdclient;              // An instance of the client for commands
 HardwareSerial *nxtserial = NULL;  // Serial port for NEXTION (if defined)
 TaskHandle_t maintask;             // Taskhandle for main task
 TaskHandle_t xplayStreamFromQueue; // Task handle for playStreamFromQueue
+TaskHandle_t xmp3StreamTask;       // Task handle for the stream producer task
 TaskHandle_t xspftask;             // Task handle for special functions
 SemaphoreHandle_t SPIsem = NULL;   // For exclusive SPI usage
+SemaphoreHandle_t metaMutex = NULL; // Serializes access to the shared metadata strings
 hw_timer_t *timer = NULL;          // For timer
 char timetxt[40];                  // Enough chars for date and time. Converted timeinfo
 char cmd[130];                     // Command from Serial
@@ -40,6 +42,72 @@ int16_t metadataLineIndex;               // Index for metalinebf
 String icystreamtitle; // Streamtitle from metadata --> Song title
 String icyname;        // Icecast station name --> SWR3,...
 
+/**
+ * @brief Thread-safe setter for the current song title (icystreamtitle).
+ *
+ * @param value New song title (nullptr is treated as an empty string)
+ * @return void
+ */
+void metaSetTitle(const char *value) {
+  if (metaMutex) {
+    xSemaphoreTake(metaMutex, portMAX_DELAY);
+  }
+  icystreamtitle = value ? value : "";
+  if (metaMutex) {
+    xSemaphoreGive(metaMutex);
+  }
+}
+
+/**
+ * @brief Thread-safe getter returning a private copy of the song title.
+ *
+ * @return String Copy of icystreamtitle taken under the metadata mutex
+ */
+String metaGetTitle() {
+  String result;
+  if (metaMutex) {
+    xSemaphoreTake(metaMutex, portMAX_DELAY);
+  }
+  result = icystreamtitle;
+  if (metaMutex) {
+    xSemaphoreGive(metaMutex);
+  }
+  return result;
+}
+
+/**
+ * @brief Thread-safe setter for the current station name (icyname).
+ *
+ * @param value New station name (nullptr is treated as an empty string)
+ * @return void
+ */
+void metaSetStation(const char *value) {
+  if (metaMutex) {
+    xSemaphoreTake(metaMutex, portMAX_DELAY);
+  }
+  icyname = value ? value : "";
+  if (metaMutex) {
+    xSemaphoreGive(metaMutex);
+  }
+}
+
+/**
+ * @brief Thread-safe getter returning a private copy of the station name.
+ *
+ * @return String Copy of icyname taken under the metadata mutex
+ */
+String metaGetStation() {
+  String result;
+  if (metaMutex) {
+    xSemaphoreTake(metaMutex, portMAX_DELAY);
+  }
+  result = icyname;
+  if (metaMutex) {
+    xSemaphoreGive(metaMutex);
+  }
+  return result;
+}
+
 String ipaddress;                      // Own IP-address
 int bitrate;                           // Bitrate in kb/sec
 int mbitrate;                          // Measured bitrate
@@ -52,6 +120,7 @@ bool reqtone = false;                  // New tone setting requested
 bool muteflag = false;                 // Mute output
 volatile bool resetreq = false;        // Request to reset the ESP32
 bool updatereq = false;                // Request to update software from remote host
+volatile bool otaActive = false;       // True while OTA/firmware update is running
 bool NetworkFound = false;             // True if WiFi network connected
 String networks;                       // Found networks in the surrounding
 int16_t playlist_num = 0;              // Nonzero for selection from playlist

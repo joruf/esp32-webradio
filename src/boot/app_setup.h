@@ -56,7 +56,8 @@ void radioSetup() {
 
   maintask = xTaskGetCurrentTaskHandle(); // My taskhandle
   SPIsem = xSemaphoreCreateMutex();
-  ;                                                  // Semaphore for SPI bus
+  ;                                 // Semaphore for SPI bus
+  metaMutex = xSemaphoreCreateMutex(); // Serializes cross-task metadata access
   pi = esp_partition_find(ESP_PARTITION_TYPE_DATA,   // Get partition iterator for
                           ESP_PARTITION_SUBTYPE_ANY, // the NVS partition
                           partname);
@@ -211,6 +212,7 @@ void radioSetup() {
     dbgprint("BOOT: Internet access available, starting OTA and mDNS");
     ArduinoOTA.setHostname(NAME); // Set the hostname
     ArduinoOTA.onStart(otastart);
+    ArduinoOTA.onError([](ota_error_t error) { otaActive = false; }); // Resume producer on failed push
     ArduinoOTA.begin(); // Allow update over the air
 
     if (MDNS.begin(NAME)) { // Start MDNS transponder
@@ -278,13 +280,27 @@ void radioSetup() {
   dataqueue = xQueueCreate(QSIZ, sizeof(qdata_struct)); // Create queue for communication
   if (vs1053Available) {
     dbgprint("▶️ VS1053 available. Start Audio-Task...");
+    // Consumer: feed queued audio to the VS1053 on Core 0 (dedicated audio core).
     xTaskCreatePinnedToCore(playStreamFromQueue,   // Task to play data in dataqueue.
                             "playStreamFromQueue", // name of task.
-                            1600,                  // Stack size of task
+                            2048,                  // Stack size of task
                             NULL,                  // parameter of the task
-                            2,                     // priority of the task
+                            3,                     // priority of the task (high: audio output)
                             &xplayStreamFromQueue, // Task handle to keep track of created task
                             0);                    // Run on CPU 0
+
+    // Producer: read the network/SD stream into the queue on Core 1.
+    // Runs at the same priority as loop()/spftask so FreeRTOS round-robin time
+    // slicing keeps both the stream buffering AND the UI (rotary encoder, HTTP)
+    // responsive. Being a separate task already decouples buffering from any
+    // slow work in loop(), which is what prevents audio dropouts.
+    xTaskCreatePinnedToCore(mp3StreamTask,   // Task to fill the audio queue.
+                            "mp3StreamTask", // name of task.
+                            8192,            // Stack size (connect/playlist parsing use String)
+                            NULL,            // parameter of the task
+                            1,               // priority (equal to loopTask/spftask)
+                            &xmp3StreamTask, // Task handle
+                            1);              // Run on CPU 1
   } else {
     dbgprint("⚠️ VS1053 missing oder invalid! Audio-Task is disable, to avoid SPI-Blocking.");
   }

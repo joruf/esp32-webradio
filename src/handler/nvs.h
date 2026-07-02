@@ -147,6 +147,53 @@ void nvsAutoSave() {
   nvsCommit();
 }
 
+static bool settingsSavePending = false;    // A runtime settings change is waiting to be persisted
+static uint32_t settingsSaveRequestedAt = 0; // millis() of the most recent change
+
+/**
+ * @brief Request a debounced save of the runtime settings (volume/preset/tone).
+ *
+ * The periodic nvsAutoSave() only writes every 10 minutes, so a volume change
+ * made shortly before a power cycle used to be lost. This marks the settings as
+ * dirty; nvsProcessPendingSave() persists them a few seconds after the last
+ * change, coalescing rapid encoder steps into a single flash write.
+ *
+ * @return void
+ */
+void nvsRequestSettingsSave() {
+  settingsSavePending = true;
+  settingsSaveRequestedAt = millis();
+}
+
+/**
+ * @brief Persist pending runtime settings once the debounce interval elapsed.
+ *
+ * Should be called regularly from the main loop. Writes are skipped internally
+ * by nvsAddValue() when a value has not actually changed, so this is cheap.
+ *
+ * @return void
+ */
+void nvsProcessPendingSave() {
+  if (!settingsSavePending) {
+    return;
+  }
+  if ((millis() - settingsSaveRequestedAt) < 4000) { // 4 s debounce
+    return;
+  }
+  settingsSavePending = false;
+
+  nvsAddValue("volume", String(ini_block.reqvol)); // Persist current volume
+  if (currentpreset >= 0) {                         // Only store a valid preset
+    nvsAddValue("preset", String(currentpreset));
+  }
+  nvsAddValue("toneha", String(ini_block.rtone[0]));
+  nvsAddValue("tonehf", String(ini_block.rtone[1]));
+  nvsAddValue("tonela", String(ini_block.rtone[2]));
+  nvsAddValue("tonelf", String(ini_block.rtone[3]));
+  nvsCommit();
+  dbgprint("Runtime settings persisted (volume %d, preset %d)", ini_block.reqvol, currentpreset);
+}
+
 /**
  * @brief Read the MP3 host from preferences for a specific preset number.
  *

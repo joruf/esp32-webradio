@@ -128,27 +128,34 @@ static void repairNvsConfig(String &actions) {
     actions += " presets";
   }
 
-  if (nvsKeyExists(ALRM_CONFIG_NVS_KEY)) {
-    String alarmJson = nvsGetAlarmConfig();
-    if (!isValidAlarmConfigJson(alarmJson)) {
-      nvsOpen();
-      if (nvs_erase_key(nvshandle, ALRM_CONFIG_NVS_KEY) == ESP_OK) {
-        repaired = true;
-        actions += " alrm_config";
-      }
-    }
-  }
-
-  if (nvsKeyExists(RADIO_CONFIG_NVS_KEY)) {
-    String radioJson = nvsGetRadioConfig();
-    if (!isValidRadioConfigJson(radioJson)) {
-      nvsOpen();
-      if (nvs_erase_key(nvshandle, RADIO_CONFIG_NVS_KEY) == ESP_OK) {
-        repaired = true;
-        actions += " radio_config";
-      }
-    }
-  }
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DISABLED (config-reset investigation): automatic erasing of alrm_config /
+  // radio_config keys on boot. A transient NVS read error could make a VALID
+  // config look invalid and delete it, which then rebuilds from defaults.
+  // Re-enable this block once the overnight config-reset cause is confirmed.
+  // ───────────────────────────────────────────────────────────────────────────
+  // if (nvsKeyExists(ALRM_CONFIG_NVS_KEY)) {
+  //   String alarmJson = nvsGetAlarmConfig();
+  //   if (!isValidAlarmConfigJson(alarmJson)) {
+  //     nvsOpen();
+  //     if (nvs_erase_key(nvshandle, ALRM_CONFIG_NVS_KEY) == ESP_OK) {
+  //       repaired = true;
+  //       actions += " alrm_config";
+  //     }
+  //   }
+  // }
+  //
+  // if (nvsKeyExists(RADIO_CONFIG_NVS_KEY)) {
+  //   String radioJson = nvsGetRadioConfig();
+  //   if (!isValidRadioConfigJson(radioJson)) {
+  //     nvsOpen();
+  //     if (nvs_erase_key(nvshandle, RADIO_CONFIG_NVS_KEY) == ESP_OK) {
+  //       repaired = true;
+  //       actions += " radio_config";
+  //     }
+  //   }
+  // }
+  // ═══════════════════════════════════════════════════════════════════════════
 
   if (repaired && nvsCommit() == ESP_OK) {
     fillkeylist();
@@ -166,12 +173,26 @@ void checkAndInitConfig() {
   String reason;
 
   if (isConfigUnrecoverable(reason)) {
-    dbgprint("BOOT: NVS not bootable (%s), writing factory defaults", reason.c_str());
-    restoreDefaultConfig();
-    dbgprint("BOOT: Default configuration written, restarting...");
-    delay(1000);
-    ESP.restart();
-    return;
+    // ═════════════════════════════════════════════════════════════════════════
+    // DISABLED (config-reset investigation): automatic factory reset on boot.
+    // This is the ONLY code path that wipes the entire NVS and rewrites all
+    // defaults automatically. A transient NVS/partition read error at boot
+    // (e.g. after a brownout or watchdog restart overnight) could make a valid
+    // configuration look "unrecoverable" and trigger a full reset.
+    //
+    // While disabled, the radio keeps whatever is stored and just logs a
+    // warning. If NVS is truly empty (first flash), uncomment saveDefaultConfig()
+    // in app_setup.h once, or use the web UI "Restore factory defaults".
+    //
+    // To restore the previous automatic behaviour, re-enable the block below.
+    // ─────────────────────────────────────────────────────────────────────────
+    dbgprint("BOOT: NVS reported not bootable (%s) - AUTO-RESET DISABLED, keeping stored config", reason.c_str());
+    // restoreDefaultConfig();
+    // dbgprint("BOOT: Default configuration written, restarting...");
+    // delay(1000);
+    // ESP.restart();
+    // return;
+    // ═════════════════════════════════════════════════════════════════════════
   }
 
   repairNvsConfig(reason);

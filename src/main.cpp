@@ -127,12 +127,15 @@ void loop() {
   static bool wasConnected = NetworkFound; // Initialzustand merken, 10sec adaption
 
   handleSleepTimer();
-  mp3loop();     // Do mp3 related actions
+  // Note: the stream data pump (mp3loop) and stall watchdog now run in the
+  // dedicated high-priority mp3StreamTask so buffering always has precedence.
   if (updatereq) // Software update requested?
   {
     updatereq = false;
     bool updated = false;
 
+    otaActive = true; // Pause the stream producer task (shares mp3client)
+    delay(60);        // Let the producer finish its current iteration
     enableBacklight(true);
     otaCheckForUpdate(true);
 
@@ -159,28 +162,25 @@ void loop() {
       delay(5000);
       dspOtaDisplayRestoreDashboard();
     }
+    otaActive = false; // Resume the stream producer task
   }
 
-  // WiFi-Reconnect-Logik, 10sec adaption
+  // WiFi reconnect logic - fully non-blocking so it never stalls audio buffering.
   if (WiFi.status() != WL_CONNECTED) {
     if (millis() - lastReconnectAttempt >= WIFI_RECONNECT_INTERVAL) {
       lastReconnectAttempt = millis();
-      dbgprint("Attempting WiFi reconnection...");
-      NetworkFound = connectwifi();
-      if (NetworkFound) {
-        // Bei erfolgreicher Verbindung notwendige Services neu starten
-        cmdserver.begin();
-        ArduinoOTA.begin();
-        MDNS.begin(NAME);
-        dbgprint("HTTP server restarted after WiFi reconnect");
-      }
+      dbgprint("WiFi connection lost, requesting background reconnect...");
+      WiFi.reconnect(); // Non-blocking; reconnects to the same AP in background
     }
     wasConnected = false;
   } else if (!wasConnected) {
-    // Bei wiederhergestellter Verbindung
+    // Connection (re)established: restart the network services once.
     wasConnected = true;
+    NetworkFound = true;
     ipaddress = WiFi.localIP().toString();
     cmdserver.begin();
+    ArduinoOTA.begin();
+    MDNS.begin(NAME);
     dbgprint("Reconnected to WiFi. IP: %s", ipaddress.c_str());
   }
 
@@ -194,7 +194,6 @@ void loop() {
   scandigital(); // Scan digital inputs
   // scanIR();                                        // See if IR input
   ArduinoOTA.handle(); // Check for OTA
-  mp3loop();           // Do more mp3 related actions
   if (http_response_flag && !cmdclient.connected() && !sseStreamActive) {
     recoverHttpServerState();
   }
@@ -210,10 +209,12 @@ void loop() {
     handlehttp();
   }
   captivePortal.loop();
-  streamWatchdog.poll();
+  // streamWatchdog.poll() now runs inside mp3StreamTask (same task as the pump)
+  // to avoid a race on mp3client between the watchdog and the stream reader.
   vuMeter.update();
 
-  nvsAutoSave();         // See if time to save settings
-  updateEncoderSwitch(); // Poll encoder push button (debounced)
+  nvsAutoSave();          // Periodic (10 min) settings save fallback
+  nvsProcessPendingSave(); // Debounced immediate save after a volume/preset change
+  updateEncoderSwitch();  // Poll encoder push button (debounced)
   checkRotaryEncoder();  // Check rotary encoder functions
 }

@@ -119,6 +119,8 @@ static void otaShowStartScreen(size_t totalBytes) {
  */
 void otastart() {
   dbgprint("OTA update Started");
+  otaActive = true; // Pause the stream producer task (shares mp3client/WiFi/CPU)
+  delay(60);        // Give mp3StreamTask time to observe the flag before mp3client is touched
 }
 
 /**

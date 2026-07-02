@@ -34,8 +34,10 @@ extern WiFiClient cmdclient;
 extern HardwareSerial *nxtserial;
 extern TaskHandle_t maintask;
 extern TaskHandle_t xplayStreamFromQueue;
+extern TaskHandle_t xmp3StreamTask;
 extern TaskHandle_t xspftask;
 extern SemaphoreHandle_t SPIsem;
+extern SemaphoreHandle_t metaMutex; // Guards the shared metadata strings (icyname/icystreamtitle)
 extern hw_timer_t *timer;
 extern char timetxt[40];
 extern char cmd[130];
@@ -53,6 +55,40 @@ extern char metalinebf[METASIZ + 1];
 extern int16_t metadataLineIndex;
 extern String icystreamtitle;
 extern String icyname;
+
+/**
+ * @brief Thread-safe setter for the current song title (icystreamtitle).
+ *
+ * The stream producer task writes the metadata while the UI/display tasks read
+ * it. Direct String assignment across tasks can free a heap buffer that another
+ * task is currently reading, so all cross-task access is serialized here.
+ *
+ * @param value New song title (nullptr is treated as an empty string)
+ * @return void
+ */
+void metaSetTitle(const char *value);
+
+/**
+ * @brief Thread-safe getter returning a private copy of the song title.
+ *
+ * @return String Copy of icystreamtitle taken under the metadata mutex
+ */
+String metaGetTitle();
+
+/**
+ * @brief Thread-safe setter for the current station name (icyname).
+ *
+ * @param value New station name (nullptr is treated as an empty string)
+ * @return void
+ */
+void metaSetStation(const char *value);
+
+/**
+ * @brief Thread-safe getter returning a private copy of the station name.
+ *
+ * @return String Copy of icyname taken under the metadata mutex
+ */
+String metaGetStation();
 extern String ipaddress;
 extern int bitrate;
 extern int mbitrate;
@@ -63,8 +99,9 @@ extern String playlist;
 extern bool hostreq;
 extern bool reqtone;
 extern bool muteflag;
-extern volatile bool resetreq;
+extern volatile bool resetreq;        // Request to reset the ESP32
 extern bool updatereq;
+extern volatile bool otaActive;       // True while OTA/firmware update is running
 extern bool NetworkFound;
 extern String networks;
 extern int16_t playlist_num;

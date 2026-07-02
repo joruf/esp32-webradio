@@ -34,14 +34,13 @@ public:
 
   if (datamode == DATA) { // Handle next byte of MP3/Ogg data
     if (vs1053Available) {
-      *outqp++ = b;
-      if (outqp == (outchunk.buf + sizeof(outchunk.buf))) { // If the buffer is full
-        // Send data to playStreamFromQueue queue.  If the buffer cannot be placed
-        // within 200 ticks, the queue is full, while the sender tries to send
-        // more.  The chunk will be discarded it that case.
-        xQueueSend(dataqueue, &outchunk, 200); // Send to queue
-        outqp = outchunk.buf;                  // Item empty now
+      if (outqp >= (outchunk.buf + sizeof(outchunk.buf))) {
+        if (xQueueSend(dataqueue, &outchunk, pdMS_TO_TICKS(100)) != pdTRUE) {
+          return;
+        }
+        outqp = outchunk.buf;
       }
+      *outqp++ = b;
     }
 
     if (metaint) {            // No METADATA on Ogg streams or mp3 files
@@ -107,9 +106,10 @@ public:
         } else if (lcml.startsWith("icy-metaint:")) {
           metaint = metaline.substring(12).toInt(); // Found metaint tag, read the value
         } else if (lcml.startsWith("icy-name:")) {
-          icyname = metaline.substring(9); // Get station name
-          icyname.trim();                  // Remove leading and trailing spaces
-          showTextOnTFT(2, icyname);       // Set screen segment bottom part
+          String stationName = metaline.substring(9); // Get station name
+          stationName.trim();                          // Remove leading and trailing spaces
+          metaSetStation(stationName.c_str());         // Publish thread-safe
+          showTextOnTFT(2, stationName);               // Set screen segment bottom part
         } else if (lcml.startsWith("transfer-encoding:")) {
           // Station provides chunked transfer
           if (lcml.endsWith("chunked")) {

@@ -15,22 +15,18 @@ void IRAM_ATTR timer60sec() {
 /**
  * @brief 10-second timer interrupt (extra watchdog).
  *
- * This function is called every 10 seconds. It checks whether data is still
- * being sent to the MP3 decoder. If inactivity persists, playback is either
- * restarted or the ESP32 is reset.
+ * This function is called every 10 seconds. It measures decoder throughput for
+ * bitrate display. Stream reconnect is handled by stream_watchdog.h in the main
+ * loop; this timer only measures bitrate and requests a device restart after
+ * prolonged decoder stalls.
  *
  * @details
  * - Counts 6 calls (60 seconds) then calls timer60sec()
- * - Checks the number of bytes sent in the last 10 seconds
- * - If 0 bytes and more than 10 consecutive failures → ESP.restart()
- * - In playlist mode, the playlist is reset
- * - On repeated failure, the current station is restarted
- * - On successful data transfer, the bitrate is calculated
+ * - Checks bytes sent to the VS1053 in DATA/PLAYLISTDATA mode only
+ * - If 0 bytes for 6 consecutive intervals (~60 s) → device restart requested
  *
  * @note Runs in interrupt context (IRAM_ATTR)
- * @note Calling time-consuming functions may cause crashes!
  * @see timer60sec()
- * @see playStream()
  * @see totalcount (global) - Counter of sent bytes
  */
 void IRAM_ATTR timer10sec() {
@@ -46,7 +42,7 @@ void IRAM_ATTR timer10sec() {
   static uint8_t morethanonce = 0;      // Counter for succesive fails
   uint32_t bytesplayed;                 // Bytes send to MP3 converter
 
-  if (datamode & (INIT | HEADER | DATA | METADATA | PLAYLISTINIT | PLAYLISTHEADER | PLAYLISTDATA)) { // Test op playing
+  if (datamode == DATA || datamode == PLAYLISTDATA) {
     if (!bitrateBaselineValid || totalcount < oldtotalcount) {
       // Initialize or resync baseline to avoid unsigned underflow spikes.
       oldtotalcount = totalcount;
@@ -54,31 +50,18 @@ void IRAM_ATTR timer10sec() {
       return;
     }
 
-    bytesplayed = totalcount - oldtotalcount; // Nunber of bytes played in the 10 seconds
+    bytesplayed = totalcount - oldtotalcount; // Number of bytes played in the 10 seconds
     oldtotalcount = totalcount;               // Save for comparison in next cycle
     if (bytesplayed == 0)                     // Still playing?
     {
-
-      if (morethanonce > 10) { // No! Happened too many times?
-        resetreq = true; // Restart from main loop (safe for NVS)
+      if (morethanonce >= 6) { // ~60 s decoder stall → restart
+        resetreq = true;
       }
 
-      if (datamode & (PLAYLISTDATA | PLAYLISTINIT | PLAYLISTHEADER)) { // In playlist mode?
-        playlist_num = 0;                                              // end of playlist
-      }
-
-      // if the connection is confused on playing, start the same channel again
-      if ((morethanonce > 0) || (playlist_num > 0)) { // If happened more than once or playlist is active
-                                                      // datamode = STOPREQD ;                     // Stop player
-        runStream(true, currentpreset);               // Start the channel again
-      }
       morethanonce++; // Count the fails
 
     } else {
-      //                                          // Data has been send to MP3
-      //                                          decoder
-      // Bitrate in kbits/s is bytesplayed / 10 / 1000 * 8
-      mbitrate = (bytesplayed + 625) / 1250; // Measured bitrate
+      mbitrate = (bytesplayed + 625) / 1250; // Measured bitrate in kbit/s
       morethanonce = 0;                      // Data seen, reset failcounter
     }
   } else {

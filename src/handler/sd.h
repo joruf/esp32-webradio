@@ -249,7 +249,9 @@ int listsdtracks(const char *dirname, int level = 0, bool send = true) {
       }
     }
     if (send) {
-      mp3loop(); // Keep playing
+      // Audio playback is kept alive by the dedicated mp3StreamTask, so we must
+      // not call mp3loop() here (it would race with that task on mp3client).
+      vTaskDelay(1);
     }
   }
   if (fcount != oldfcount) // Files in this directory?
@@ -384,7 +386,7 @@ bool connecttofile() {
     dbgprint("Error opening file %s", path.c_str()); // No luck
     return false;
   }
-  icyname = "";    // No icy name yet
+  metaSetStation(""); // No icy name yet
   chunked = false; // File not chunked
   metaint = 0;     // No metadata
   return true;

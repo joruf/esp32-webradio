@@ -862,7 +862,8 @@ inline void dspDashboardRefreshTitle(void) {
     dspDashboardDrawChrome();
   }
 
-  len = icystreamtitle.length();
+  String songTitle = metaGetTitle();
+  len = songTitle.length();
   if (len == 0) {
     // Always call draw to process the background clearing if a title was previously on screen
     dspDashboardDrawSongTitle("", DSP_DASH_COLOR_TITLE);
@@ -872,7 +873,7 @@ inline void dspDashboardRefreshTitle(void) {
   if (len >= sizeof(buf)) {
     len = sizeof(buf) - 1;
   }
-  icystreamtitle.toCharArray(buf, len + 1);
+  songTitle.toCharArray(buf, len + 1);
   utf8ascii(buf);
 
   dspDashboardDrawSongTitle(buf, DSP_DASH_COLOR_TITLE);

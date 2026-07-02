@@ -52,8 +52,9 @@ bool isSoundPlaying() {
  */
 void playSound(bool _enable) {
   if (_enable == true) {
-    muteflag = false;          // Mute/unmute: boolean{mute=true, play=false}
-    showTextOnTFT(3, icyname); // Set screen segment bottom part
+    muteflag = false;               // Mute/unmute: boolean{mute=true, play=false}
+    String stationName = metaGetStation();
+    showTextOnTFT(3, stationName); // Set screen segment bottom part
   } else {
     muteflag = true;          // Mute/unmute: boolean{mute=true, play=false}
     showTextOnTFT(3, "Mute"); // Set screen segment bottom part
@@ -181,16 +182,20 @@ static void startVolumeFadeOut(bool stopAfter) {
  * audio output before valid stream data is available.
  */
 void beginStreamAudioOnDecoderStart(void) {
-  if (!volumeFadeStartPending) {
-    return;
-  }
-
-  volumeFadeStartPending = false;
   if (vs1053Available && vs1053player) {
     vs1053player->setOutputEnabled(true);
   }
-  playSound(true);
-  startVolumeFadeIn();
+
+  if (volumeFadeStartPending) {
+    volumeFadeStartPending = false;
+    playSound(true);
+    startVolumeFadeIn();
+    return;
+  }
+
+  if (datamode == DATA || datamode == PLAYLISTDATA) {
+    playSound(true);
+  }
 }
 
 /**
@@ -224,6 +229,7 @@ bool setVolume(uint8_t volume) {
   }
 
   ini_block.reqvol = volume;
+  nvsRequestSettingsSave(); // Persist the new volume shortly after the change
   return true;
 }
 
@@ -240,6 +246,7 @@ uint8_t adjustVolume(int8_t delta) {
   int16_t newVolume = (int16_t)ini_block.reqvol + delta;
 
   ini_block.reqvol = (uint8_t)constrain(newVolume, 0, 100);
+  nvsRequestSettingsSave(); // Persist the new volume shortly after the change
 
   return ini_block.reqvol;
 }

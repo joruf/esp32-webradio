@@ -121,6 +121,10 @@ void mp3loop() {
         res = mp3client.read(tmpbuff, maxchunk);
         streamWatchdogFeed((uint16_t)res);
         vuMeterFeed((uint16_t)res);
+      } else if (!localfile && mp3client.connected() && (datamode == DATA || datamode == PLAYLISTDATA)) {
+        if (mp3client.available() > 0) {
+          streamWatchdogFeed(1);
+        }
       } else if (datamode == PLAYLISTDATA) {
         playlist_num = 0;
         dbgprint("End of playlist seen");
@@ -223,12 +227,46 @@ void mp3loop() {
  * @desc	Disconnect from the server
  * */
 void stop_mp3client() {
-  while (mp3client.connected()) {
-    dbgprint("Stopping client"); // Stop connection to host
-    mp3client.flush();
+  // NOTE: This now runs inside the dedicated stream producer task. The previous
+  // implementation used delay(500) inside a while(connected()) loop, which could
+  // block the producer for several seconds on every reconnect and starve the
+  // audio queue. Close the socket and wait only briefly (bounded) for it to drop.
+  mp3client.flush();
+  mp3client.stop();
+  uint8_t retries = 0;
+  while (mp3client.connected() && retries < 10) {
     mp3client.stop();
-    delay(500);
+    vTaskDelay(pdMS_TO_TICKS(5)); // Yield without a long blocking delay
+    retries++;
   }
   mp3client.flush(); // Flush stream client
   mp3client.stop();  // Stop stream client
+}
+
+/**
+ * @brief Dedicated stream producer task.
+ *
+ * Runs the network/SD to audio-queue pump (mp3loop) and the stall watchdog on a
+ * high-priority task so buffering the stream always takes precedence over the
+ * HTTP server, web UI, SSE, encoder and other work in loop(). This prevents
+ * audio dropouts when the web interface is busy.
+ *
+ * The pump is paused while an OTA/firmware update is running because the update
+ * reuses the same WiFi client (mp3client) as the stream.
+ *
+ * @param parameter Unused FreeRTOS task parameter
+ */
+void mp3StreamTask(void *parameter) {
+  while (true) {
+    if (otaActive) {
+      vTaskDelay(50 / portTICK_PERIOD_MS);
+      continue;
+    }
+
+    mp3loop();            // Keep the audio queue filled (state machine + data pump)
+    streamWatchdogPoll(); // Handle stalled-stream detection in the same task
+
+    // Yield ~1 ms so loop() (HTTP/UI) and other tasks still get CPU time.
+    vTaskDelay(1);
+  }
 }

@@ -423,8 +423,10 @@ const char *analyzeCmd(const char *par, const char *val) {
     if (datamode == STOPPED) {
       sprintf(reply, "Player stopped"); // Format reply
     } else {
-      sprintf(reply, "%s - %s", icyname.c_str(),
-              icystreamtitle.c_str()); // Streamtitle from metadata
+      String stationName = metaGetStation();
+      String songTitle = metaGetTitle();
+      sprintf(reply, "%s - %s", stationName.c_str(),
+              songTitle.c_str()); // Streamtitle from metadata
     }
   } else if (argument.startsWith("reset")) // Reset request
   {

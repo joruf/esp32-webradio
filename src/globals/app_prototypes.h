@@ -20,6 +20,8 @@ String httpheader(String contentstype, uint16_t cacheMaxAgeSec = 0,
                   const String &lastModified = "");
 void recoverHttpServerState();
 bool nvsKeyExists(const char *key);
+void nvsRequestSettingsSave();
+void nvsProcessPendingSave();
 void mp3loop();
 void tftlog(const char *str);
 void playStreamFromQueue(void *parameter); // Task to play the stream

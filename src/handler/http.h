@@ -244,9 +244,9 @@ uint8_t httpReadByte(bool forcestart, uint16_t maxIdleRetries = 40) {
         delay(1); // Give communication some time
         continue; // Next loop of no input yet
       }
-      if (len > sizeof(buf)) // Limit number of bytes
-      {
-        len = sizeof(buf);
+      if (len > sizeof(httpReadBuf)) // Limit number of bytes (buf is a pointer, so
+      {                              // sizeof(buf) would wrongly cap reads to 4 bytes)
+        len = sizeof(httpReadBuf);
       }
       len = cmdclient.read(buf, len); // Read a number of bytes from the stream
       i = 0;                          // Pointer to begin of buffer
@@ -966,6 +966,7 @@ void handlehttp() {
   if (http_getcmd.startsWith("uploadfirmware")) {
     String uploadMessage;
     bool ok = handleFirmwareUploadPost(http_post_content_length, uploadMessage);
+    otaActive = false; // Resume stream producer (on success the device restarts)
     String json = String("{\"ok\":") + (ok ? "true" : "false") + ",\"message\":\"" +
                   jsonEscapeString(uploadMessage.c_str()) + "\"}";
     sendHttpJsonResponse(json);

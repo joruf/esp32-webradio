@@ -128,7 +128,8 @@ static bool tryStopRadioAlarm(int8_t alrm_stop_hour, int8_t alrm_stop_min) {
 static void updateAlarmDisplayFeedback(void) {
   if (radioAlarmStatusChanged == ALRM_START) {
     radioAlarmStatusChanged = ALRM_NONE;
-    showTextOnTFT(3, icyname);
+    String stationName = metaGetStation();
+    showTextOnTFT(3, stationName);
   } else if (radioAlarmStatusChanged == ALRM_STOP) {
     radioAlarmStatusChanged = ALRM_NONE;
   }

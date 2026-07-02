@@ -143,7 +143,7 @@ void showStreamDataOnTFT(const char *ml, bool full) {
 #endif
 
   if (extractStreamTitle(ml, streamtitle, sizeof(streamtitle))) {
-    icystreamtitle = streamtitle;
+    metaSetTitle(streamtitle);
     addTitleToHistory(streamtitle);
 #if defined(BLUETFT)
     dspDashboardInvalidateTitle();
@@ -156,7 +156,7 @@ void showStreamDataOnTFT(const char *ml, bool full) {
   } else if (full && ml != nullptr && ml[0] != '\0') {
     strncpy(streamtitle, ml, sizeof(streamtitle));
     streamtitle[sizeof(streamtitle) - 1] = '\0';
-    icystreamtitle = streamtitle;
+    metaSetTitle(streamtitle);
     addTitleToHistory(streamtitle);
 #if defined(BLUETFT)
     dspDashboardInvalidateTitle();
@@ -437,8 +437,8 @@ bool connectToWebradioServer() {
   parseHostString(host, hostwoext, port, extension);
   mp3Title = extractMp3TitleFromExtension(extension);
   if (mp3Title.length() > 0) {
-    icyname = "MP3 Stream";
-    showTextOnTFT(2, icyname.c_str());
+    metaSetStation("MP3 Stream");
+    showTextOnTFT(2, "MP3 Stream");
     showStreamDataOnTFT(mp3Title.c_str(), true);
   }
 
@@ -476,13 +476,16 @@ static bool streamFirstStartAfterBoot = true;
 static const uint16_t STREAM_START_BOOT_WARMUP_MIN_CHUNKS = 72;
 static const uint32_t STREAM_START_BOOT_WARMUP_MIN_MS = 650;
 
+#include "stream_watchdog.h"
+
 static void processQDataChunk() {
-  if (!claimSPI("chunk")) {
-    return;
+  while (!claimSPI("chunk")) {
+    vTaskDelay(1);
   }
   vs1053player->playChunk(inchunk.buf, sizeof(inchunk.buf));
   releaseSPI();
   totalcount += sizeof(inchunk.buf);
+  streamWatchdogFeed((uint16_t)sizeof(inchunk.buf));
 
   if (streamStartWarmupPending) {
     const bool bootWarmup = streamFirstStartAfterBoot;
@@ -502,16 +505,26 @@ static void processQDataChunk() {
  * @brief Process QSTARTSONG chunk type - start the player.
  */
 static void processQStartSong() {
+  const bool reconnect = !streamFirstStartAfterBoot;
+
   streamStartWarmupPending = false;
   streamStartWarmupChunks = 0;
   streamStartWarmupMs = millis();
 
-  if (!claimSPI("startsong")) {
-    return;
+  while (!claimSPI("startsong")) {
+    vTaskDelay(1);
   }
-  vs1053player->setOutputEnabled(false);
+  if (!reconnect) {
+    vs1053player->setOutputEnabled(false);
+  }
   vs1053player->startSong();
   releaseSPI();
+
+  if (reconnect) {
+    beginStreamAudioOnDecoderStart();
+    return;
+  }
+
   streamStartWarmupPending = true;
 }
 
@@ -527,7 +540,7 @@ static void processQStopSong() {
   vs1053player->setVolume(0);
   vs1053player->stopSong();
   releaseSPI();
-  vTaskDelay(500 / portTICK_PERIOD_MS);
+  vTaskDelay(50 / portTICK_PERIOD_MS);
 }
 
 /**
@@ -582,6 +595,7 @@ static void handleTftInfoDisplay() {
  */
 static void handleTftUpdate() {
   bool spiClaimed = false;
+  static uint32_t lastLiveDashboardMs = 0;
 
   if (dsp_isUseSPI()) {
     spiClaimed = claimSPI("hspectft");
@@ -590,8 +604,11 @@ static void handleTftUpdate() {
   if (tft) {
     handle_tft_txt();
 #if defined(BLUETFT)
-    dspDashboardRefreshLiveStatus();
-    updateWifiStatusDisplay();
+    if (datamode == STOPPED || (millis() - lastLiveDashboardMs) >= 2000UL) {
+      dspDashboardRefreshLiveStatus();
+      updateWifiStatusDisplay();
+      lastLiveDashboardMs = millis();
+    }
 #endif
     handleTftInfoDisplay();
     dsp_update();

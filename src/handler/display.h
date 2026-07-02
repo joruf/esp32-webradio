@@ -12,7 +12,7 @@
  */
 void showTitleOnTFT(const char *str) {
   if (str) {
-    icystreamtitle = String(str);
+    metaSetTitle(str);
   }
   dspDashboardInvalidateTitle();
 }
@@ -23,7 +23,7 @@ void showTitleOnTFT(const char *str) {
  * @param str Title text
  */
 void showTitleOnTFT(String &str) {
-  icystreamtitle = str;
+  metaSetTitle(str.c_str());
   dspDashboardInvalidateTitle();
 }
 

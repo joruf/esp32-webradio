@@ -102,8 +102,10 @@ static void diagAppendPartitionJson(String &json, const char *keyName, const esp
  */
 static String buildLiveStatusJson(void) {
   String json = "{";
-  json += "\"station\":\"" + jsonEscapeString(icyname.c_str()) + "\",";
-  json += "\"title\":\"" + jsonEscapeString(icystreamtitle.c_str()) + "\",";
+  String stationName = metaGetStation();
+  String songTitle = metaGetTitle();
+  json += "\"station\":\"" + jsonEscapeString(stationName.c_str()) + "\",";
+  json += "\"title\":\"" + jsonEscapeString(songTitle.c_str()) + "\",";
   json += "\"firmware\":\"" + jsonEscapeString(FIRMWARE) + "\",";
   json += "\"volume\":" + String(ini_block.reqvol) + ",";
   json += "\"time\":\"" + jsonEscapeString(timetxt) + "\",";

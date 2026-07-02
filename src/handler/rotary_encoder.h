@@ -48,8 +48,9 @@ void checkRotaryEncoder() {
 #if defined(BLUETFT)
       dspDashboardInvalidateStation();
 #endif
-      if (icyname.length() > 0) {
-        showTextOnTFT(2, icyname.c_str());
+      String stationName = metaGetStation();
+      if (stationName.length() > 0) {
+        showTextOnTFT(2, stationName.c_str());
       } else {
         showTextOnTFT(2, "");
       }
@@ -142,6 +143,7 @@ void checkRotaryEncoder() {
     case VOLUME:
       ini_block.reqvol = constrain(ini_block.reqvol + rotationcount, 0, 100);
       muteflag = false;
+      nvsRequestSettingsSave(); // Persist the new volume shortly after the change
       break;
 
     case PRESET:

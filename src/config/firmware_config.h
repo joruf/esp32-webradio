@@ -9,7 +9,7 @@
 
 #define BLUETFT
 
-#define QSIZ 400
+#define QSIZ 800
 #define DEBUG_BUFFER_SIZE 150
 #define NAME "ESP32Webradio"
 #define MAXPRESETS 200
