@@ -1,4 +1,5 @@
 #include "VolumeMapper.h"
+#include "util/value_steps.h"
 
 /** Duration in ms for soft volume fade on play start/stop. */
 static const uint32_t VOLUME_FADE_MS = 1000;
@@ -253,11 +254,7 @@ static const uint8_t VOLUME_STEP = 5;
  * @return uint8_t Volume rounded to the nearest multiple of VOLUME_STEP
  */
 static uint8_t roundVolumeToStep(uint8_t volume) {
-  uint16_t snapped = ((uint16_t)volume + (VOLUME_STEP / 2)) / VOLUME_STEP * VOLUME_STEP;
-  if (snapped > 100) {
-    snapped = 100;
-  }
-  return (uint8_t)snapped;
+  return (uint8_t)snapValueToStep(volume, VOLUME_STEP, 0, 100);
 }
 
 /**

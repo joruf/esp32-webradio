@@ -105,6 +105,9 @@ void handleWebpage(const String &pagename) {
     } else if (pagename.indexOf("diagnostics.html") >= 0) {
       p = diagnostics_html;
       l = sizeof(diagnostics_html) - 1;
+    } else if (pagename.indexOf("eventlog.html") >= 0) {
+      p = eventlog_html;
+      l = sizeof(eventlog_html) - 1;
     } else if (pagename.indexOf("app.css") >= 0 || pagename.indexOf("index.css") >= 0) {
       p = app_css;
       l = sizeof(app_css) - 1;
@@ -430,7 +433,8 @@ const char *analyzeCmd(const char *par, const char *val) {
     }
   } else if (argument.startsWith("reset")) // Reset request
   {
-    resetreq = true;                        // Reset all
+    eventLogSetShutdownReason("user request"); // Record why we restart
+    resetreq = true;                           // Reset all
   } else if (argument.startsWith("update")) // Update request
   {
     otaChecker.check(true);

@@ -212,6 +212,10 @@ void radioSetup() {
     dbgprint("BOOT: Internet access available, starting OTA and mDNS");
     ArduinoOTA.setHostname(NAME); // Set the hostname
     ArduinoOTA.onStart(otastart);
+    ArduinoOTA.onEnd([]() { // Push-style OTA finished; ESP restarts internally
+      eventLogSetShutdownReason("firmware update (OTA push)");
+      eventLogRecordShutdown();
+    });
     ArduinoOTA.onError([](ota_error_t error) { otaActive = false; }); // Resume producer on failed push
     ArduinoOTA.begin(); // Allow update over the air
 
@@ -263,6 +267,11 @@ void radioSetup() {
   if (NetworkFound) {
     getCurrentTime(); // Sync time (write it in the register timetxt)
   }
+
+  // Record this boot (and infer an unexpected shutdown if the last restart was
+  // not a planned software restart). The timestamp is patched later by
+  // eventLogProcess() once the NTP clock is available.
+  eventLogRecordBoot();
 
   if (tft) {
     dsp_fillRect(0, 8, dsp_getwidth(), dsp_getheight() - 8, BLACK); // Clear most of the screen

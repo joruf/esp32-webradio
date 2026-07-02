@@ -55,6 +55,7 @@ void IRAM_ATTR timer10sec() {
     if (bytesplayed == 0)                     // Still playing?
     {
       if (morethanonce >= 6) { // ~60 s decoder stall → restart
+        eventLogSetShutdownReason("stream stall recovery");
         resetreq = true;
       }
 

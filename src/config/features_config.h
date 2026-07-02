@@ -8,6 +8,8 @@
 
 #include <ArduinoJson.h>
 
+#include "util/value_steps.h"
+
 struct FeatureSettings {
   uint8_t dark_start;
   uint8_t dark_end;
@@ -51,7 +53,8 @@ public:
     data.dark_end = constrain((int)(feat["dark_end"] | data.dark_end), 0, 23);
     data.vu_meter = feat["vu_meter"] | data.vu_meter;
     data.stream_watchdog = feat["stream_watchdog"] | data.stream_watchdog;
-    data.alarm_fade_sec = constrain((int)(feat["alarm_fade_sec"] | data.alarm_fade_sec), 5, 600);
+    int fadeSec = (int)(feat["alarm_fade_sec"] | data.alarm_fade_sec);
+    data.alarm_fade_sec = (uint16_t)snapValueToStep(fadeSec, 5, 5, 600);
     const char *url = feat["ota_check_url"] | nullptr;
     if (url && strlen(url) > 0) {
       data.ota_check_url = String(url);

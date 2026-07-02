@@ -9,6 +9,7 @@
 #include <ArduinoJson.h>
 #include "alarm_config.h"
 #include "features_config.h"
+#include "radio_config_merge.h"
 
 void applyClockConfiguration(bool restartNtp);
 
@@ -615,58 +616,6 @@ static bool loadRadioConfigDocument(JsonDocument &doc) {
 }
 
 /**
- * @brief Merge keys present in @p patch into an existing radio configuration document.
- *
- * @param doc Target document (modified in place)
- * @param patch Patch document with one or more top-level keys
- */
-static void mergeRadioConfigPatch(JsonDocument &doc, JsonDocument &patch) {
-  if (patch["version"].is<int>() || patch["version"].is<long>() || patch["version"].is<double>()) {
-    doc["version"] = patch["version"];
-  }
-  if (patch["volume"].is<int>() || patch["volume"].is<long>() || patch["volume"].is<double>()) {
-    doc["volume"] = patch["volume"];
-  }
-  if (patch["preset"].is<int>() || patch["preset"].is<long>() || patch["preset"].is<double>()) {
-    doc["preset"] = patch["preset"];
-  }
-
-  if (patch["clock"].is<JsonObject>()) {
-    JsonObject target = doc["clock"].to<JsonObject>();
-    for (JsonPair kv : patch["clock"].as<JsonObject>()) {
-      target[kv.key().c_str()] = kv.value();
-    }
-  }
-
-  if (patch["tone"].is<JsonObject>()) {
-    JsonObject target = doc["tone"].to<JsonObject>();
-    for (JsonPair kv : patch["tone"].as<JsonObject>()) {
-      target[kv.key().c_str()] = kv.value();
-    }
-  }
-
-  if (patch["features"].is<JsonObject>()) {
-    JsonObject target = doc["features"].to<JsonObject>();
-    for (JsonPair kv : patch["features"].as<JsonObject>()) {
-      target[kv.key().c_str()] = kv.value();
-    }
-  }
-
-  if (patch["alarms"].is<JsonArray>()) {
-    doc["alarms"].set(patch["alarms"]);
-  }
-  if (patch["wifi"].is<JsonArray>()) {
-    doc["wifi"].set(patch["wifi"]);
-  }
-  if (patch["presets"].is<JsonArray>()) {
-    doc["presets"].set(patch["presets"]);
-  }
-  if (patch["gpio"].is<JsonArray>()) {
-    doc["gpio"].set(patch["gpio"]);
-  }
-}
-
-/**
  * @brief Persist a prepared radio configuration document to NVS and runtime state.
  *
  * @param doc Parsed and normalized radio configuration document
@@ -822,6 +771,11 @@ static bool applyRadioConfigDoc(JsonDocument &doc, bool maskWifiPasswords) {
   nvsAddValue("feat_alarm_fade", String((int)(feat["alarm_fade_sec"] | 15)));
   nvsAddValue("feat_ota_url", String((const char *)(feat["ota_check_url"] | "")));
 
+  // Apply the feature settings to the live in-memory struct as well, so changes
+  // (alarm fade duration, dark mode, VU meter, watchdog, OTA URL) take effect
+  // immediately without requiring a reboot.
+  applyFeaturesFromDoc(doc);
+
   String outputJson;
   serializeJson(doc, outputJson);
   if (outputJson.length() == 0 || outputJson.length() >= RADIO_CONFIG_MAX_LEN) {
@@ -863,6 +817,22 @@ bool applyRadioConfigMerge(const String &patchJson, bool maskWifiPasswords) {
     dbgprint("applyRadioConfigMerge: unable to load base config");
     return false;
   }
+
+  // The stored config blob is not rewritten on every runtime volume/tone/preset
+  // change (encoder, /?volume=, tone commands, station switch). Seed the merge
+  // base with the live runtime values so a partial patch that does not carry
+  // them (e.g. the scheduler/display pages send only "features") does not revert
+  // the current volume, tone or station. A patch that actually contains these
+  // keys still wins in mergeRadioConfigPatch() below.
+  doc["volume"] = ini_block.reqvol;
+  JsonObject baseTone = doc["tone"].to<JsonObject>();
+  baseTone["ha"] = ini_block.rtone[0];
+  baseTone["hf"] = ini_block.rtone[1];
+  baseTone["la"] = ini_block.rtone[2];
+  baseTone["lf"] = ini_block.rtone[3];
+  // Keep the currently playing station. currentpreset is the live value; fall
+  // back to the requested preset while a switch is still in progress (-1).
+  doc["preset"] = (currentpreset >= 0) ? currentpreset : ini_block.newpreset;
 
   mergeRadioConfigPatch(doc, patch);
   return applyRadioConfigDoc(doc, maskWifiPasswords);

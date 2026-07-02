@@ -497,6 +497,7 @@ static bool handleFirmwareUploadPost(uint32_t contentLength, String &message) {
 
   dspOtaDisplayProgress(written, (size_t)contentLength, "Complete");
   message = "Firmware uploaded successfully. Restarting...";
+  eventLogSetShutdownReason("firmware upload (.bin)");
   resetreq = true;
   return true;
 }
@@ -773,6 +774,7 @@ void handlehttpreply() {
               saveDefaultConfig();
               fillkeylist();
               dbgprint("NVS storage erased via web interface");
+              eventLogSetShutdownReason("NVS erase (factory reset)");
               resetreq = true;
               sndstr += String("NVS erased. Defaults restored. ESP32 is restarting...");
             } else {
@@ -995,6 +997,11 @@ void handlehttp() {
 
   if (http_getcmd.startsWith("getdiagnostics")) {
     sendHttpJsonResponse(buildDiagnosticsJson());
+    return;
+  }
+
+  if (http_getcmd.startsWith("geteventlog")) {
+    sendHttpJsonResponse(eventLogGetJson());
     return;
   }
 

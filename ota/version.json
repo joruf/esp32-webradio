@@ -1,10 +1,20 @@
 {
-  "version": "v2.37",
+  "version": "v2.39",
   "released": "2026-07-02",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.37.bin",
-  "notes": "OTA page can now install a specific release (including older ones = downgrade) picked from a list that is auto-detected online from the repository releases folder, so only firmware images that really exist are offered. Manual .bin uploads now show a brick-risk warning and are validated (minimum/maximum size, ESP32 0xE9 image signature and chip type) both in the browser and on the device before flashing. Online volume (Web UI sliders) now changes only in 5-step increments to match the rotary encoder, enforced in the browser and on the device.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.39.bin",
+  "notes": "New Power Log page: the last 20 shutdown and boot events are recorded in NVS and shown in the Web UI. Planned shutdowns store their reason (user request, firmware update/upload, NVS erase, stream-stall recovery); unexpected ones (power loss, brownout, crash, watchdog) are inferred on the next boot. Each boot is logged with date and time when the NTP clock is available, otherwise as unknown time (and patched once the clock syncs).",
   "history": [
+    {
+      "version": "v2.39",
+      "released": "2026-07-02",
+      "notes": "New Power Log page: the last 20 shutdown and boot events are recorded in NVS and shown in the Web UI. Planned shutdowns store their reason (user request, firmware update/upload, NVS erase, stream-stall recovery); unexpected ones (power loss, brownout, crash, watchdog) are inferred on the next boot. Each boot is logged with date and time when the NTP clock is available, otherwise as unknown time (and patched once the clock syncs)."
+    },
+    {
+      "version": "v2.38",
+      "released": "2026-07-02",
+      "notes": "Saving a setting now only changes that one parameter: partial config saves no longer revert the current volume, station or tone and no longer reset unrelated feature flags (dark mode, VU meter, watchdog) to their defaults. The Alarm volume fade-in is fixed - changing it no longer makes the volume jump and it now takes effect immediately without a reboot; it is the time to ramp from silence up to the configured volume and is set in 5-second increments. Added host-based unit tests (pio test -e native) covering the config merge, volume mapping and step quantization."
+    },
     {
       "version": "v2.37",
       "released": "2026-07-02",

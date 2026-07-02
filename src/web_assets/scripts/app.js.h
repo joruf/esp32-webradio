@@ -749,9 +749,6 @@ const char app_js[] PROGMEM = R"=====(
                 offset: normalizeClockOffsetValue($("#clk-offset").val()),
                 dst: normalizeBinaryClockValue($("#clk-dst").val())
             };
-            if ($("#cfg-preset").length) {
-                patch.preset = parseInt($("#cfg-preset").val(), 10) || 0;
-            }
         }
 
         return patch;
@@ -861,7 +858,10 @@ const char app_js[] PROGMEM = R"=====(
                 persistRadioConfig({ silentLog: false });
                 return;
             case "cfg-preset":
-                break;
+                // Send only the preset so saving the boot preset never touches
+                // any other parameter (and vice versa).
+                saveConfigPatch({ preset: parseInt(value, 10) || 0 }, { silentLog: false });
+                return;
         }
 
         persistRadioConfig();
@@ -1991,7 +1991,7 @@ const char app_js[] PROGMEM = R"=====(
             merged.dark_end = Math.max(0, Math.min(23, parseInt($("#feat-dark-end").val(), 10) || 0));
         }
         if ($("#feat-alarm-fade").length) {
-            merged.alarm_fade_sec = Math.max(0, Math.min(60, parseInt($("#feat-alarm-fade").val(), 10) || 15));
+            merged.alarm_fade_sec = Math.max(5, Math.min(60, Math.round((parseInt($("#feat-alarm-fade").val(), 10) || 15) / 5) * 5));
         }
         if ($("#feat-vu-meter").length) {
             merged.vu_meter = $("#feat-vu-meter").is(":checked");
@@ -2561,8 +2561,9 @@ const char app_js[] PROGMEM = R"=====(
             if (isNaN(parsed)) {
                 return 15;
             }
-            if (parsed < 0) {
-                return 0;
+            parsed = Math.round(parsed / 5) * 5; // Snap to 5-second increments
+            if (parsed < 5) {
+                return 5;
             }
             if (parsed > 60) {
                 return 60;
@@ -2852,6 +2853,53 @@ const char app_js[] PROGMEM = R"=====(
         });
     }
 
+    function initEventLogPage() {
+        if (!$("#eventlog-body").length) {
+            return;
+        }
+
+        function renderEventLog(data) {
+            var events = (data && data.events) ? data.events : [];
+            var $body = $("#eventlog-body");
+            $body.empty();
+
+            if (!events.length) {
+                $body.append('<tr><td colspan="5">No events logged yet.</td></tr>');
+                return;
+            }
+
+            // Newest first for readability.
+            for (var i = events.length - 1; i >= 0; i--) {
+                var ev = events[i] || {};
+                var kind = ev.ev === "shutdown" ? "shutdown" : "boot";
+                var kindLabel = kind === "shutdown" ? "Shutdown" : "Boot";
+                var time = ev.known ? (ev.time || "") : "unknown time";
+                var num = events.length - i;
+
+                var $row = $("<tr></tr>").addClass("eventlog-row-" + kind);
+                $row.append($("<td></td>").text(num));
+                $row.append($("<td></td>").append($("<span></span>").addClass("eventlog-badge eventlog-badge-" + kind).text(kindLabel)));
+                $row.append($("<td></td>").text(ev.reason || "-"));
+                $row.append($("<td></td>").text(time));
+                $row.append($("<td></td>").text(ev.fw || "-"));
+                $body.append($row);
+            }
+        }
+
+        function refreshEventLog() {
+            $("#eventlog-body").html('<tr><td colspan="5">Loading...</td></tr>');
+            fetch("/?geteventlog&_t=" + Date.now())
+                .then(function(r) { return r.json(); })
+                .then(renderEventLog)
+                .catch(function(err) {
+                    $("#eventlog-body").html('<tr><td colspan="5">Failed to load power log: ' + escapeHtml(String(err)) + '</td></tr>');
+                });
+        }
+
+        $("#eventlog-refresh").off("click.eventlog").on("click.eventlog", refreshEventLog);
+        refreshEventLog();
+    }
+
     $(function() {
         setInterval(function() {
             if (!shouldRunLiveUpdates()) {
@@ -2865,6 +2913,7 @@ const char app_js[] PROGMEM = R"=====(
         initSchedulerPage();
         initMaintenancePage();
         initDiagnosticsPage();
+        initEventLogPage();
         initIndexPage();
         initMp3StreamPage();
         initNavActiveState();

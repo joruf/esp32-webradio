@@ -513,6 +513,26 @@ const char app_css[] PROGMEM = R"=====(
 		overflow: auto;
 		font-size: 0.85em;
 	}
+	.eventlog-table-wrap { overflow-x: auto; margin-bottom: 12px; }
+	.eventlog-table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+	.eventlog-table th, .eventlog-table td {
+		text-align: left;
+		padding: 8px 10px;
+		border-bottom: 1px solid rgba(128, 128, 128, 0.25);
+		white-space: nowrap;
+	}
+	.eventlog-table th { font-weight: 600; }
+	.eventlog-table td:nth-child(3) { white-space: normal; }
+	.eventlog-badge {
+		display: inline-block;
+		padding: 2px 8px;
+		border-radius: 10px;
+		font-size: 0.8em;
+		font-weight: 600;
+		color: #fff;
+	}
+	.eventlog-badge-boot { background: #2e7d32; }
+	.eventlog-badge-shutdown { background: #c0392b; }
 	.sound-page { padding-bottom: 24px; }
 	.sound-page-header { margin: 8px 0 20px 0; }
 	.sound-page-header h1 { margin: 0 0 6px 0; font-size: 1.75em; font-weight: 600; letter-spacing: -0.02em; }

@@ -25,6 +25,7 @@
 #include "web_assets/pages/firmware_page.h"
 #include "web_assets/pages/about_page.h"
 #include "web_assets/pages/diagnostics_page.h"
+#include "web_assets/pages/eventlog_page.h"
 #include "web_assets/styles/app.css.h"
 #include "web_assets/scripts/app.js.h"
 /* #include "web_assets/icons/favicon.ico.h" */

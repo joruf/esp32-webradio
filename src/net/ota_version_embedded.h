@@ -12,12 +12,22 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.37",
+  "version": "v2.39",
   "released": "2026-07-02",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.37.bin",
-  "notes": "OTA page can now install a specific release (including older ones = downgrade) picked from an online-detected list of firmware images that really exist. Manual .bin uploads now show a brick-risk warning and are validated (size, ESP32 0xE9 signature and chip type) before flashing. Online volume now changes only in 5-step increments.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.39.bin",
+  "notes": "New Power Log page: the last 20 shutdown and boot events are stored in NVS and shown in the Web UI. Planned shutdowns store their reason; unexpected ones (power loss, brownout, crash, watchdog) are inferred on the next boot. Boots are logged with date/time when NTP is available, otherwise as unknown time.",
   "history": [
+    {
+      "version": "v2.39",
+      "released": "2026-07-02",
+      "notes": "New Power Log page: the last 20 shutdown and boot events are stored in NVS and shown in the Web UI. Planned shutdowns store their reason; unexpected ones (power loss, brownout, crash, watchdog) are inferred on the next boot. Boots are logged with date/time when NTP is available, otherwise as unknown time."
+    },
+    {
+      "version": "v2.38",
+      "released": "2026-07-02",
+      "notes": "Saving a setting now only changes that one parameter: partial config saves no longer revert the current volume, station or tone and no longer reset unrelated feature flags to their defaults. Alarm volume fade-in is fixed (no volume jump, effective immediately) and is set in 5-second increments. Added host-based unit tests (pio test -e native)."
+    },
     {
       "version": "v2.37",
       "released": "2026-07-02",
@@ -57,16 +67,6 @@ const char ota_version_embedded_json[] PROGMEM = R"=====(
       "version": "v2.30",
       "released": "2026-06-27",
       "notes": "Reworked the Play button live visualization from JS class blinking to a CSS-driven animated icon effect and moved the stream kbps pill into the metadata panel heading on a single line."
-    },
-    {
-      "version": "v2.29",
-      "released": "2026-06-27",
-      "notes": "Reduced startup pop/pfffftt artifacts by decoupling amplifier enable from immediate volume writes and moving unmute/fade-in to decoder-confirmed start timing. Added stream warmup gating before enabling audio output and an extra one-time cold-boot warmup window for the very first automatic stream start after device boot."
-    },
-    {
-      "version": "v2.28",
-      "released": "2026-06-26",
-      "notes": "Optimized live status updates to save resources: SSE remains primary, polling fallback is now adaptive (active/idle/background intervals) with retry backoff and visibility-aware scheduling. Added stable preset state synchronization from live payloads and settings load so the active preset button is always highlighted correctly after refresh. Simplified index preset UI by removing redundant current-label text and keeping visual active-state only. Display alarm fade setting now supports 0-60 seconds."
     }
   ]
 }

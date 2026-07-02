@@ -65,6 +65,7 @@
 //**************************************************************************************************
 #include "audio/vs1053.h"
 #include "config/nvs.h"
+#include "system/event_log.h"
 #include "system/string.h"
 #include "system/isr.h"
 #include "audio/volume.h"
@@ -164,6 +165,7 @@ void loop() {
     if (updated) {
       dspOtaDisplaySuccess();
       delay(3000);
+      eventLogSetShutdownReason("firmware update");
       resetreq = true;
     } else {
       dbgprint("OTA update failed, device not restarted");
@@ -194,8 +196,9 @@ void loop() {
 
   if (resetreq) // Reset requested?
   {
-    delay(1000);   // wait some time
-    ESP.restart(); // Reboot
+    eventLogRecordShutdown(); // Persist a planned shutdown entry before rebooting
+    delay(1000);              // wait some time
+    ESP.restart();            // Reboot
   }
   scanserial();  // Handle serial input
   scanserial2(); // Handle serial input from NEXTION (if active)
@@ -223,6 +226,7 @@ void loop() {
 
   nvsAutoSave();          // Periodic (10 min) settings save fallback
   nvsProcessPendingSave(); // Debounced immediate save after a volume/preset change
+  eventLogProcess();      // Patch the boot timestamp once the NTP clock is ready
   updateEncoderSwitch();  // Poll encoder push button (debounced)
   checkRotaryEncoder();  // Check rotary encoder functions
 }
