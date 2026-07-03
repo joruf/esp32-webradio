@@ -12,12 +12,17 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.41",
+  "version": "v2.42",
   "released": "2026-07-03",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.41.bin",
-  "notes": "The scheduler setting 'Alarm volume fade' now works both ways: alarms fade the volume in from silence, and the snooze/sleep timer fades the volume out gently over the same duration before stopping.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.42.bin",
+  "notes": "Fixed a rare Web UI hang (device online but unreachable for minutes): the live-status SSE push could block the main loop on a dead browser connection. SSE now only writes when the send buffer has room, drops a stuck client, and no longer calls the blocking flush.",
   "history": [
+    {
+      "version": "v2.42",
+      "released": "2026-07-03",
+      "notes": "Fixed a rare Web UI hang (device online but unreachable for minutes): the live-status SSE push could block the main loop on a dead browser connection. SSE now only writes when the send buffer has room, drops a stuck client, and no longer calls the blocking flush."
+    },
     {
       "version": "v2.41",
       "released": "2026-07-03",
@@ -62,11 +67,6 @@ const char ota_version_embedded_json[] PROGMEM = R"=====(
       "version": "v2.33",
       "released": "2026-06-28",
       "notes": "New MP3 Stream page (mp3stream.html): play MP3 files from your PC or phone over the local network with a guided UI, auto-detected media server Base URL, copy-to-clipboard for the python3 HTTP server command, immediate playback on file or folder selection, and fixed URL decoding for encoded stream paths."
-    },
-    {
-      "version": "v2.32",
-      "released": "2026-06-27",
-      "notes": "Improved OTA reliability and UX: static WebUI assets now use ETag/Last-Modified with conditional 304 responses, local OTA upload shows progress modal from upload start through install, and OTA TFT screen performs a full black clear to prevent leftover graphics."
     }
   ]
 }

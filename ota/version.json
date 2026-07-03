@@ -1,10 +1,15 @@
 {
-  "version": "v2.41",
+  "version": "v2.42",
   "released": "2026-07-03",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.41.bin",
-  "notes": "The scheduler setting is now called 'Alarm volume fade' and is used for both directions: an alarm fades the volume in from silence to your set level when it starts, and the snooze/sleep timer now fades the volume out gently over the same duration before stopping, instead of cutting off abruptly.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.42.bin",
+  "notes": "Fixed a rare hang where the Web UI became unreachable (device still online) for several minutes: the live-status (SSE) push from the main loop could block on a dead/half-open browser connection until the TCP timeout expired. SSE events are now only sent when the network send buffer has room, a stuck client is dropped after a short grace period, and the blocking flush was removed - so the main loop stays responsive.",
   "history": [
+    {
+      "version": "v2.42",
+      "released": "2026-07-03",
+      "notes": "Fixed a rare hang where the Web UI became unreachable (device still online) for several minutes: the live-status (SSE) push from the main loop could block on a dead/half-open browser connection until the TCP timeout expired. SSE events are now only sent when the network send buffer has room, a stuck client is dropped after a short grace period, and the blocking flush was removed - so the main loop stays responsive."
+    },
     {
       "version": "v2.41",
       "released": "2026-07-03",

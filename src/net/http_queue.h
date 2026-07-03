@@ -92,6 +92,7 @@ static void httpAttachSseClient(WiFiClient &client) {
 
   sseClient = client;
   client = WiFiClient();
+  sseClient.setNoDelay(true); // Push events promptly without waiting for Nagle
   httpBeginSse(sseClient);
   sseStreamActive = true;
   sseLastPushMs = 0;
@@ -100,6 +101,12 @@ static void httpAttachSseClient(WiFiClient &client) {
 
 /**
  * @brief Push a live JSON event to the active SSE client.
+ *
+ * Runs from the main loop(). To keep the loop responsive on a slow or dead peer,
+ * the event is sent with a single non-blocking write() (bounded by the WiFiClient
+ * retry/select loop) and the previous per-fragment writes plus the blocking
+ * flush() were removed. A short write means the half-open connection is gone, so
+ * the client is dropped immediately instead of stalling the Web UI every cycle.
  */
 static void httpServiceSse() {
   if (!sseStreamActive || !sseClient.connected()) {
@@ -119,11 +126,18 @@ static void httpServiceSse() {
 
   sseLastPushMs = millis();
   sseLastPlaybackState = currentPlaybackState;
-  String payload = buildLiveStatusJson();
-  sseClient.print("data: ");
-  sseClient.print(payload);
-  sseClient.print("\n\n");
-  sseClient.flush();
+
+  // Send the whole event in a single write(): the WiFiClient write path uses a
+  // non-blocking send() bounded by its own retry/select loop, so it cannot stall
+  // the main loop indefinitely on a dead peer. A short write means the socket is
+  // gone, so drop the client immediately instead of retrying every cycle. No
+  // flush() is needed and no per-fragment writes that could each block.
+  String frame = "data: " + buildLiveStatusJson() + "\n\n";
+  size_t written = sseClient.print(frame);
+  if (written < frame.length()) {
+    sseClient.stop();
+    sseStreamActive = false;
+  }
 }
 
 #endif
