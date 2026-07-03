@@ -402,11 +402,13 @@ static bool handleFirmwareUploadPost(uint32_t contentLength, String &message) {
   // completely unrelated file) and must be rejected before touching flash.
   if (contentLength < 262144UL) {
     message = "File too small to be a valid firmware image";
+    eventLogRecordWarning("Firmware upload rejected: file too small");
     return false;
   }
 
   if (!isOtaUpdateCapable((size_t)contentLength)) {
     message = "Image does not fit OTA partition";
+    eventLogRecordWarning("Firmware upload rejected: does not fit partition");
     return false;
   }
 
@@ -419,6 +421,7 @@ static bool handleFirmwareUploadPost(uint32_t contentLength, String &message) {
 
   if (!Update.begin((size_t)contentLength)) {
     message = String("Update.begin failed: ") + String(Update.errorString());
+    eventLogRecordError("Firmware upload: Update.begin failed");
     dspOtaDisplayFailed(Update.errorString());
     return false;
   }
@@ -448,6 +451,7 @@ static bool handleFirmwareUploadPost(uint32_t contentLength, String &message) {
         timerStart(timer);
         Update.abort();
         message = "Not a valid ESP32 firmware image (bad magic byte)";
+        eventLogRecordWarning("Firmware upload rejected: bad magic byte");
         dspOtaDisplayFailed("Invalid image");
         return false;
       }
@@ -457,6 +461,7 @@ static bool handleFirmwareUploadPost(uint32_t contentLength, String &message) {
           timerStart(timer);
           Update.abort();
           message = "Firmware built for a different chip (not ESP32)";
+          eventLogRecordWarning("Firmware upload rejected: wrong chip type");
           dspOtaDisplayFailed("Wrong chip");
           return false;
         }
@@ -470,6 +475,7 @@ static bool handleFirmwareUploadPost(uint32_t contentLength, String &message) {
       timerStart(timer);
       Update.abort();
       message = String("Write failed: ") + String(Update.errorString());
+      eventLogRecordError("Firmware upload write to flash failed");
       dspOtaDisplayFailed(Update.errorString());
       return false;
     }
@@ -485,12 +491,14 @@ static bool handleFirmwareUploadPost(uint32_t contentLength, String &message) {
   if (written != (size_t)contentLength) {
     Update.abort();
     message = String("Upload incomplete: ") + String((unsigned)written) + "/" + String((unsigned)contentLength);
+    eventLogRecordError("Firmware upload incomplete (connection dropped)");
     dspOtaDisplayFailed("Upload incomplete");
     return false;
   }
 
   if (!Update.end(true) || !Update.isFinished()) {
     message = String("Finalize failed: ") + String(Update.errorString());
+    eventLogRecordError("Firmware upload finalize/verify failed");
     dspOtaDisplayFailed(Update.errorString());
     return false;
   }
@@ -752,6 +760,7 @@ void handlehttpreply() {
             if (writeRadioConfig()) {
               sndstr += String("Configuration saved");
             } else {
+              eventLogRecordError("Web UI: configuration save failed");
               sndstr += String("Configuration save failed");
             }
           } else if (http_getcmd.startsWith("savefeatures")) // Save display/feature settings only
@@ -779,6 +788,7 @@ void handlehttpreply() {
               sndstr += String("NVS erased. Defaults restored. ESP32 is restarting...");
             } else {
               dbgprint("NVS erase failed!");
+              eventLogRecordError("NVS erase failed");
               sndstr += String("NVS erase failed");
             }
             timerStart(timer);
@@ -798,6 +808,7 @@ void handlehttpreply() {
             if (writeAlarmConfig()) {
               sndstr += String("Alarm configuration saved");
             } else {
+              eventLogRecordError("Web UI: alarm configuration save failed");
               sndstr += String("Alarm configuration save failed");
             }
           } else if (http_getcmd.startsWith("saveprefs")) // Is is a "Save preferences"

@@ -533,6 +533,8 @@ const char app_css[] PROGMEM = R"=====(
 	}
 	.eventlog-badge-boot { background: #2e7d32; }
 	.eventlog-badge-shutdown { background: #c0392b; }
+	.eventlog-badge-error { background: #b71c1c; }
+	.eventlog-badge-warn { background: #e08600; }
 	.sound-page { padding-bottom: 24px; }
 	.sound-page-header { margin: 8px 0 20px 0; }
 	.sound-page-header h1 { margin: 0 0 6px 0; font-size: 1.75em; font-weight: 600; letter-spacing: -0.02em; }

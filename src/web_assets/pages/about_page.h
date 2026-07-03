@@ -14,7 +14,7 @@ const char about_html[] PROGMEM = R"=====(
 <!DOCTYPE html>
 <html prefix="og: http://purl.org/dc/elements/1.1/" lang="en-EN">
 	<head>
-		<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+		<meta http-equiv="content-type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<!--
 		<link rel="icon" href="favicon.ico" type="image/x-icon">
@@ -32,42 +32,78 @@ const char about_html[] PROGMEM = R"=====(
 <div id="body" class="container sound-page">
 			<header class="sound-page-header">
 				<h1>About</h1>
-				<p class="sound-page-lead">Project overview, capabilities and source code references for ESP32 Webradio.</p>
+				<p class="sound-page-lead">What this device does: streaming, alarms, web control, diagnostics and firmware updates.</p>
 			</header>
 			<div class="sound-studio">
 
-			<div class="row panel panel-default sound-card">
-				<div class="panel-heading">Firmware</div>
-				<div class="panel-body">
-					<p class="config-help">Installed version, release information, and over-the-air updates are on a dedicated page.</p>
-					<a href="ota.html" class="btn btn-default"><span class="btn-icon" aria-hidden="true">&#11015;</span> Open OTA Update</a>
-				</div>
-			</div>
-
 			<p class="lead">
-				This is a high-performance ESP32-based web radio featuring an integrated alarm clock and sleep functionality.
+				ESP32 Webradio is a dual-core Internet radio with VS1053 hardware decoding, a colour TFT display,
+				rotary-encoder control and a full web interface. It streams internet radio and local MP3 files,
+				wakes you with scheduled alarms, and keeps a persistent log of boots, shutdowns and runtime issues.
 			</p>
 
 			<div class="row">
 				<div class="col-md-6">
-					<h3>Core Features</h3>
+					<h3>Playback &amp; Audio</h3>
 					<ul>
-						<li><strong>Web Radio & Streaming:</strong> Plays high-quality audio streams with full metadata (Artist & Track) display.</li>
-						<li><strong>Alarm & Sleep Timer:</strong> Integrated wake-up functionality and a customizable sleep timer for nightly use.</li>
-						<li><strong>Smart Connectivity:</strong> Stores multiple WiFi profiles and automatically connects to the best available network.</li>
-						<li><strong>Time Synchronization:</strong> Supports custom NTP servers (e.g., <code>pool.ntp.org</code>) for precise timekeeping.</li>
+						<li><strong>Internet radio:</strong> MP3, Ogg and AAC streams with ICY metadata (station name and song title) on the display and in the web UI.</li>
+						<li><strong>VS1053 decoder:</strong> Hardware MP3 decoding offloads the ESP32; a dedicated stream task keeps the audio buffer full for gap-free playback.</li>
+						<li><strong>Stream watchdog:</strong> Detects stalled streams and reconnects automatically after short network dropouts.</li>
+						<li><strong>MP3 Stream page:</strong> Play MP3 files from your PC or phone over the local Wi-Fi (folder served via a simple HTTP server).</li>
+						<li><strong>Presets &amp; playlists:</strong> Multiple station presets; supports <code>.m3u</code> playlist URLs.</li>
+						<li><strong>Volume:</strong> 0–100 scale mapped to an audible range; all changes in <strong>5-step increments</strong> (encoder and web UI).</li>
+						<li><strong>Equalizer:</strong> Treble and bass gain and frequency control via the Sound Settings page.</li>
 					</ul>
 				</div>
 				<div class="col-md-6">
-					<h3>Smart Display & Audio</h3>
+					<h3>Control &amp; Display</h3>
 					<ul>
-						<li><strong>Auto-Display Control:</strong> The screen activates instantly upon interaction (volume, station change) and features a 5-minute auto-dim/power-off function.</li>
-						<li><strong>Advanced DSP:</strong> Full control over audio characteristics:
-							<ul>
-								<li>Treble Gain & Frequency tuning</li>
-								<li>Bass Gain & Frequency enhancement</li>
-							</ul>
-						</li>
+						<li><strong>Rotary encoder:</strong> Turn for volume (5-step), single click for play/mute, double click to change station.</li>
+						<li><strong>Web interface:</strong> Control playback, volume, presets, alarms and configuration from any browser on your network.</li>
+						<li><strong>Live updates:</strong> Station and title refresh via Server-Sent Events with polling fallback.</li>
+						<li><strong>TFT dashboard:</strong> Date, time, station, song title, volume bar, VU meter and Wi-Fi signal on the built-in display.</li>
+						<li><strong>Auto backlight:</strong> Display turns on with any interaction and dims after inactivity.</li>
+						<li><strong>Dark mode:</strong> Optional scheduled dark theme for the web UI (Display Settings).</li>
+					</ul>
+				</div>
+			</div>
+
+			<div class="row">
+				<div class="col-md-6">
+					<h3>Scheduler &amp; Timers</h3>
+					<ul>
+						<li><strong>Alarm clock:</strong> Multiple alarms with weekday selection, start/stop times and gradual volume fade-in (5–60&nbsp;s in 5&nbsp;s steps).</li>
+						<li><strong>Sleep / snooze timer:</strong> Stop playback automatically after a chosen number of minutes (index page or <code>/?snooze=XX</code>).</li>
+						<li><strong>NTP time:</strong> Configurable time server, UTC offset and daylight-saving for reliable alarm triggering.</li>
+					</ul>
+				</div>
+				<div class="col-md-6">
+					<h3>Network &amp; Configuration</h3>
+					<ul>
+						<li><strong>Multi-WiFi:</strong> Several stored networks with automatic fallback; captive portal when no known network is found.</li>
+						<li><strong>JSON configuration:</strong> WiFi, presets, GPIO buttons, clock, volume, tone and alarms stored in NVS and editable in the browser.</li>
+						<li><strong>Partial saves:</strong> Changing one setting updates only that value — volume, station and other options stay untouched.</li>
+						<li><strong>Diagnostics page:</strong> Chip, memory, flash, network and partition details for troubleshooting.</li>
+					</ul>
+				</div>
+			</div>
+
+			<div class="row">
+				<div class="col-md-6">
+					<h3>Power Log</h3>
+					<ul>
+						<li><strong>Boot &amp; shutdown history:</strong> Last 20 events in NVS — planned restarts (user, firmware update, factory reset) and unexpected ones (power loss, brownout, crash).</li>
+						<li><strong>Errors &amp; warnings:</strong> Runtime issues such as WiFi loss, stream failures, OTA problems and config save errors.</li>
+						<li><strong>Timestamps:</strong> Date and time when NTP is available; otherwise marked as unknown until the clock syncs.</li>
+					</ul>
+				</div>
+				<div class="col-md-6">
+					<h3>Firmware Updates (OTA)</h3>
+					<ul>
+						<li><strong>Online update:</strong> Check and install the latest release from the project manifest.</li>
+						<li><strong>Specific version:</strong> Install any release listed in the repository (including older versions for downgrade).</li>
+						<li><strong>Local upload:</strong> Flash a <code>.bin</code> file from your PC with browser and device validation (size, ESP32 image signature, chip type).</li>
+						<li><strong>Safe flashing:</strong> Invalid images are rejected before writing to flash; the OTA screen shows progress without display artefacts.</li>
 					</ul>
 				</div>
 			</div>
@@ -75,9 +111,16 @@ const char about_html[] PROGMEM = R"=====(
 			<hr>
 
 			<div class="row panel panel-default sound-card">
+				<div class="panel-heading">Hardware</div>
+				<div class="panel-body">
+					<p class="config-help">Typical build: ESP32 Dev Module, VS1053B audio breakout, ST7735 TFT (160×128), KY-040 rotary encoder. Pin assignments are configurable in the web UI and stored in NVS. SD card and IR remote are not used in the current firmware.</p>
+				</div>
+			</div>
+
+			<div class="row panel panel-default sound-card">
 				<div class="panel-heading">Source code</div>
 				<div class="panel-body">
-					<p class="config-help">Firmware source, documentation, and OTA release files are available on GitHub.</p>
+					<p class="config-help">Firmware source, documentation, OTA manifests and release binaries are on GitHub. Built with PlatformIO; the web UI is embedded in PROGMEM.</p>
 					<p>
 						<a href="https://github.com/joruf/esp32-webradio" target="_blank" rel="noopener" class="btn btn-default"><span class="btn-icon" aria-hidden="true">&#128279;</span> github.com/joruf/esp32-webradio</a>
 					</p>

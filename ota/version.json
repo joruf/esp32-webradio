@@ -1,10 +1,15 @@
 {
-  "version": "v2.39",
-  "released": "2026-07-02",
+  "version": "v2.40",
+  "released": "2026-07-03",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.39.bin",
-  "notes": "New Power Log page: the last 20 shutdown and boot events are recorded in NVS and shown in the Web UI. Planned shutdowns store their reason (user request, firmware update/upload, NVS erase, stream-stall recovery); unexpected ones (power loss, brownout, crash, watchdog) are inferred on the next boot. Each boot is logged with date and time when the NTP clock is available, otherwise as unknown time (and patched once the clock syncs).",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.40.bin",
+  "notes": "Power Log now records runtime errors and warnings in addition to boot/shutdown events: WiFi loss, stream connect failures, stream watchdog stalls, OTA/upload failures, config save errors, VS1053 detection problems and more. Events are deduplicated to protect flash wear and shown on the Power Log page with Error/Warning badges.",
   "history": [
+    {
+      "version": "v2.40",
+      "released": "2026-07-03",
+      "notes": "Power Log now records runtime errors and warnings in addition to boot/shutdown events: WiFi loss, stream connect failures, stream watchdog stalls, OTA/upload failures, config save errors, VS1053 detection problems and more. Events are deduplicated to protect flash wear and shown on the Power Log page with Error/Warning badges."
+    },
     {
       "version": "v2.39",
       "released": "2026-07-02",

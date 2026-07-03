@@ -4,9 +4,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A fully‑featured, high‑performance Internet radio based on the **ESP32** dual‑core microcontroller, the **VS1053** hardware MP3/Ogg decoder and a colour TFT display.
-The firmware is built around **FreeRTOS multitasking** with a dedicated stream‑producer task for gap‑free playback, **fail‑safe (non‑destructive) startup validation**, a **JSON REST API**, **rotary encoder** control, an **alarm clock**, a **sleep timer**, **WiFi auto‑discovery** and **robust OTA updates** – all managed through a modern, responsive web interface.
+The firmware is built around **FreeRTOS multitasking** with a dedicated stream‑producer task for gap‑free playback, **fail‑safe (non‑destructive) startup validation**, a **JSON REST API**, **rotary encoder** control, an **alarm clock**, a **sleep timer**, **WiFi auto‑discovery**, a **Power Log** for boot/shutdown and runtime diagnostics, and **robust OTA updates** – all managed through a modern, responsive web interface.
 
-**Current firmware:** `v2.37` · **Source code:** [github.com/joruf/esp32-webradio](https://github.com/joruf/esp32-webradio)
+**Current firmware:** `v2.40` · **Source code:** [github.com/joruf/esp32-webradio](https://github.com/joruf/esp32-webradio)
 
 ---
 
@@ -37,6 +37,7 @@ esp32-webradio/
 │  │  ├─ firmware_config.h         # FIRMWARE version, display type, audio queue size
 │  │  ├─ features_config.h         # Feature flags, OTA check URL
 │  │  ├─ radio_config.h            # Unified radio_config JSON (NVS)
+│  │  ├─ radio_config_merge.h       # Pure JSON merge helper (partial patches)
 │  │  ├─ alarm_config.h            # Alarm JSON parsing
 │  │  ├─ nvs.h                     # NVS read/write + debounced settings save
 │  │  ├─ writeDefaultConfig.h      # Write factory defaults to NVS
@@ -55,9 +56,13 @@ esp32-webradio/
 │  │  ├─ setup.h                   # WiFi scan/connect/AP mode, default GPIO pins
 │  │  ├─ loop.h                    # timer10sec (bitrate & stall measurement)
 │  │  ├─ time.h                    # NTP synchronisation
+│  │  ├─ event_log.h               # Power Log: boot/shutdown/error/warn (NVS ring buffer)
+│  │  ├─ event_log_util.h           # Ring-buffer helpers (testable, ArduinoJson only)
 │  │  ├─ isr.h                     # Encoder interrupt handlers
 │  │  ├─ spi.h                     # Shared SPI bus claim/release
 │  │  ├─ string.h / helper.h       # Utilities
+│  ├─ util/
+│  │  └─ value_steps.h             # snapValueToStep() (volume & alarm-fade quantization)
 │  ├─ input/
 │  │  ├─ rotary_encoder.h          # Encoder state machine (5-step volume)
 │  │  └─ encoder_switch.h          # Debounced push button
@@ -72,13 +77,18 @@ esp32-webradio/
 │  ├─ globals/                     # Shared types, globals, prototypes
 │  │  ├─ globals.h / globals.cpp, types.h, app_prototypes.h
 │  └─ web_assets/                  # Embedded web UI (PROGMEM)
-│     ├─ pages/                    # HTML views (*_page.h → *_html)
+│     ├─ pages/                    # HTML views (*_page.h → *_html), incl. eventlog_page.h
 │     ├─ partials/                 # nav_menu.html → nav_menu.h
 │     ├─ styles/ scripts/ vendor/  # app.css.h, app.js.h, bootstrap, jQuery
 │     ├─ icons/                    # favicon.ico.h
 │     └─ web_assets.h              # Umbrella include
 ├─ ota/                            # version.json & release binaries (GitHub OTA)
 │  └─ releases/                    # esp32_webradio_vX.YZ.bin
+├─ test/                           # Host-based unit tests (pio test -e native)
+│  ├─ test_value_steps/            # Volume/fade step quantization
+│  ├─ test_volume_mapper/          # External → chip volume mapping
+│  ├─ test_config_merge/           # Partial config patch merge behaviour
+│  └─ test_event_log/              # Event-log ring buffer helpers
 ├─ partitions/ota_app.csv          # Dual OTA partition table (~1.875 MB per slot)
 ├─ scripts/pio_embed_web_assets.py # Build step: HTML/CSS/JS → PROGMEM headers
 ├─ docs/                           # Reference material & Web UI screenshots
@@ -103,10 +113,16 @@ esp32-webradio/
 - **Volume mapping & 5‑step increments** – The user‑facing scale is **0–100** but is linearly mapped onto the audible VS1053 range (**40–100**), so the whole travel is useful. Volume always changes in **5‑step increments**, both from the encoder and from the web UI (enforced in the browser and on the device). Volume changes are persisted with a short debounce so the last level survives a power cycle.
 - **Rich Web Interface** – Bootstrap + jQuery front‑end backed by a JSON API.
   - Real‑time metadata (station name, song title) via SSE (`/?events`) with polling fallback
-  - Pages: Webradio, **MP3 Stream** (LAN playback from PC/phone), Scheduler, Configuration, Sound, Display, **OTA Update**, Maintenance, About, Diagnostics
+  - Pages: Webradio, **MP3 Stream** (LAN playback from PC/phone), Scheduler, Configuration, Sound, Display, **OTA Update**, Maintenance, **Power Log**, Diagnostics, About
   - Volume, tone control (bass/treble gain & frequency)
   - Preset management (add, edit, delete, drag‑and‑drop reorder)
-  - Snooze timer & alarm scheduler (weekdays, multiple alarms, fade‑in)
+  - Snooze timer & alarm scheduler (weekdays, multiple alarms, fade‑in in **5‑second steps**)
+- **Power Log** – The last **20** boot, shutdown, error and warning events are stored in NVS and shown on `eventlog.html`.
+  - **Boot / shutdown** – Planned restarts (user, firmware update, NVS erase, stream stall recovery) and unexpected ones (power loss, brownout, crash, watchdog) inferred from `esp_reset_reason()`
+  - **Errors & warnings** – Runtime issues such as WiFi loss, stream connect failures, watchdog stalls, OTA/upload failures, config save errors and VS1053 detection problems
+  - Timestamps from NTP when available, otherwise “unknown time” (boot time is patched once the clock syncs)
+  - Identical messages are **deduplicated** (60 s window) to limit flash wear
+- **Partial configuration saves** – Saving a single setting (e.g. alarm fade on the Scheduler page) sends only that patch; volume, station and unrelated feature flags are not reverted from stale NVS data.
 - **Robust OTA firmware updates**
   - Online check against a GitHub manifest, one‑click install of the latest release
   - **Install a specific release** – including **older ones (downgrade)** – picked from a list that is **auto‑detected online** from the repository `ota/releases/` folder, so only firmware images that really exist are offered
@@ -117,6 +133,7 @@ esp32-webradio/
 - **Playlist Support** – Handles `.m3u` playlists (remote streams).
 - **Non‑Volatile Storage (NVS)** – Settings survive reboots via a unified `radio_config` JSON (plus legacy keys). Startup validation is **non‑destructive**: the configuration is no longer wiped on transient NVS read errors.
 - **Thread‑safe metadata** – Shared stream metadata (station/title) is guarded by a mutex to avoid cross‑task heap corruption.
+- **Host unit tests** – Hardware‑independent logic (config merge, volume mapping, step quantization, event‑log ring buffer) is covered by native tests runnable with `pio test -e native` (no ESP32 required).
 - **Multiple Display Types** – ST7735, ST7789, ILI9341, SSD1306, LCD1602, NEXTION and a dummy (serial‑only) display – switchable in `config/firmware_config.h`.
 - **Android Companion App** – Optional WebView app in `android-app/` (same web UI, no firmware changes).
 
@@ -134,7 +151,7 @@ Captured from a live device to document the current look and layout of each page
   ![Webradio Dashboard](docs/screenshots/webui/index.png)
 - **MP3 Stream** (`mp3stream.html`) – Stream MP3 files from your PC or phone over the local network (see [MP3 Stream – play your own music](#mp3-stream--play-your-own-music) below).
   ![MP3 Stream](docs/screenshots/webui/mp3stream.png)
-- **Scheduler** (`scheduler.html`) – Snooze timer and multi‑alarm scheduling with weekday selection and fade duration.
+- **Scheduler** (`scheduler.html`) – Snooze timer, multi‑alarm scheduling with weekday selection, and alarm fade‑in (5–60 s, 5 s steps).
   ![Scheduler](docs/screenshots/webui/scheduler.png)
 - **Configuration** (`config.html`) – WiFi priorities, clock settings, startup preset, watchdog option, presets, and GPIO mapping.
   ![Configuration](docs/screenshots/webui/config.png)
@@ -146,6 +163,7 @@ Captured from a live device to document the current look and layout of each page
   ![Maintenance](docs/screenshots/webui/maintenance.png)
 - **Diagnostics** (`diagnostics.html`) – Runtime/device JSON diagnostics and refresh control.
   ![Diagnostics](docs/screenshots/webui/diagnostics.png)
+- **Power Log** (`eventlog.html`) – Boot, shutdown, error and warning history with colour‑coded badges (newest first).
 - **OTA Update** (`ota.html`) – Online update check/install, install a specific (auto‑detected) release, validated local `.bin` upload, release history, and manifest URL settings.
   ![OTA Update](docs/screenshots/webui/ota.png)
 - **About** (`about.html`) – Project overview, feature summary, and source links.
@@ -290,6 +308,16 @@ Short version:
 
 Phone and ESP32 must be on the same Wi‑Fi.
 
+### Running unit tests (optional)
+
+Hardware‑independent helpers are tested on the host (no ESP32 connected):
+
+```bash
+pio test -e native
+```
+
+This runs **23** tests covering config merge (partial patches must not touch unrelated keys), volume mapping, 5‑step quantization and the event‑log ring buffer. The firmware build uses `default_envs = esp32dev` in `platformio.ini`; only `pio test -e native` builds the test environment.
+
 ---
 
 ## REST API & JSON Endpoint
@@ -302,10 +330,12 @@ You can query the current radio status, change volume, select presets, etc.
 
 - **Configuration (JSON)** – Unified settings document.
   - `GET /?getconfig` → full radio configuration
-  - `POST /?saveconfig` → save JSON body to NVS
+  - `POST /?saveconfig` → save JSON body to NVS (full document or **partial patch** – only keys present in the body are updated; unrelated parameters are left unchanged)
   - `GET /?getalarms` / `POST /?savealarms` → alarm scheduler JSON
 
 - **Diagnostics** – `GET /?getdiagnostics` → chip, memory, flash, network and partition info (includes `ota_max_size`, the size of the target OTA partition).
+
+- **Power Log** – `GET /?geteventlog` → JSON document `{"events":[…]}` with the last 20 boot/shutdown/error/warn entries (`ev`, `reason`, `time`, `known`, `fw`, `epoch`).
 
 - **OTA**
   - `GET /?checkupdate=1` → version manifest comparison (also returns `ota_max_size`)
@@ -345,8 +375,9 @@ You can query the current radio status, change volume, select presets, etc.
 ## Alarm & Sleep Timer
 
 - **Alarm Clock** – Configured on the **Scheduler** page (`scheduler.html`).
-  - Multiple alarms with start/stop times and weekday selection, plus volume fade‑in
+  - Multiple alarms with start/stop times and weekday selection, plus **alarm volume fade‑in** (5–60 s in **5‑second steps**)
   - At start time the radio plays the configured boot preset; at stop time it shuts off
+  - Fade duration takes effect immediately after saving (no reboot required)
   - Stored as JSON in NVS (`alrm_config`, also part of `radio_config`)
   - Implemented in `config/alarm_config.h` and `ui/alarm.h` using NTP time (`system/time.h`)
 
@@ -362,7 +393,9 @@ You can query the current radio status, change volume, select presets, etc.
 
 All user settings are stored in the ESP32’s **Non‑Volatile Storage (NVS)** partition.
 
-**Primary:** `radio_config` – unified JSON document (WiFi, presets, GPIO, clock, volume, tone, alarms, feature flags). Load/save via `/?getconfig` and `/?saveconfig`.
+**Primary:** `radio_config` – unified JSON document (WiFi, presets, GPIO, clock, volume, tone, alarms, feature flags). Load/save via `/?getconfig` and `/?saveconfig`. Partial `POST` bodies merge only the keys they carry (`config/radio_config_merge.h`); live volume/station/tone are preserved when saving unrelated settings.
+
+**Event log:** `event_log` – JSON ring buffer of the last 20 boot/shutdown/error/warn events for the Power Log page.
 
 **Legacy keys** (still read and migrated into `radio_config`):
 
@@ -374,9 +407,33 @@ All user settings are stored in the ESP32’s **Non‑Volatile Storage (NVS)** p
 
 > **Startup safety:** Boot validation (`boot/boot_validation.h`) no longer performs a factory reset on transient NVS read errors — the configuration is only rewritten when it is genuinely missing/unrecoverable, so overnight resets are avoided.
 
-> **Editing:** Use the web UI (**Configuration**, **Scheduler**, **Sound**, **Display**) or the raw JSON editor under **Maintenance**.
+> **Editing:** Use the web UI (**Configuration**, **Scheduler**, **Sound**, **Display**) or the raw JSON editor under **Maintenance**. Review **Power Log** after incidents.
 
-> **Implementation:** `config/radio_config.h`, `config/nvs.h`, `net/http.h`.
+> **Implementation:** `config/radio_config.h`, `config/nvs.h`, `system/event_log.h`, `net/http.h`.
+
+---
+
+## Power Log
+
+The **Power Log** page (`eventlog.html`) shows the last **20** persisted events from NVS. It helps trace reboots and software issues without a serial monitor.
+
+| Event type | Badge | Examples |
+|------------|-------|----------|
+| `boot` | green | power‑on, planned restart, recovered from crash/watchdog |
+| `shutdown` | red | user request, firmware update, power loss, brownout |
+| `error` | dark red | stream connect failed, OTA write failed, VS1053 not detected, config save failed |
+| `warn` | orange | WiFi lost, stream stalled (reconnecting), firmware upload rejected |
+
+**When events are recorded**
+
+- **Planned shutdowns** – Logged synchronously before `ESP.restart()` (user reset, OTA success, NVS erase, stream stall recovery, firmware upload).
+- **Unexpected shutdowns** – Inferred on the next boot from `esp_reset_reason()` when no planned shutdown was recorded.
+- **Every boot** – Logged during setup; timestamp patched once NTP is available.
+- **Runtime errors/warnings** – Queued from any task (stream, HTTP, OTA) and flushed to NVS from the main loop; duplicate reasons within 60 s are dropped.
+
+**API:** `GET /?geteventlog` → `{"events":[{"ev":"boot","reason":"…","time":"…","known":true,"fw":"v2.40 …","epoch":…}, …]}`
+
+**Implementation:** `system/event_log.h`, `system/event_log_util.h`
 
 ---
 

@@ -434,6 +434,7 @@ bool update_software(const char *lstmodkey, const char *updatehost, const char *
  */
 bool updateFirmwareFromUrl(const String &url) {
   if (url.length() == 0 || WiFi.status() != WL_CONNECTED) {
+    eventLogRecordError("OTA aborted: no WiFi connection");
     dspOtaDisplayFailed("No WiFi");
     delay(3000);
     dspOtaDisplayRestoreDashboard();
@@ -442,6 +443,7 @@ bool updateFirmwareFromUrl(const String &url) {
 
   if (!isOtaUpdateCapable()) {
     dbgprint("OTA failed: no OTA slot in partition table");
+    eventLogRecordError("OTA aborted: no OTA partition slot");
     dspOtaDisplayFailed("No OTA slot");
     delay(3000);
     dspOtaDisplayRestoreDashboard();
@@ -471,6 +473,7 @@ bool updateFirmwareFromUrl(const String &url) {
 
   if (!httpReady) {
     dbgprint("OTA URL invalid");
+    eventLogRecordError("OTA aborted: invalid firmware URL");
     dspOtaDisplayFailed("Invalid URL");
     delay(3000);
     dspOtaDisplayRestoreDashboard();
@@ -480,6 +483,7 @@ bool updateFirmwareFromUrl(const String &url) {
   int code = http.GET();
   if (code != HTTP_CODE_OK) {
     dbgprint("OTA download failed: HTTP %d", code);
+    eventLogRecordError((String("OTA download failed: HTTP ") + code).c_str());
     char err[20];
     snprintf(err, sizeof(err), "HTTP error %d", code);
     dspOtaDisplayFailed(err);
@@ -493,6 +497,7 @@ bool updateFirmwareFromUrl(const String &url) {
   const esp_partition_t *otaPart = esp_ota_get_next_update_partition(NULL);
   if (otaPart && contentLength > 0 && (size_t)contentLength > otaPart->size) {
     dbgprint("OTA image too large (%d > %u)", contentLength, (unsigned)otaPart->size);
+    eventLogRecordError("OTA aborted: firmware image too large");
     dspOtaDisplayFailed("Image too large");
     http.end();
     delay(3000);
@@ -506,6 +511,7 @@ bool updateFirmwareFromUrl(const String &url) {
 
   if (!Update.begin(totalBytes > 0 ? totalBytes : UPDATE_SIZE_UNKNOWN)) {
     dbgprint("OTA begin failed: %s", Update.errorString());
+    eventLogRecordError((String("OTA begin failed: ") + Update.errorString()).c_str());
     dspOtaDisplayFailed(Update.errorString());
     http.end();
     delay(3000);
@@ -518,6 +524,7 @@ bool updateFirmwareFromUrl(const String &url) {
 
   if (written == 0 || !Update.end(true)) {
     dbgprint("OTA write failed: %s", Update.errorString());
+    eventLogRecordError((String("OTA write failed: ") + Update.errorString()).c_str());
     Update.abort();
     dspOtaDisplayFailed(Update.errorString());
     delay(3000);
@@ -527,6 +534,7 @@ bool updateFirmwareFromUrl(const String &url) {
 
   if (!Update.isFinished()) {
     dbgprint("OTA finished flag not set");
+    eventLogRecordError("OTA verify failed (not finished)");
     dspOtaDisplayFailed("Verify failed");
     delay(3000);
     dspOtaDisplayRestoreDashboard();

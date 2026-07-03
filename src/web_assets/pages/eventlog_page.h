@@ -14,7 +14,7 @@ const char eventlog_html[] PROGMEM = R"=====(
 <div id="body" class="container sound-page">
 			<header class="sound-page-header">
 				<h1>Power Log</h1>
-				<p class="sound-page-lead">The most recent shutdown and boot events. Times are shown from the NTP clock when it was available, otherwise as &quot;unknown&quot;.</p>
+				<p class="sound-page-lead">The most recent boot, shutdown, error and warning events, newest first. Times are shown from the NTP clock when it was available, otherwise as &quot;unknown&quot;.</p>
 			</header>
 			<div class="sound-studio">
 			<div class="row panel panel-default sound-card">

@@ -58,6 +58,7 @@ void radioSetup() {
   SPIsem = xSemaphoreCreateMutex();
   ;                                 // Semaphore for SPI bus
   metaMutex = xSemaphoreCreateMutex(); // Serializes cross-task metadata access
+  eventLogInitMutex();                 // Protects the runtime event-log buffer
   pi = esp_partition_find(ESP_PARTITION_TYPE_DATA,   // Get partition iterator for
                           ESP_PARTITION_SUBTYPE_ANY, // the NVS partition
                           partname);
@@ -189,6 +190,7 @@ void radioSetup() {
 
     if (modeReg == 0x0000 || modeReg == 0xFFFF) {
       dbgprint("VS1053 not properly installed! Register-Dump: 0x%04X", modeReg);
+      eventLogRecordError("VS1053 invalid mode register (check wiring)");
       vs1053Available = false;
     } else {
       dbgprint("VS1053 erfolgreich initialisiert. Mode-Register: 0x%04X", modeReg);
@@ -196,6 +198,7 @@ void radioSetup() {
     }
   } else {
     dbgprint("VS1053 not detected, continuing without audio decoder");
+    eventLogRecordError("VS1053 audio decoder not detected");
     vs1053Available = false;
   }
 

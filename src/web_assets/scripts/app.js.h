@@ -2868,11 +2868,13 @@ const char app_js[] PROGMEM = R"=====(
                 return;
             }
 
+            var labels = { boot: "Boot", shutdown: "Shutdown", error: "Error", warn: "Warning" };
+
             // Newest first for readability.
             for (var i = events.length - 1; i >= 0; i--) {
                 var ev = events[i] || {};
-                var kind = ev.ev === "shutdown" ? "shutdown" : "boot";
-                var kindLabel = kind === "shutdown" ? "Shutdown" : "Boot";
+                var kind = labels[ev.ev] ? ev.ev : "boot";
+                var kindLabel = labels[kind];
                 var time = ev.known ? (ev.time || "") : "unknown time";
                 var num = events.length - i;
 

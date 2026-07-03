@@ -169,6 +169,7 @@ void loop() {
       resetreq = true;
     } else {
       dbgprint("OTA update failed, device not restarted");
+      eventLogRecordError("Firmware update failed, device not restarted");
       delay(5000);
       dspOtaDisplayRestoreDashboard();
     }
@@ -177,6 +178,10 @@ void loop() {
 
   // WiFi reconnect logic - fully non-blocking so it never stalls audio buffering.
   if (WiFi.status() != WL_CONNECTED) {
+    if (wasConnected) {
+      // First detection of a dropped link (dedup in the event log guards repeats).
+      eventLogRecordWarning("WiFi connection lost");
+    }
     if (millis() - lastReconnectAttempt >= WIFI_RECONNECT_INTERVAL) {
       lastReconnectAttempt = millis();
       dbgprint("WiFi connection lost, requesting background reconnect...");

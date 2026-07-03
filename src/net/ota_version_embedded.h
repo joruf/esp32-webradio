@@ -12,12 +12,17 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.39",
-  "released": "2026-07-02",
+  "version": "v2.40",
+  "released": "2026-07-03",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.39.bin",
-  "notes": "New Power Log page: the last 20 shutdown and boot events are stored in NVS and shown in the Web UI. Planned shutdowns store their reason; unexpected ones (power loss, brownout, crash, watchdog) are inferred on the next boot. Boots are logged with date/time when NTP is available, otherwise as unknown time.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.40.bin",
+  "notes": "Power Log now records runtime errors and warnings (WiFi, stream, OTA, config, VS1053) with deduplication and Error/Warning badges on the Power Log page.",
   "history": [
+    {
+      "version": "v2.40",
+      "released": "2026-07-03",
+      "notes": "Power Log now records runtime errors and warnings (WiFi, stream, OTA, config, VS1053) with deduplication and Error/Warning badges on the Power Log page."
+    },
     {
       "version": "v2.39",
       "released": "2026-07-02",
@@ -62,11 +67,6 @@ const char ota_version_embedded_json[] PROGMEM = R"=====(
       "version": "v2.31",
       "released": "2026-06-27",
       "notes": "Introduced local firmware upload via ota.html with direct installation, plus a unified modal workflow that blocks interactions during update and reports completion after the device service is reachable again. Applied the same wait/recovery UX to online OTA updates. Moved Alarm volume fade control from display page to scheduler page for better feature ownership."
-    },
-    {
-      "version": "v2.30",
-      "released": "2026-06-27",
-      "notes": "Reworked the Play button live visualization from JS class blinking to a CSS-driven animated icon effect and moved the stream kbps pill into the metadata panel heading on a single line."
     }
   ]
 }

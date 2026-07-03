@@ -79,12 +79,18 @@ public:
     }
 
     if (reconnectAttempts_ >= 5) {
+      if (!gaveUpLogged_) {
+        gaveUpLogged_ = true;
+        eventLogRecordError("Stream watchdog gave up after 5 reconnects");
+      }
       return;
     }
 
     reconnectAttempts_++;
+    gaveUpLogged_ = false;
     dbgprint("Stream watchdog: soft reconnect attempt %d after %lu ms stall", reconnectAttempts_,
              (unsigned long)stallMs_);
+    eventLogRecordWarning("Stream stalled, reconnecting");
     lastActivityMs_ = millis();
     requestSoftStreamReconnect();
   }
@@ -93,6 +99,7 @@ private:
   uint32_t lastActivityMs_ = 0;
   uint32_t stallMs_ = 0;
   uint8_t reconnectAttempts_ = 0;
+  bool gaveUpLogged_ = false; // Ensures the "gave up" error is logged only once
 };
 
 StreamWatchdog streamWatchdog;

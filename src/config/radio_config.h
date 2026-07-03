@@ -786,6 +786,7 @@ static bool applyRadioConfigDoc(JsonDocument &doc, bool maskWifiPasswords) {
 
   if (nvsCommit() != ESP_OK) {
     dbgprint("applyRadioConfig: NVS commit failed");
+    eventLogRecordError("Config save failed (NVS commit)");
     return false;
   }
 
@@ -815,6 +816,7 @@ bool applyRadioConfigMerge(const String &patchJson, bool maskWifiPasswords) {
   JsonDocument doc;
   if (!loadRadioConfigDocument(doc)) {
     dbgprint("applyRadioConfigMerge: unable to load base config");
+    eventLogRecordError("Config save failed (base config unreadable)");
     return false;
   }
 

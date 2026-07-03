@@ -457,6 +457,7 @@ bool connectToWebradioServer() {
   }
 
   dbgprint("Request %s failed!", host.c_str());
+  eventLogRecordError((String("Stream connect failed: ") + hostwoext).c_str());
   if ((host.indexOf('<') >= 0) || (host.indexOf('>') >= 0)) {
     playlist_num = 0;
     datamode = STOPPED;

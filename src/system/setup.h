@@ -255,10 +255,12 @@ bool connectwifi() {
     // Wait max 15 seconds for connection
     if (WiFi.waitForConnectResult() != WL_CONNECTED) {
       dbgprint("BOOT: WiFi connection timed out after 15 seconds");
+      eventLogRecordWarning("WiFi connect timed out, started config AP");
       localAP = true;
     }
   } else {
     dbgprint("BOOT: No WiFi credentials found in configuration");
+    eventLogRecordWarning("No WiFi credentials, started config AP");
     localAP = true;
   }
 

@@ -25,6 +25,11 @@
 #define EVENT_LOG_MAX_LEN 4096
 #define EVENT_LOG_MAX_ENTRIES 20
 
+/** Max runtime error/warning events buffered in RAM before the loop flushes them. */
+#define EVENT_LOG_PENDING_MAX 8
+/** Suppress identical reasons logged again within this window (flash-wear guard). */
+#define EVENT_LOG_DEDUP_MS 60000UL
+
 /** Planned shutdown reason set before an intentional restart. */
 static String eventLogPlannedReason = "";
 /** True while the most recent boot entry still needs a real timestamp. */
@@ -33,6 +38,21 @@ static bool eventLogBootTimePending = false;
 static uint32_t eventLogBootLoggedAt = 0;
 /** Guard so the shutdown entry is written only once per restart. */
 static bool eventLogShutdownWritten = false;
+
+/** One buffered runtime event (error/warning) awaiting persistence. */
+struct EventLogPending {
+  char ev[10];
+  char reason[80];
+};
+/** RAM ring of pending runtime events (filled by any task, drained in loop). */
+static EventLogPending eventLogPending[EVENT_LOG_PENDING_MAX];
+/** Number of valid entries currently in eventLogPending. */
+static volatile uint8_t eventLogPendingCount = 0;
+/** Serializes access to the pending buffer across tasks (stream, loop, http). */
+static SemaphoreHandle_t eventLogMutex = NULL;
+/** Last queued reason and time, used to deduplicate repeated errors. */
+static char eventLogLastReason[80] = "";
+static uint32_t eventLogLastReasonMs = 0;
 
 /**
  * @brief Read the raw event-log JSON document from NVS.
@@ -123,6 +143,131 @@ static void eventLogAppendPersisted(const char *ev, const char *reason, bool tim
 }
 
 /**
+ * @brief Create the mutex protecting the pending runtime-event buffer.
+ *
+ * Call once during setup before the audio/stream tasks are started.
+ */
+void eventLogInitMutex() {
+  if (eventLogMutex == NULL) {
+    eventLogMutex = xSemaphoreCreateMutex();
+  }
+}
+
+/**
+ * @brief Take the pending-buffer mutex (no-op when not yet created).
+ *
+ * @return true when the caller may access the pending buffer
+ */
+static bool eventLogTakeLock() {
+  if (eventLogMutex == NULL) {
+    return true; // Early boot: still single-threaded
+  }
+  return xSemaphoreTake(eventLogMutex, pdMS_TO_TICKS(50)) == pdTRUE;
+}
+
+/** @brief Release the pending-buffer mutex (no-op when not yet created). */
+static void eventLogGiveLock() {
+  if (eventLogMutex != NULL) {
+    xSemaphoreGive(eventLogMutex);
+  }
+}
+
+/**
+ * @brief Queue a runtime event for deferred persistence from the main loop.
+ *
+ * Safe to call from any task. The event is copied into a small RAM buffer and
+ * written to NVS later by eventLogProcess() (loop context), so tasks never touch
+ * NVS directly. Identical reasons within EVENT_LOG_DEDUP_MS are dropped to bound
+ * flash writes when an error condition persists.
+ *
+ * @param ev     Event kind ("error" or "warn")
+ * @param reason Human-readable, concise reason
+ */
+static void eventLogQueueEvent(const char *ev, const char *reason) {
+  if (reason == NULL) {
+    reason = "";
+  }
+
+  if (!eventLogTakeLock()) {
+    return;
+  }
+
+  uint32_t now = millis();
+  bool duplicate = (strncmp(eventLogLastReason, reason, sizeof(eventLogLastReason)) == 0) &&
+                   ((now - eventLogLastReasonMs) < EVENT_LOG_DEDUP_MS);
+
+  if (!duplicate && eventLogPendingCount < EVENT_LOG_PENDING_MAX) {
+    EventLogPending &slot = eventLogPending[eventLogPendingCount];
+    strncpy(slot.ev, ev ? ev : "", sizeof(slot.ev) - 1);
+    slot.ev[sizeof(slot.ev) - 1] = '\0';
+    strncpy(slot.reason, reason, sizeof(slot.reason) - 1);
+    slot.reason[sizeof(slot.reason) - 1] = '\0';
+    eventLogPendingCount++;
+
+    strncpy(eventLogLastReason, reason, sizeof(eventLogLastReason) - 1);
+    eventLogLastReason[sizeof(eventLogLastReason) - 1] = '\0';
+    eventLogLastReasonMs = now;
+  }
+
+  eventLogGiveLock();
+}
+
+/**
+ * @brief Record a software error for later review on the Power Log page.
+ *
+ * @param reason Concise description of the failure
+ */
+void eventLogRecordError(const char *reason) {
+  dbgprint("EVENTLOG error: %s", reason ? reason : "");
+  eventLogQueueEvent("error", reason);
+}
+
+/**
+ * @brief Record a non-fatal warning for later review on the Power Log page.
+ *
+ * @param reason Concise description of the condition
+ */
+void eventLogRecordWarning(const char *reason) {
+  dbgprint("EVENTLOG warn: %s", reason ? reason : "");
+  eventLogQueueEvent("warn", reason);
+}
+
+/**
+ * @brief Append all buffered runtime events into @p doc and clear the buffer.
+ *
+ * @param doc Target event-log document ({"events":[...]})
+ * @return true when at least one entry was appended
+ */
+static bool eventLogAppendPendingTo(JsonDocument &doc) {
+  EventLogPending local[EVENT_LOG_PENDING_MAX];
+  uint8_t count = 0;
+
+  if (!eventLogTakeLock()) {
+    return false;
+  }
+  count = eventLogPendingCount;
+  for (uint8_t i = 0; i < count; i++) {
+    local[i] = eventLogPending[i];
+  }
+  eventLogPendingCount = 0;
+  eventLogGiveLock();
+
+  if (count == 0) {
+    return false;
+  }
+
+  String timeStr;
+  uint32_t epoch = 0;
+  bool known = eventLogFormatNow(timeStr, epoch);
+
+  for (uint8_t i = 0; i < count; i++) {
+    eventLogAppendEntry(doc, local[i].ev, local[i].reason, FIRMWARE, timeStr.c_str(), epoch, known,
+                        EVENT_LOG_MAX_ENTRIES);
+  }
+  return true;
+}
+
+/**
  * @brief Map an ESP reset reason to a shutdown label (for unexpected restarts).
  *
  * @param reason Reset reason from ESP-IDF
@@ -209,6 +354,10 @@ void eventLogRecordBoot() {
   eventLogAppendEntry(doc, "boot", eventLogBootReason(reason), FIRMWARE, timeStr.c_str(), epoch, known,
                       EVENT_LOG_MAX_ENTRIES);
 
+  // Fold in any warnings/errors already queued during early setup (e.g. missing
+  // VS1053, WiFi fallback) so they are stored together with this boot entry.
+  eventLogAppendPendingTo(doc);
+
   String out;
   serializeJson(doc, out);
   eventLogSetJson(out);
@@ -249,6 +398,22 @@ void eventLogRecordShutdown() {
  * pending and a synced clock is available, or until a timeout elapses.
  */
 void eventLogProcess() {
+  // 1. Persist buffered runtime errors/warnings (from any task) in loop context.
+  if (eventLogPendingCount > 0) {
+    JsonDocument doc;
+    String stored = eventLogGetJson();
+    if (deserializeJson(doc, stored) || !doc["events"].is<JsonArray>()) {
+      doc.clear();
+      doc["events"].to<JsonArray>();
+    }
+    if (eventLogAppendPendingTo(doc)) {
+      String out;
+      serializeJson(doc, out);
+      eventLogSetJson(out);
+    }
+  }
+
+  // 2. Patch the pending boot timestamp once the NTP clock is available.
   if (!eventLogBootTimePending) {
     return;
   }
@@ -282,15 +447,22 @@ void eventLogProcess() {
     return;
   }
 
-  JsonObject last = events[events.size() - 1];
-  if (last["ev"] == "boot" && last["known"].as<bool>() == false) {
-    last["time"] = timeStr;
-    last["epoch"] = epoch;
-    last["known"] = true;
+  // Find the most recent boot entry still missing a timestamp (runtime
+  // errors/warnings may have been appended after it) and patch it.
+  for (int i = (int)events.size() - 1; i >= 0; i--) {
+    JsonObject entry = events[i];
+    if (entry["ev"] == "boot") {
+      if (entry["known"].as<bool>() == false) {
+        entry["time"] = timeStr;
+        entry["epoch"] = epoch;
+        entry["known"] = true;
 
-    String out;
-    serializeJson(doc, out);
-    eventLogSetJson(out);
+        String out;
+        serializeJson(doc, out);
+        eventLogSetJson(out);
+      }
+      break;
+    }
   }
 
   eventLogBootTimePending = false;
