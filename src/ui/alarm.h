@@ -64,7 +64,14 @@ void handleSleepTimer() {
     if (sleeptimer_ms <= 0) {
       sleeptimer_ms = -1; // Reset timer
       if (datamode != STOPPED) {
-        runStream(false);
+        // Gentle "sleep" shutdown: fade the volume down over the configured
+        // "Alarm volume fade" duration, then stop (mirrors the alarm fade-in).
+        dbgprint("Snooze timer expired, fading out over %d s", features.alarm_fade_sec);
+#if !defined(BLUETFT)
+        showTextOnTFT(1, "Stream stopped");
+#endif
+        showTextOnTFT(3, "Radio off");
+        startAlarmVolumeFadeOut(features.alarm_fade_sec);
       }
     }
   } else {

@@ -157,7 +157,10 @@ static void startVolumeFadeIn(void) {
 }
 
 /**
- * @brief Starts a long fade-in for alarm wake (from silence to reqvol).
+ * @brief Starts the alarm volume fade-in (from silence up to reqvol).
+ *
+ * Used when a scheduled alarm starts so the music rises gently from silence to
+ * the configured volume over the "Alarm volume fade" duration.
  *
  * @param durationSec Fade duration in seconds
  */
@@ -174,6 +177,40 @@ void startAlarmVolumeFade(uint16_t durationSec) {
   volumeFadeActive = true;
   muteflag = false;
   volumeFadeStartPending = false;
+}
+
+/**
+ * @brief Starts the alarm volume fade-out (from current level down to silence,
+ *        then stops playback).
+ *
+ * Mirror of startAlarmVolumeFade() for a gentle shutdown: used by the snooze
+ * timer so the music fades away over the "Alarm volume fade" duration instead of
+ * stopping abruptly. Falls back to an immediate stop when nothing is audible.
+ *
+ * @param durationSec Fade duration in seconds
+ */
+void startAlarmVolumeFadeOut(uint16_t durationSec) {
+  const uint8_t startLevel = getOutputVolume();
+
+  volumeFadeDurationMs = (uint32_t)durationSec * 1000UL;
+  if (volumeFadeDurationMs < 1000UL) {
+    volumeFadeDurationMs = 1000UL;
+  }
+  volumeFadeIn = false;
+  volumeFadeStopPending = true; // Stop the stream once the fade reaches zero
+  volumeFadeStartPending = false;
+  volumeFadeStartMs = millis();
+  volumeFadeStartLevel = startLevel;
+  volumeFadeCurrent = startLevel;
+
+  if (startLevel == 0) {
+    volumeFadeActive = false;
+    volumeFadeDurationMs = VOLUME_FADE_MS;
+    finishStreamStop();
+    return;
+  }
+
+  volumeFadeActive = true;
 }
 
 /**

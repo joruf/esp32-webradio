@@ -12,12 +12,17 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.40",
+  "version": "v2.41",
   "released": "2026-07-03",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.40.bin",
-  "notes": "Power Log now records runtime errors and warnings (WiFi, stream, OTA, config, VS1053) with deduplication and Error/Warning badges on the Power Log page.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.41.bin",
+  "notes": "The scheduler setting 'Alarm volume fade' now works both ways: alarms fade the volume in from silence, and the snooze/sleep timer fades the volume out gently over the same duration before stopping.",
   "history": [
+    {
+      "version": "v2.41",
+      "released": "2026-07-03",
+      "notes": "The scheduler setting 'Alarm volume fade' now works both ways: alarms fade the volume in from silence, and the snooze/sleep timer fades the volume out gently over the same duration before stopping."
+    },
     {
       "version": "v2.40",
       "released": "2026-07-03",
@@ -62,11 +67,6 @@ const char ota_version_embedded_json[] PROGMEM = R"=====(
       "version": "v2.32",
       "released": "2026-06-27",
       "notes": "Improved OTA reliability and UX: static WebUI assets now use ETag/Last-Modified with conditional 304 responses, local OTA upload shows progress modal from upload start through install, and OTA TFT screen performs a full black clear to prevent leftover graphics."
-    },
-    {
-      "version": "v2.31",
-      "released": "2026-06-27",
-      "notes": "Introduced local firmware upload via ota.html with direct installation, plus a unified modal workflow that blocks interactions during update and reports completion after the device service is reachable again. Applied the same wait/recovery UX to online OTA updates. Moved Alarm volume fade control from display page to scheduler page for better feature ownership."
     }
   ]
 }

@@ -116,7 +116,7 @@ esp32-webradio/
   - Pages: Webradio, **MP3 Stream** (LAN playback from PC/phone), Scheduler, Configuration, Sound, Display, **OTA Update**, Maintenance, **Power Log**, Diagnostics, About
   - Volume, tone control (bass/treble gain & frequency)
   - Preset management (add, edit, delete, drag‑and‑drop reorder)
-  - Snooze timer & alarm scheduler (weekdays, multiple alarms, fade‑in in **5‑second steps**)
+  - Snooze timer & alarm scheduler (weekdays, multiple alarms, **Alarm volume fade** in **5‑second steps** – fades in on alarm start, out on snooze end)
 - **Power Log** – The last **20** boot, shutdown, error and warning events are stored in NVS and shown on `eventlog.html`.
   - **Boot / shutdown** – Planned restarts (user, firmware update, NVS erase, stream stall recovery) and unexpected ones (power loss, brownout, crash, watchdog) inferred from `esp_reset_reason()`
   - **Errors & warnings** – Runtime issues such as WiFi loss, stream connect failures, watchdog stalls, OTA/upload failures, config save errors and VS1053 detection problems
@@ -151,7 +151,7 @@ Captured from a live device to document the current look and layout of each page
   ![Webradio Dashboard](docs/screenshots/webui/index.png)
 - **MP3 Stream** (`mp3stream.html`) – Stream MP3 files from your PC or phone over the local network (see [MP3 Stream – play your own music](#mp3-stream--play-your-own-music) below).
   ![MP3 Stream](docs/screenshots/webui/mp3stream.png)
-- **Scheduler** (`scheduler.html`) – Snooze timer, multi‑alarm scheduling with weekday selection, and alarm fade‑in (5–60 s, 5 s steps).
+- **Scheduler** (`scheduler.html`) – Snooze timer, multi‑alarm scheduling with weekday selection, and the Alarm volume fade (5–60 s, 5 s steps) used for both alarm fade‑in and snooze fade‑out.
   ![Scheduler](docs/screenshots/webui/scheduler.png)
 - **Configuration** (`config.html`) – WiFi priorities, clock settings, startup preset, watchdog option, presets, and GPIO mapping.
   ![Configuration](docs/screenshots/webui/config.png)
@@ -375,17 +375,17 @@ You can query the current radio status, change volume, select presets, etc.
 ## Alarm & Sleep Timer
 
 - **Alarm Clock** – Configured on the **Scheduler** page (`scheduler.html`).
-  - Multiple alarms with start/stop times and weekday selection, plus **alarm volume fade‑in** (5–60 s in **5‑second steps**)
-  - At start time the radio plays the configured boot preset; at stop time it shuts off
+  - Multiple alarms with start/stop times and weekday selection, plus the **Alarm volume fade** (5–60 s in **5‑second steps**)
+  - At start time the radio plays the configured boot preset and **fades the volume in** from silence; at stop time it shuts off
   - Fade duration takes effect immediately after saving (no reboot required)
   - Stored as JSON in NVS (`alrm_config`, also part of `radio_config`)
   - Implemented in `config/alarm_config.h` and `ui/alarm.h` using NTP time (`system/time.h`)
 
 - **Snooze / Sleep Timer** – Automatic shutoff for night‑time listening.
   - Use the drop‑down on the index page or send `/?snooze=XX` (also `/?sleeptime=XX`)
-  - After the chosen minutes, the radio stops and the display turns off
+  - After the chosen minutes, the volume **fades out** over the Alarm volume fade duration, then the radio stops and the display turns off
   - Any interaction (encoder, button, web command) resets the timer
-  - Implemented in `ui/alarm.h`
+  - Implemented in `ui/alarm.h` (`startAlarmVolumeFadeOut`)
 
 ---
 

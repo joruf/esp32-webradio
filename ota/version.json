@@ -1,10 +1,15 @@
 {
-  "version": "v2.40",
+  "version": "v2.41",
   "released": "2026-07-03",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.40.bin",
-  "notes": "Power Log now records runtime errors and warnings in addition to boot/shutdown events: WiFi loss, stream connect failures, stream watchdog stalls, OTA/upload failures, config save errors, VS1053 detection problems and more. Events are deduplicated to protect flash wear and shown on the Power Log page with Error/Warning badges.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.41.bin",
+  "notes": "The scheduler setting is now called 'Alarm volume fade' and is used for both directions: an alarm fades the volume in from silence to your set level when it starts, and the snooze/sleep timer now fades the volume out gently over the same duration before stopping, instead of cutting off abruptly.",
   "history": [
+    {
+      "version": "v2.41",
+      "released": "2026-07-03",
+      "notes": "The scheduler setting is now called 'Alarm volume fade' and is used for both directions: an alarm fades the volume in from silence to your set level when it starts, and the snooze/sleep timer now fades the volume out gently over the same duration before stopping, instead of cutting off abruptly."
+    },
     {
       "version": "v2.40",
       "released": "2026-07-03",
