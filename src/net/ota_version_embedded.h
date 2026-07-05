@@ -12,12 +12,22 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.43",
-  "released": "2026-07-03",
+  "version": "v2.45",
+  "released": "2026-07-05",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.43.bin",
-  "notes": "Fixed alarm schedule inconsistency: the Web UI could show a stale default alarm while the firmware scheduled a different one (alarms live in the alrm_config NVS key, the UI read a cached copy in radio_config). The UI now always shows the real active schedule, the cache is healed on boot, and alarm saves keep both in sync.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.45.bin",
+  "notes": "Hardened config persistence: partial saves skip alrm_config writes, empty alarm patches ignored, no boot auto-reset on invalid alrm_config, legacy alrm_start/stop keys removed, Web UI no longer injects default alarms.",
   "history": [
+    {
+      "version": "v2.45",
+      "released": "2026-07-05",
+      "notes": "Hardened config persistence: partial saves skip alrm_config writes, empty alarm patches ignored, no boot auto-reset on invalid alrm_config, legacy alrm_start/stop keys removed, Web UI no longer injects default alarms."
+    },
+    {
+      "version": "v2.44",
+      "released": "2026-07-05",
+      "notes": "Fixed alarm schedules silently reset to factory default (6:30-7:30) when saving unrelated settings. Partial saves seed alarms from authoritative alrm_config; Web UI no longer substitutes defaults on load errors; alarm reductions logged as warnings."
+    },
     {
       "version": "v2.43",
       "released": "2026-07-03",
@@ -57,16 +67,6 @@ const char ota_version_embedded_json[] PROGMEM = R"=====(
       "version": "v2.36",
       "released": "2026-07-02",
       "notes": "Stability and structure release: user volume 0-100 now maps onto the audible VS1053 range with 5-step encoder increments and immediate persistent save; fixed leftover third digit in the TFT volume readout; OTA update screen no longer shows artifacts and reliably shows size and estimated time (dashboard rendering is paused during flashing); thread-safe stream metadata, non-blocking client stop, HTTP read fix; enlarged app partitions and reorganized source into domain folders."
-    },
-    {
-      "version": "v2.35",
-      "released": "2026-06-28",
-      "notes": "MP3 Stream page responsive layout: viewport meta tag and index.html-style panel structure for smartphones; mobile CSS for full-width action buttons, volume slider, and help text wrapping."
-    },
-    {
-      "version": "v2.34",
-      "released": "2026-06-28",
-      "notes": "MP3 Stream page redesign: scan LAN folder via ESP32 proxy (?mediadir=), track list with Play all, sessionStorage keeps playback across Web UI navigation, and firmware reconnects interrupted LAN streams before Content-Length is complete."
     }
   ]
 }

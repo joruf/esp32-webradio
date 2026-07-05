@@ -1277,8 +1277,8 @@ const char app_js[] PROGMEM = R"=====(
         }
 
         try {
-            applyRadioConfigToForms(mergeWithDefaultConfig(parseRadioConfigData(JSON.parse(text))));
-            saveRadioConfig({ applyAudio: true });
+            var parsed = parseRadioConfigData(JSON.parse(text));
+            saveConfigPatch(parsed, { applyAudio: true, silentLog: false });
         } catch (e) {
             showCommandLog("Invalid JSON: " + (e && e.message ? e.message : e));
         }
@@ -1328,9 +1328,6 @@ const char app_js[] PROGMEM = R"=====(
     function applyAlarmsToForms(cfg) {
         alarmState.version = cfg.version || 1;
         alarmState.alarms = cfg.alarms || [];
-        if ($("#alarm-list").length && alarmState.alarms.length === 0) {
-            alarmState.alarms.push(createDefaultAlarm());
-        }
         if ($("#alarm-list").length) {
             renderAlarmList();
         }
@@ -1351,17 +1348,18 @@ const char app_js[] PROGMEM = R"=====(
                 try {
                     var cfg = parseRadioConfigData(data);
                     if (!cfg.alarms || cfg.alarms.length === 0) {
-                        cfg.alarms = getDefaultRadioConfig().alarms.slice(0);
+                        console.warn("Device returned no alarm schedules; not substituting defaults");
+                        cfg.alarms = [];
                     }
                     applyAlarmsToForms(cfg);
                 } catch (e) {
                     console.log("Failed to parse alarm configuration", e);
-                    applyAlarmsToForms({ version: 1, alarms: getDefaultRadioConfig().alarms.slice(0) });
+                    applyAlarmsToForms({ version: 1, alarms: [] });
                 }
             },
             error: function() {
                 console.log("Failed to load alarm configuration");
-                applyAlarmsToForms({ version: 1, alarms: getDefaultRadioConfig().alarms.slice(0) });
+                applyAlarmsToForms({ version: 1, alarms: [] });
             }
         });
     }
@@ -1377,6 +1375,13 @@ const char app_js[] PROGMEM = R"=====(
         if (!validation.ok) {
             if (!options.silent) {
                 showCommandLog(validation.message);
+            }
+            return false;
+        }
+
+        if (!validation.config.alarms || validation.config.alarms.length === 0) {
+            if (!options.silent) {
+                showCommandLog("No alarm schedules to save. Use Add Alarm first.", { type: "error" });
             }
             return false;
         }
@@ -1823,9 +1828,8 @@ const char app_js[] PROGMEM = R"=====(
         if (!merged.gpio || merged.gpio.length === 0) {
             merged.gpio = defaults.gpio.slice(0);
         }
-        if (!merged.alarms || merged.alarms.length === 0) {
-            merged.alarms = defaults.alarms.slice(0);
-        }
+        // Never substitute factory default alarms: an empty/missing list is intentional.
+        // Defaults are only added explicitly via "Add Alarm" on the scheduler page.
         if (!merged.clock) {
             merged.clock = defaults.clock;
         }
@@ -1859,9 +1863,6 @@ const char app_js[] PROGMEM = R"=====(
         config = mergeWithDefaultConfig(config);
         delete config.wifi_signals;
         config.alarms = sanitizeAlarmsForSave(config.alarms);
-        if (!config.alarms.length) {
-            config.alarms = getDefaultRadioConfig().alarms.slice(0);
-        }
 
         if (!config.features) {
             config.features = getDefaultRadioConfig().features;

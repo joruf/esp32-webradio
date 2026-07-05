@@ -1,10 +1,20 @@
 {
-  "version": "v2.43",
-  "released": "2026-07-03",
+  "version": "v2.45",
+  "released": "2026-07-05",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.43.bin",
-  "notes": "Fixed alarm schedule inconsistency: the Web UI could show a different (stale, default) alarm than the one the firmware actually used, because alarms live in a separate NVS key (alrm_config) while the Web UI read a cached copy in the radio_config blob. The Web UI now always shows the real active schedule, the cached copy is healed on boot, and every alarm save keeps both in sync.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.45.bin",
+  "notes": "Hardened configuration persistence: partial saves no longer write alarms to NVS at all (only explicit alarm saves do), empty alarm arrays in patches are ignored, invalid alrm_config at boot is no longer auto-reset to factory defaults, obsolete alrm_start/alrm_stop legacy keys are removed after migration, and the Web UI no longer injects default 6:30-7:30 alarms when loading or saving.",
   "history": [
+    {
+      "version": "v2.45",
+      "released": "2026-07-05",
+      "notes": "Hardened configuration persistence: partial saves no longer write alarms to NVS at all (only explicit alarm saves do), empty alarm arrays in patches are ignored, invalid alrm_config at boot is no longer auto-reset to factory defaults, obsolete alrm_start/alrm_stop legacy keys are removed after migration, and the Web UI no longer injects default 6:30-7:30 alarms when loading or saving."
+    },
+    {
+      "version": "v2.44",
+      "released": "2026-07-05",
+      "notes": "Fixed alarm schedules being silently reset to the factory default (6:30-7:30) when saving unrelated settings such as alarm fade or display options. Partial config saves now always seed alarms from the authoritative alrm_config NVS key instead of a stale radio_config blob. The Web UI no longer substitutes default alarms on load errors, and alarm count reductions are logged as warnings in the Power Log."
+    },
     {
       "version": "v2.43",
       "released": "2026-07-03",

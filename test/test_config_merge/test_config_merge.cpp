@@ -120,7 +120,7 @@ void test_clock_patch_merges_per_field(void) {
   TEST_ASSERT_EQUAL_INT(1, base["clock"]["dst"].as<int>());
 }
 
-/** Array patches (alarms/wifi/presets/gpio) replace the whole array. */
+/** Non-empty alarms patches replace the whole array. */
 void test_alarms_patch_replaces_array(void) {
   JsonDocument base;
   buildBase(base);
@@ -136,6 +136,24 @@ void test_alarms_patch_replaces_array(void) {
 
   TEST_ASSERT_EQUAL_INT(2, base["alarms"].as<JsonArray>().size());
   TEST_ASSERT_EQUAL_INT(5, base["alarms"][0]["id"].as<int>());
+}
+
+/** An empty alarms array in a patch must not wipe existing schedules. */
+void test_empty_alarms_patch_is_noop(void) {
+  JsonDocument base;
+  buildBase(base);
+  JsonArray baseAlarms = base["alarms"].to<JsonArray>();
+  baseAlarms.clear();
+  JsonObject existing = baseAlarms.add<JsonObject>();
+  existing["id"] = 9;
+
+  JsonDocument patch;
+  patch["alarms"].to<JsonArray>();
+
+  mergeRadioConfigPatch(base, patch);
+
+  TEST_ASSERT_EQUAL_INT(1, base["alarms"].as<JsonArray>().size());
+  TEST_ASSERT_EQUAL_INT(9, base["alarms"][0]["id"].as<int>());
 }
 
 /** An empty patch changes nothing. */
@@ -160,6 +178,7 @@ int main(int, char **) {
   RUN_TEST(test_tone_patch_merges_per_field);
   RUN_TEST(test_clock_patch_merges_per_field);
   RUN_TEST(test_alarms_patch_replaces_array);
+  RUN_TEST(test_empty_alarms_patch_is_noop);
   RUN_TEST(test_empty_patch_is_noop);
   return UNITY_END();
 }

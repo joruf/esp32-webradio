@@ -59,7 +59,11 @@ inline void mergeRadioConfigPatch(JsonDocument &doc, JsonDocument &patch) {
   }
 
   if (patch["alarms"].is<JsonArray>()) {
-    doc["alarms"].set(patch["alarms"]);
+    JsonArray patchAlarms = patch["alarms"].as<JsonArray>();
+    // An empty array means "no alarm changes" (partial save), not "delete all alarms".
+    if (patchAlarms.size() > 0) {
+      doc["alarms"].set(patchAlarms);
+    }
   }
   if (patch["wifi"].is<JsonArray>()) {
     doc["wifi"].set(patch["wifi"]);

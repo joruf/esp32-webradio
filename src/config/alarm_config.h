@@ -7,6 +7,7 @@
 #define ALARM_CONFIG_H
 
 #include <ArduinoJson.h>
+#include "system/event_log.h"
 
 #define MAX_ALARMS 16
 #define ALRM_CONFIG_MAX_LEN 2048
@@ -38,6 +39,7 @@ AlarmSchedule alarm_schedule;
 
 void migrateLegacyAlarmKeys();
 void resetAlarmScheduleTracking(void);
+static void eraseLegacyAlarmKeys(void);
 
 /**
  * @brief Read the alarm configuration JSON from NVS.
@@ -300,12 +302,36 @@ void loadAlarmConfigFromNvs() {
     if (isValidAlarmConfigJson(json) && parseAlarmConfig(json)) {
       ini_block.alrm_config = json;
       dbgprint("BOOT: Alarm configuration loaded (%d schedule(s))", alarm_schedule.count);
+      eraseLegacyAlarmKeys();
       return;
     }
-    dbgprint("BOOT: Invalid alrm_config in NVS, restoring default alarm schedule");
+    dbgprint("BOOT: alrm_config in NVS failed validation (%d bytes), not auto-resetting", json.length());
+    eventLogRecordWarning("Invalid alrm_config at boot (kept existing schedule)");
+    if (alarm_schedule.count > 0) {
+      return;
+    }
+    if (ini_block.alrm_config.length() > 0 && isValidAlarmConfigJson(ini_block.alrm_config) &&
+        parseAlarmConfig(ini_block.alrm_config)) {
+      return;
+    }
+    return;
   }
 
   migrateLegacyAlarmKeys();
+}
+
+/**
+ * @brief Remove obsolete per-field alarm keys after migration to alrm_config JSON.
+ */
+static void eraseLegacyAlarmKeys(void) {
+  nvsOpen();
+  if (nvsKeyExists("alrm_start")) {
+    nvs_erase_key(nvshandle, "alrm_start");
+  }
+  if (nvsKeyExists("alrm_stop")) {
+    nvs_erase_key(nvshandle, "alrm_stop");
+  }
+  nvsCommit();
 }
 
 /**
@@ -318,7 +344,9 @@ void migrateLegacyAlarmKeys() {
   if (start.length() < 3 && stop.length() < 3) {
     setDefaultAlarmSchedule();
     ini_block.alrm_config = serializeAlarmConfig();
-    nvsSetAlarmConfig(ini_block.alrm_config);
+    if (nvsSetAlarmConfig(ini_block.alrm_config) == ESP_OK) {
+      eraseLegacyAlarmKeys();
+    }
     return;
   }
 
@@ -339,7 +367,11 @@ void migrateLegacyAlarmKeys() {
   entry.days_mask = 0x7F;
 
   ini_block.alrm_config = serializeAlarmConfig();
-  nvsSetAlarmConfig(ini_block.alrm_config);
+  if (nvsSetAlarmConfig(ini_block.alrm_config) != ESP_OK) {
+    return;
+  }
+
+  eraseLegacyAlarmKeys();
   dbgprint("Migrated legacy alarm keys to alrm_config");
 }
 
@@ -354,8 +386,16 @@ bool applyAlarmConfig(const String &json) {
     return false;
   }
 
+  const uint8_t prevCount = alarm_schedule.count;
+
   if (!parseAlarmConfig(json)) {
     return false;
+  }
+
+  if (prevCount > 0 && alarm_schedule.count < prevCount) {
+    eventLogRecordWarning((String("Alarm schedules reduced from ") + prevCount + " to " +
+                           alarm_schedule.count)
+                              .c_str());
   }
 
   for (uint8_t i = 0; i < alarm_schedule.count; i++) {

@@ -236,6 +236,32 @@ static void appendDefaultAlarm(JsonArray &alarms) {
 }
 
 /**
+ * @brief Overlay the alarms array from the authoritative alrm_config NVS key.
+ *
+ * The radio_config blob can carry a stale copy (e.g. factory 6:30-7:30) while
+ * alrm_config holds the schedule the firmware actually runs. Partial saves
+ * (features, clock, tone) must never persist that stale copy back into NVS.
+ *
+ * @param doc Target radio configuration document (modified in place)
+ */
+static void seedAlarmsFromAuthoritativeStore(JsonDocument &doc) {
+  String alarmJson = ini_block.alrm_config.length() > 0 ? ini_block.alrm_config : nvsGetAlarmConfig();
+  if (alarmJson.length() == 0) {
+    return;
+  }
+
+  JsonDocument alarmsDoc;
+  if (deserializeJson(alarmsDoc, alarmJson) || alarmsDoc.overflowed()) {
+    return;
+  }
+  if (!alarmsDoc["alarms"].is<JsonArray>() || alarmsDoc["alarms"].size() == 0) {
+    return;
+  }
+
+  doc["alarms"].set(alarmsDoc["alarms"]);
+}
+
+/**
  * @brief Fill missing top-level radio configuration fields with firmware defaults.
  *
  * Existing values are preserved. New fields introduced by firmware updates are added
@@ -253,6 +279,10 @@ static void ensureRadioConfigStructure(JsonDocument &doc) {
     doc["alarms"].to<JsonArray>();
   }
   JsonArray alarms = doc["alarms"].to<JsonArray>();
+  if (alarms.size() == 0) {
+    seedAlarmsFromAuthoritativeStore(doc);
+    alarms = doc["alarms"].as<JsonArray>();
+  }
   if (alarms.size() == 0) {
     appendDefaultAlarm(alarms);
   }
@@ -620,9 +650,11 @@ static bool loadRadioConfigDocument(JsonDocument &doc) {
  *
  * @param doc Parsed and normalized radio configuration document
  * @param maskWifiPasswords If true, masked WiFi passwords are restored from NVS
+ * @param updateAlarms If true, persist the alarms array to alrm_config NVS; false
+ *                     keeps the authoritative schedule untouched (partial saves)
  * @return true if configuration was accepted
  */
-static bool applyRadioConfigDoc(JsonDocument &doc, bool maskWifiPasswords) {
+static bool applyRadioConfigDoc(JsonDocument &doc, bool maskWifiPasswords, bool updateAlarms) {
   ensureRadioConfigStructure(doc);
   doc.remove("wifi_signals");
 
@@ -746,7 +778,7 @@ static bool applyRadioConfigDoc(JsonDocument &doc, bool maskWifiPasswords) {
   }
 
   String alarmsJson = extractAlarmsJsonFromDoc(doc);
-  if (alarmsJson.length() > 0) {
+  if (updateAlarms && alarmsJson.length() > 0) {
     if (!applyAlarmConfig(alarmsJson)) {
       dbgprint("applyRadioConfig: alarm save rejected, keeping existing schedule");
       JsonDocument alarmsDoc;
@@ -836,8 +868,16 @@ bool applyRadioConfigMerge(const String &patchJson, bool maskWifiPasswords) {
   // back to the requested preset while a switch is still in progress (-1).
   doc["preset"] = (currentpreset >= 0) ? currentpreset : ini_block.newpreset;
 
+  // Partial patches never carry alarms. Seed from the authoritative alrm_config
+  // key so a stale radio_config blob cannot overwrite the live schedule.
+  const bool patchUpdatesAlarms =
+      patch["alarms"].is<JsonArray>() && patch["alarms"].as<JsonArray>().size() > 0;
+  if (!patchUpdatesAlarms) {
+    seedAlarmsFromAuthoritativeStore(doc);
+  }
+
   mergeRadioConfigPatch(doc, patch);
-  return applyRadioConfigDoc(doc, maskWifiPasswords);
+  return applyRadioConfigDoc(doc, maskWifiPasswords, patchUpdatesAlarms);
 }
 
 /**
