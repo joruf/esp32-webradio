@@ -1,10 +1,15 @@
 {
-  "version": "v2.42",
+  "version": "v2.43",
   "released": "2026-07-03",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.42.bin",
-  "notes": "Fixed a rare hang where the Web UI became unreachable (device still online) for several minutes: the live-status (SSE) push from the main loop could block on a dead/half-open browser connection until the TCP timeout expired. SSE events are now only sent when the network send buffer has room, a stuck client is dropped after a short grace period, and the blocking flush was removed - so the main loop stays responsive.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.43.bin",
+  "notes": "Fixed alarm schedule inconsistency: the Web UI could show a different (stale, default) alarm than the one the firmware actually used, because alarms live in a separate NVS key (alrm_config) while the Web UI read a cached copy in the radio_config blob. The Web UI now always shows the real active schedule, the cached copy is healed on boot, and every alarm save keeps both in sync.",
   "history": [
+    {
+      "version": "v2.43",
+      "released": "2026-07-03",
+      "notes": "Fixed alarm schedule inconsistency: the Web UI could show a different (stale, default) alarm than the one the firmware actually used, because alarms live in a separate NVS key (alrm_config) while the Web UI read a cached copy in the radio_config blob. The Web UI now always shows the real active schedule, the cached copy is healed on boot, and every alarm save keeps both in sync."
+    },
     {
       "version": "v2.42",
       "released": "2026-07-03",

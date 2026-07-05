@@ -179,6 +179,7 @@ void radioSetup() {
   }
   otaChecker.check(false);
   loadAlarmConfigFromNvs(); // Load or migrate alarm JSON configuration
+  syncAlarmsToRadioConfig(); // Heal a stale alarms copy in the radio_config blob
   dbgprint("BOOT: Preferences loaded, active preset %d, volume %d", ini_block.newpreset, ini_block.reqvol);
   // tcpip_adapter_set_hostname(TCPIP_ADAPTER_IF_STA, NAME);
   WiFi.setHostname(NAME);

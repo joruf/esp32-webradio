@@ -953,6 +953,17 @@ String getRadioConfigJsonForWeb() {
       ensureRadioConfigFeatures(doc);
       maskWifiPasswordsForWeb(doc);
 
+      // Alarms are owned by the authoritative alrm_config key (that is what the
+      // firmware actually schedules). The copy embedded in the radio_config blob
+      // can be stale, so always overlay the real schedule before serving it to
+      // the web UI. alarmDoc must stay in scope until serializeJson() below.
+      String alarmJson = ini_block.alrm_config.length() > 0 ? ini_block.alrm_config : nvsGetAlarmConfig();
+      JsonDocument alarmDoc;
+      if (alarmJson.length() > 0 && !deserializeJson(alarmDoc, alarmJson) && !alarmDoc.overflowed() &&
+          alarmDoc["alarms"].is<JsonArray>()) {
+        doc["alarms"].set(alarmDoc["alarms"]);
+      }
+
       String output;
       serializeJson(doc, output);
       if (output.length() > 0 && output.length() < RADIO_CONFIG_MAX_LEN) {

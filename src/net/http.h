@@ -571,7 +571,9 @@ void writeprefs() {
           // without restart!
           if (key == "alrm_config") {
             ini_block.alrm_config = contents;
-            applyAlarmConfig(contents);
+            if (applyAlarmConfig(contents)) {
+              syncAlarmsToRadioConfig(); // Keep the radio_config blob in sync
+            }
             dbgprint("Alarm configuration saved from preferences");
           }
         }

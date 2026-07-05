@@ -471,7 +471,9 @@ const char *analyzeCmd(const char *par, const char *val) {
 
   // Alarm clock schedules (JSON object)
   else if (argument == "alrm_config") {
-    applyAlarmConfig(value);
+    if (applyAlarmConfig(value)) {
+      syncAlarmsToRadioConfig(); // Keep the radio_config blob in sync with alrm_config
+    }
     dbgprint("Alarm configuration updated");
   }
 
