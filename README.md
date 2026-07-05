@@ -141,6 +141,187 @@ esp32-webradio/
 
 ---
 
+## Process Diagrams
+
+Overview of the most important runtime flows. Diagrams marked **User** describe what happens from a user’s perspective; **Developer** diagrams show the firmware internals.
+
+### For users
+
+#### Web UI – control the radio & live metadata
+
+```mermaid
+flowchart TD
+  USER[Browser: index.html] -->|load| ESP[ESP32 HTTP server :80]
+  ESP -->|GET /?getconfig| CFG[WiFi presets volume features]
+  ESP -->|SSE GET /?events| LIVE[Live station + song title]
+  ESP -.->|fallback polling| JSON[GET /?getJSON]
+  USER -->|slider button preset| CMD[/?volume= /?preset= /?stop /?station=]
+  CMD --> PLAY[Playback + TFT display]
+  CMD -->|debounced| NVS[(NVS: volume tone preset)]
+```
+
+#### Alarm clock & snooze timer
+
+```mermaid
+flowchart TD
+  SCH[Scheduler page: set alarms + fade] -->|POST /?savealarms| NVS[(alrm_config NVS)]
+  NTP[NTP clock sync] --> TICK[Every second: handleRadioAlarm]
+  NVS --> SCHED[alarm_schedule in RAM]
+  SCHED --> TICK
+  TICK -->|matching weekday + start| ON[Play boot preset + volume fade in]
+  TICK -->|matching stop time| OFF[Stop playback]
+  IDX[Index page: snooze dropdown] -->|/?snooze=XX| TIMER[Countdown sleeptimer_ms]
+  TIMER -->|expired| FADE[Fade out over Alarm volume fade]
+  FADE --> STOP[Stop stream + turn display off]
+```
+
+#### MP3 Stream – play files from your PC or phone
+
+```mermaid
+flowchart LR
+  FILES[Music folder on PC/phone] -->|python3 -m http.server 8000| SERVER[Local HTTP server]
+  BROWSER[Browser: mp3stream.html] -->|pick file / folder| URL[Build stream URL]
+  URL -->|START STREAM / ?station=| ESP[ESP32 Webradio]
+  SERVER -->|GET MP3 over Wi‑Fi| ESP
+  ESP --> VS1053[VS1053 decoder + speakers]
+```
+
+#### Firmware update (OTA)
+
+```mermaid
+flowchart TD
+  PAGE[OTA Update page] --> PATH{How to update?}
+  PATH -->|Install latest| MAN[Download version.json from GitHub]
+  PATH -->|Pick version| VER[/?installversion=vX.YZ]
+  PATH -->|Upload .bin| POST[POST /?uploadfirmware=1]
+  MAN --> BIN[Download esp32_webradio_vX.YZ.bin]
+  VER --> BIN
+  BIN --> VAL{Valid ESP32 image?\nsize · 0xE9 magic · chip type}
+  POST --> VAL
+  VAL -->|no| LOG[Warning in Power Log\nflash not touched]
+  VAL -->|yes| FLASH[Write to inactive OTA slot]
+  FLASH --> REBOOT[Restart → new firmware boots]
+```
+
+#### WiFi – first connection & fallback
+
+```mermaid
+flowchart TD
+  BOOT[Device powers on] --> CREDS{WiFi credentials\nin configuration?}
+  CREDS -->|none or timeout| AP[ESP opens config Access Point]
+  CREDS -->|1+ stored networks| TRY[Try networks up to 15 s]
+  TRY -->|success| HOME[Join home Wi‑Fi\nradio reachable at device IP]
+  TRY -->|failed| AP
+  AP --> PORTAL[Captive portal redirects browser]
+  PORTAL --> SETUP[Configuration page:\nadd SSID + password]
+  SETUP -->|save + restart| HOME
+```
+
+### For developers
+
+#### Boot sequence
+
+```mermaid
+flowchart TD
+  PWR[Power on / radioSetup] --> NVS[NVS partition + namespace init]
+  NVS --> VAL[checkAndInitConfig\nnon-destructive validation]
+  VAL --> MIG[migrateToRadioConfig]
+  MIG --> IO[readIOprefs + readprefs]
+  IO --> FEAT[applyFeaturesFromDoc]
+  FEAT --> ALRM[loadAlarmConfigFromNvs]
+  ALRM --> SYNC[syncAlarmsToRadioConfig]
+  SYNC --> VS1053[VS1053 begin + self-test]
+  VS1053 --> WIFI[connectwifi]
+  WIFI -->|STA| OTA[mDNS + ArduinoOTA]
+  WIFI -->|AP mode| CAP[captivePortalBegin]
+  OTA --> HTTP[cmdserver.begin :80]
+  CAP --> HTTP
+  HTTP --> RTOS[Start mp3StreamTask · playStreamFromQueue · spftask]
+  RTOS --> NTP[configTime + eventLogRecordBoot]
+```
+
+#### Audio pipeline (FreeRTOS tasks)
+
+```mermaid
+flowchart LR
+  subgraph producer [mp3StreamTask]
+    WIFI[mp3client HTTP/ICY] --> LOOP[mp3loop state machine]
+    LOOP --> PARSER[AudioStreamParser]
+    PARSER --> Q[dataqueue FreeRTOS]
+    WD[streamWatchdogPoll]
+  end
+  subgraph consumer [playStreamFromQueue]
+    Q --> CHUNK[QDATA / QSTARTSONG / QSTOPSONG]
+    CHUNK --> VS[VS1053 SPI playChunk]
+  end
+  subgraph render [spftask + loop]
+    META[metaMutex: station/title]
+    TFT[TFT dashboard via SPIsem]
+    VOL[volume fade + tone]
+  end
+  VS --> OUT[Analog audio out]
+  producer -.->|otaActive pauses producer| OTA[OTA flash]
+```
+
+#### Partial configuration save
+
+```mermaid
+flowchart TD
+  POST[POST /?saveconfig partial JSON] --> MERGE[applyRadioConfigMerge]
+  MERGE --> LOAD[loadRadioConfigDocument base blob]
+  LOAD --> LIVE[Overlay live volume tone preset from RAM]
+  LIVE --> SEED[seedAlarmsFromAuthoritativeStore\nunless patch has alarms array]
+  SEED --> PATCH[mergeRadioConfigPatch]
+  PATCH -->|alarms array non-empty| ALRM[applyAlarmConfig → alrm_config NVS]
+  PATCH -->|no alarms or empty array| SKIP[Skip alrm_config write]
+  ALRM --> DOC[applyRadioConfigDoc]
+  SKIP --> DOC
+  DOC --> BLOB[Persist radio_config blob + legacy keys]
+  DOC --> RUN[Apply clock features GPIO WiFi to runtime]
+```
+
+#### Stream watchdog (stall recovery)
+
+```mermaid
+flowchart TD
+  PLAY[datamode = DATA streaming] --> FEED[streamWatchdogFeed on each chunk]
+  FEED -->|activity| OK[Reset stall timer]
+  FEED -->|no bytes for 60 s| STALL[Stall detected]
+  STALL --> SOFT[requestSoftStreamReconnect]
+  SOFT --> RST[stop_mp3client + xQueueReset + hostreq]
+  RST --> PLAY
+  STALL -->|5 failed attempts| GIVEUP[eventLogRecordError\ngive up reconnecting]
+```
+
+#### Power Log – event persistence
+
+```mermaid
+flowchart LR
+  subgraph record [Record paths]
+    PLAN[Planned shutdown\nbefore ESP.restart]
+    BOOT[Boot + esp_reset_reason inference]
+    RUNTIME[Errors/warnings from HTTP stream OTA]
+  end
+  record --> MUTEX[event log mutex + dedup 60 s]
+  MUTEX --> FLUSH[Main loop: flush to NVS]
+  FLUSH --> NVS[(event_log max 20 entries)]
+  NVS --> API[GET /?geteventlog]
+  API --> UI[eventlog.html]
+```
+
+#### Build & test (host)
+
+```mermaid
+flowchart LR
+  SRC[src/ + web_assets/] -->|pio_embed_web_assets.py| PROG[PROGMEM headers]
+  PROG --> BUILD[pio run -e esp32dev]
+  BUILD --> BIN[.pio/build/esp32dev/firmware.bin]
+  SRC -->|pio test -e native| TEST[test_config_merge · volume_mapper · event_log · value_steps]
+  TEST --> HOST[Runs on Linux/macOS\nno ESP32 required]
+```
+
+---
+
 ## Web UI Screenshots
 
 Captured from a live device to document the current look and layout of each page.
@@ -392,6 +573,27 @@ You can query the current radio status, change volume, select presets, etc.
 ## Configuration Storage (NVS)
 
 All user settings are stored in the ESP32’s **Non‑Volatile Storage (NVS)** partition.
+
+### Architektur (aktuell korrekt)
+
+```mermaid
+flowchart LR
+  subgraph authoritative [Autoritativ]
+    NVS_ALRM[alrm_config NVS]
+    RAM[alarm_schedule RAM]
+  end
+  subgraph secondary [Sekundär / Sync]
+    NVS_RADIO[radio_config Blob]
+  end
+  savealarms --> NVS_ALRM
+  savealarms --> RAM
+  savealarms --> syncAlarmsToRadioConfig
+  syncAlarmsToRadioConfig --> NVS_RADIO
+  saveconfig_partial[saveconfig ohne alarms] --> NVS_RADIO
+  saveconfig_partial -.->|kein Schreiben| NVS_ALRM
+  getconfig --> overlay[Overlay aus alrm_config]
+  overlay --> WebUI
+```
 
 **Primary:** `radio_config` – unified JSON document (WiFi, presets, GPIO, clock, volume, tone, alarms, feature flags). Load/save via `/?getconfig` and `/?saveconfig`. Partial `POST` bodies merge only the keys they carry (`config/radio_config_merge.h`); live volume/station/tone are preserved when saving unrelated settings.
 
