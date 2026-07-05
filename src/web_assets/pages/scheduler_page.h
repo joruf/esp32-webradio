@@ -28,7 +28,11 @@ const char scheduler_html[] PROGMEM = R"=====(
 			<div class="row panel panel-default sound-card">
 				<div class="panel-heading">Snooze Timer</div>
 				<div class="panel-body">
-					<p class="config-help">Snooze stops playback after the selected duration.</p>
+					<p class="config-help">Snooze stops playback after the selected duration. The radio fades out gently when the timer ends.</p>
+					<div id="snooze-status" class="snooze-status" hidden>
+						<p class="snooze-countdown-line">Radio turns off at <strong id="snooze-off-at">--:--</strong></p>
+						<p class="snooze-countdown-line">Remaining: <strong id="snooze-remaining">--:--</strong></p>
+					</div>
 					<div class="row">
 						<div class="form-group col-xs-12 col-sm-6 col-md-3 col-lg-3">
 							<select class="form-control" id="snooze">

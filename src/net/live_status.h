@@ -16,6 +16,11 @@
 #include <esp_system.h>
 #include <rom/rtc.h>
 
+extern int32_t sleeptimer_ms;
+extern time_t snooze_off_epoch;
+extern int16_t snooze_duration_mins;
+String formatSnoozeOffAt(void);
+
 /**
  * @brief Convert WiFi mode enum to readable string.
  *
@@ -117,7 +122,11 @@ static String buildLiveStatusJson(void) {
   json += "\"playback_state\":\"" + String(datamode == STOPPED ? "STOP" : "PLAY") + "\",";
   json += "\"stream_kbps\":" + String(mbitrate > 0 ? mbitrate : bitrate) + ",";
   json += "\"dark_mode\":" + String(isDarkModeActive() ? "true" : "false") + ",";
+  json += "\"epoch\":" + String((unsigned long)(timeinfo.tm_year ? (unsigned long)time(nullptr) : 0UL)) + ",";
   json += "\"snooze_sec\":" + String(sleeptimer_ms > 0 ? sleeptimer_ms / 1000 : 0) + ",";
+  json += "\"snooze_mins\":" + String((int)snooze_duration_mins) + ",";
+  json += "\"snooze_off_epoch\":" + String((unsigned long)snooze_off_epoch) + ",";
+  json += "\"snooze_off_at\":\"" + jsonEscapeString(formatSnoozeOffAt().c_str()) + "\",";
   json += "\"vu_level\":" + String(getVuMeterLevel()) + ",";
   json += "\"preset\":" + String(ini_block.newpreset) + ",";
   json += buildTitleHistoryJson();
@@ -191,7 +200,11 @@ static String buildDiagnosticsJson(void) {
   json += "\"watchdog_enabled\":" + String(features.stream_watchdog ? "true" : "false") + ",";
   json += "\"vu_meter\":" + String(features.vu_meter ? "true" : "false") + ",";
   json += "\"vu_level\":" + String(getVuMeterLevel()) + ",";
+  json += "\"epoch\":" + String((unsigned long)(timeinfo.tm_year ? (unsigned long)time(nullptr) : 0UL)) + ",";
   json += "\"snooze_sec\":" + String(sleeptimer_ms > 0 ? sleeptimer_ms / 1000 : 0) + ",";
+  json += "\"snooze_mins\":" + String((int)snooze_duration_mins) + ",";
+  json += "\"snooze_off_epoch\":" + String((unsigned long)snooze_off_epoch) + ",";
+  json += "\"snooze_off_at\":\"" + jsonEscapeString(formatSnoozeOffAt().c_str()) + "\",";
   json += "\"alarm_count\":" + String(alarm_schedule.count) + ",";
   json += "\"preset\":" + String(ini_block.newpreset) + ",";
   json += "\"volume\":" + String(ini_block.reqvol) + ",";

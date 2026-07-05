@@ -2552,6 +2552,134 @@ const char app_js[] PROGMEM = R"=====(
         refreshDiagnostics();
     }
 
+    var snoozeCountdownTimer = null;
+    var snoozeEndEpoch = 0;
+
+    function pad2(num) {
+        var n = parseInt(num, 10) || 0;
+        return (n < 10 ? "0" : "") + n;
+    }
+
+    /**
+     * @param {number} totalSec Remaining seconds
+     * @return {string} Human-readable countdown (e.g. "12m 05s")
+     */
+    function formatSnoozeRemaining(totalSec) {
+        var sec = Math.max(0, parseInt(totalSec, 10) || 0);
+        var h = Math.floor(sec / 3600);
+        var m = Math.floor((sec % 3600) / 60);
+        var s = sec % 60;
+
+        if (h > 0) {
+            return h + "h " + pad2(m) + "m " + pad2(s) + "s";
+        }
+        if (m > 0) {
+            return m + "m " + pad2(s) + "s";
+        }
+        return s + "s";
+    }
+
+    function stopSnoozeCountdown() {
+        if (snoozeCountdownTimer) {
+            clearInterval(snoozeCountdownTimer);
+            snoozeCountdownTimer = null;
+        }
+    }
+
+    function hideSnoozeStatus() {
+        stopSnoozeCountdown();
+        snoozeEndEpoch = 0;
+        if ($("#snooze-status").length) {
+            $("#snooze-status").prop("hidden", true);
+            $("#snooze-off-at").text("--:--");
+            $("#snooze-remaining").text("--:--");
+        }
+    }
+
+    function updateSnoozeCountdownDisplay() {
+        if (!snoozeEndEpoch || !$("#snooze-status").length) {
+            hideSnoozeStatus();
+            return;
+        }
+
+        var remaining = snoozeEndEpoch - Math.floor(Date.now() / 1000);
+        if (remaining <= 0) {
+            hideSnoozeStatus();
+            $("#snooze").val("0");
+            return;
+        }
+
+        $("#snooze-remaining").text(formatSnoozeRemaining(remaining));
+        $("#snooze-status").prop("hidden", false);
+    }
+
+    function startSnoozeCountdown() {
+        stopSnoozeCountdown();
+        updateSnoozeCountdownDisplay();
+        snoozeCountdownTimer = setInterval(updateSnoozeCountdownDisplay, 1000);
+    }
+
+    /**
+     * Apply snooze state returned by GET /?getJSON (or optimistic client data).
+     *
+     * @param {Object} data Live status payload
+     */
+    function applySnoozeStateFromServer(data) {
+        if (!$("#snooze").length || !$("#snooze-status").length) {
+            return;
+        }
+
+        var sec = parseInt(data.snooze_sec, 10) || 0;
+        var mins = parseInt(data.snooze_mins, 10) || 0;
+        var offEpoch = parseInt(data.snooze_off_epoch, 10) || 0;
+        var offAt = data.snooze_off_at || "";
+        var deviceEpoch = parseInt(data.epoch, 10) || 0;
+
+        if (sec <= 0) {
+            hideSnoozeStatus();
+            $("#snooze").val("0");
+            return;
+        }
+
+        if (offEpoch > 0) {
+            snoozeEndEpoch = offEpoch;
+        } else if (deviceEpoch > 0) {
+            snoozeEndEpoch = deviceEpoch + sec;
+        } else {
+            snoozeEndEpoch = Math.floor(Date.now() / 1000) + sec;
+        }
+
+        if (offAt) {
+            $("#snooze-off-at").text(offAt);
+        } else {
+            var offDate = new Date(snoozeEndEpoch * 1000);
+            $("#snooze-off-at").text(pad2(offDate.getHours()) + ":" + pad2(offDate.getMinutes()));
+        }
+
+        if (mins > 0 && $("#snooze option[value='" + mins + "']").length) {
+            $("#snooze").val(String(mins));
+        }
+
+        startSnoozeCountdown();
+    }
+
+    function loadSchedulerSnooze() {
+        if (!$("#snooze").length || !$("#alarm-list").length) {
+            return;
+        }
+
+        $.ajax({
+            url: "/?getJSON=1&_t=" + Date.now(),
+            dataType: "json",
+            success: function(data) {
+                applySnoozeStateFromServer(data || {});
+            },
+            error: function() {
+                console.log("Failed to load snooze timer state");
+            }
+        });
+    }
+
     function initSchedulerPage() {
         if (!$("#alarm-list").length) {
             return;
@@ -2595,6 +2723,7 @@ const char app_js[] PROGMEM = R"=====(
             });
 
         loadSchedulerAlarms();
+        loadSchedulerSnooze();
         loadRadioConfig().always(function() {
             updateAlarmFadeValueLabel();
         });
@@ -4004,35 +4133,55 @@ const char app_js[] PROGMEM = R"=====(
             ensureMp3StreamLiveUpdates();
     };
 
-    /** Send snooze timer to the ESP32 API using jQuery */
+    /** Send snooze timer to the ESP32 and update the scheduler countdown. */
     function sendSnoozeTimer() {
-            var $sel = $("#snooze");
-            if (!$sel.length) {
-                $sel = $("#sleeptime");
+        var $sel = $("#snooze");
+        if (!$sel.length) {
+            $sel = $("#sleeptime");
+        }
+        if (!$sel.length) {
+            return;
+        }
+
+        var val = parseInt($sel.val(), 10) || 0;
+        var isScheduler = $("#alarm-list").length > 0;
+
+        console.log("Sending Snooze: " + val + " min.");
+
+        $.get("/?snooze=" + val + "&_t=" + Date.now(), function() {
+            console.log("Snooze successfully transferred");
+
+            if (val === 0) {
+                hideSnoozeStatus();
+                if (isScheduler) {
+                    showCommandLog("Snooze timer turned off.");
+                } else {
+                    showNotification("Snooze turned off.", { type: "success" });
+                }
+                return;
             }
-            var val = $sel.val();
-            
-            if (val == "0") return;
 
-            console.log("Sending Snooze: " + val + " Min.");
-
-            $.get("/?snooze=" + val + "&_t=" + Date.now(), function(data) {
-                    console.log("Snooze successfully transferred");
-                    $sel.prop('selectedIndex', 0);
-                    showNotification("Snooze set to " + val + " min.", { type: "success" });
-            });
+            if (isScheduler) {
+                $.getJSON("/?getJSON=1&_t=" + Date.now(), function(data) {
+                    applySnoozeStateFromServer(data || {});
+                    showCommandLog("Snooze set to " + val + " min.");
+                });
+            } else {
+                showNotification("Snooze set to " + val + " min.", { type: "success" });
+            }
+        });
     }
 
     /** @deprecated use sendSnoozeTimer */
     function sendSleepTimer() {
-            sendSnoozeTimer();
+        sendSnoozeTimer();
     }
 
     /** jQuery Event-Handler */
     $(document).ready(function() {
-            $(document).on("change", "#snooze, #sleeptime", function() {
-                    sendSnoozeTimer();
-            });
+        $(document).on("change", "#snooze, #sleeptime", function() {
+            sendSnoozeTimer();
+        });
             $(document).on("change blur", "#feat-ota-url", function() {
                 if (canPersistRadioConfig()) {
                     persistRadioConfig({ silentLog: false });

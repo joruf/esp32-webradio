@@ -332,23 +332,12 @@ const char *analyzeCmd(const char *par, const char *val) {
   {                                              // Do not handle here
   } else if (argument.indexOf("sleeptime") >= 0 || argument.indexOf("snooze") >= 0) // Snooze timer
   {
-    dbgprint("Snooze timer set");
     int mins = value.toInt();
-    if (mins > 0) {
-      sleeptimer_ms = (int32_t)mins * 60 * 1000;
-      dbgprint("Snooze set to %d min", mins);
+    setSnoozeTimerMinutes(mins);
 #if defined(BLUETFT)
-      dspDashboardInvalidateSnooze();
-      dspDashboardUpdateSnooze();
+    dspDashboardInvalidateSnooze();
+    dspDashboardUpdateSnooze();
 #endif
-    } else {
-      sleeptimer_ms = -1;
-      dbgprint("Snooze off");
-#if defined(BLUETFT)
-      dspDashboardInvalidateSnooze();
-      dspDashboardUpdateSnooze();
-#endif
-    }
   } else if (argument.indexOf("checkupdate") >= 0) {
     otaChecker.check(true);
     if (otaChecker.isUpdateAvailable()) {

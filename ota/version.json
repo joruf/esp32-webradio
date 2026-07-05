@@ -1,10 +1,15 @@
 {
-  "version": "v2.45",
+  "version": "v2.46",
   "released": "2026-07-05",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.45.bin",
-  "notes": "Hardened configuration persistence: partial saves no longer write alarms to NVS at all (only explicit alarm saves do), empty alarm arrays in patches are ignored, invalid alrm_config at boot is no longer auto-reset to factory defaults, obsolete alrm_start/alrm_stop legacy keys are removed after migration, and the Web UI no longer injects default 6:30-7:30 alarms when loading or saving.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.46.bin",
+  "notes": "Scheduler snooze timer: when you pick a duration on scheduler.html the device stores the shut-off time and the page shows a live countdown (remaining time and radio off at HH:MM). Active snooze state is restored on page load via getJSON.",
   "history": [
+    {
+      "version": "v2.46",
+      "released": "2026-07-05",
+      "notes": "Scheduler snooze timer: when you pick a duration on scheduler.html the device stores the shut-off time and the page shows a live countdown (remaining time and radio off at HH:MM). Active snooze state is restored on page load via getJSON."
+    },
     {
       "version": "v2.45",
       "released": "2026-07-05",

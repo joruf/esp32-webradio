@@ -12,12 +12,17 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.45",
+  "version": "v2.46",
   "released": "2026-07-05",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.45.bin",
-  "notes": "Hardened config persistence: partial saves skip alrm_config writes, empty alarm patches ignored, no boot auto-reset on invalid alrm_config, legacy alrm_start/stop keys removed, Web UI no longer injects default alarms.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.46.bin",
+  "notes": "Scheduler snooze timer: live countdown on scheduler.html with shut-off time (HH:MM) and remaining time; state restored on page load from getJSON.",
   "history": [
+    {
+      "version": "v2.46",
+      "released": "2026-07-05",
+      "notes": "Scheduler snooze timer: live countdown on scheduler.html with shut-off time (HH:MM) and remaining time; state restored on page load from getJSON."
+    },
     {
       "version": "v2.45",
       "released": "2026-07-05",
@@ -62,11 +67,6 @@ const char ota_version_embedded_json[] PROGMEM = R"=====(
       "version": "v2.37",
       "released": "2026-07-02",
       "notes": "OTA page can now install a specific release (including older ones = downgrade) picked from an online-detected list of firmware images that really exist. Manual .bin uploads now show a brick-risk warning and are validated (size, ESP32 0xE9 signature and chip type) before flashing. Online volume now changes only in 5-step increments."
-    },
-    {
-      "version": "v2.36",
-      "released": "2026-07-02",
-      "notes": "Stability and structure release: user volume 0-100 now maps onto the audible VS1053 range with 5-step encoder increments and immediate persistent save; fixed leftover third digit in the TFT volume readout; OTA update screen no longer shows artifacts and reliably shows size and estimated time (dashboard rendering is paused during flashing); thread-safe stream metadata, non-blocking client stop, HTTP read fix; enlarged app partitions and reorganized source into domain folders."
     }
   ]
 }

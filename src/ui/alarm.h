@@ -4,10 +4,70 @@
  */
 int32_t sleeptimer_ms = -1; // -1 means timer is disabled
 
+/** Unix epoch (seconds) when the snooze timer stops playback; 0 if inactive. */
+time_t snooze_off_epoch = 0;
+
+/** Original snooze duration in minutes (dropdown value); 0 if inactive. */
+int16_t snooze_duration_mins = 0;
+
 static int8_t alarm_last_check_hour = -1;
 static int8_t alarm_last_check_min = -1;
 static uint16_t alarm_started_mask = 0;
 static uint16_t alarm_stopped_mask = 0;
+
+void clearSnoozeTimer(void);
+
+/**
+ * @brief Format the snooze shut-off time as HH:MM for the Web UI.
+ *
+ * @return Time label or empty string when no snooze is active or clock is unset
+ */
+String formatSnoozeOffAt(void) {
+  if (snooze_off_epoch <= 0) {
+    return "";
+  }
+
+  struct tm ti;
+  if (!localtime_r(&snooze_off_epoch, &ti)) {
+    return "";
+  }
+
+  char buf[8];
+  snprintf(buf, sizeof(buf), "%02d:%02d", ti.tm_hour, ti.tm_min);
+  return String(buf);
+}
+
+/**
+ * @brief Start or clear the snooze (sleep) timer.
+ *
+ * @param mins Selected duration in minutes; 0 disables the timer
+ */
+void setSnoozeTimerMinutes(int mins) {
+  if (mins > 0) {
+    sleeptimer_ms = (int32_t)mins * 60 * 1000;
+    snooze_duration_mins = (int16_t)mins;
+    time_t now = time(nullptr);
+    if (now > 1000000000L) {
+      snooze_off_epoch = now + (time_t)(mins * 60);
+    } else {
+      snooze_off_epoch = 0;
+    }
+    dbgprint("Snooze set to %d min (off at epoch %lu)", mins, (unsigned long)snooze_off_epoch);
+    return;
+  }
+
+  clearSnoozeTimer();
+}
+
+/**
+ * @brief Disable the snooze timer and clear stored shut-off metadata.
+ */
+void clearSnoozeTimer(void) {
+  sleeptimer_ms = -1;
+  snooze_off_epoch = 0;
+  snooze_duration_mins = 0;
+  dbgprint("Snooze off");
+}
 
 /**
  * @brief Reset alarm trigger tracking after schedule changes.
@@ -62,7 +122,7 @@ void handleSleepTimer() {
     }
 
     if (sleeptimer_ms <= 0) {
-      sleeptimer_ms = -1; // Reset timer
+      clearSnoozeTimer();
       if (datamode != STOPPED) {
         // Gentle "sleep" shutdown: fade the volume down over the configured
         // "Alarm volume fade" duration, then stop (mirrors the alarm fade-in).
