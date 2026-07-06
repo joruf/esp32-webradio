@@ -646,6 +646,33 @@ static bool loadRadioConfigDocument(JsonDocument &doc) {
 }
 
 /**
+ * @brief Sync volume, tone, preset, clock and features in a config document with live runtime state.
+ *
+ * Individual NVS keys and ini_block are authoritative for these values (encoder,
+ * /?volume=, tone commands, station switch may update them without rewriting
+ * the radio_config blob). Used when serving getconfig and before persisting the blob.
+ *
+ * @param doc Parsed radio configuration document (modified in place)
+ */
+static void syncDocWithPersistedRuntime(JsonDocument &doc) {
+  doc["volume"] = ini_block.reqvol;
+  doc["preset"] = (currentpreset >= 0) ? currentpreset : ini_block.newpreset;
+
+  JsonObject tone = doc["tone"].to<JsonObject>();
+  tone["ha"] = ini_block.rtone[0];
+  tone["hf"] = ini_block.rtone[1];
+  tone["la"] = ini_block.rtone[2];
+  tone["lf"] = ini_block.rtone[3];
+
+  JsonObject clock = doc["clock"].to<JsonObject>();
+  clock["server"] = ini_block.clk_server.length() > 0 ? ini_block.clk_server : String("pool.ntp.org");
+  clock["offset"] = ini_block.clk_offset;
+  clock["dst"] = ini_block.clk_dst;
+
+  appendFeaturesToDoc(doc);
+}
+
+/**
  * @brief Persist a prepared radio configuration document to NVS and runtime state.
  *
  * @param doc Parsed and normalized radio configuration document
@@ -808,6 +835,8 @@ static bool applyRadioConfigDoc(JsonDocument &doc, bool maskWifiPasswords, bool 
   // immediately without requiring a reboot.
   applyFeaturesFromDoc(doc);
 
+  syncDocWithPersistedRuntime(doc);
+
   String outputJson;
   serializeJson(doc, outputJson);
   if (outputJson.length() == 0 || outputJson.length() >= RADIO_CONFIG_MAX_LEN) {
@@ -864,6 +893,11 @@ bool applyRadioConfigMerge(const String &patchJson, bool maskWifiPasswords) {
   baseTone["hf"] = ini_block.rtone[1];
   baseTone["la"] = ini_block.rtone[2];
   baseTone["lf"] = ini_block.rtone[3];
+  JsonObject baseClock = doc["clock"].to<JsonObject>();
+  baseClock["server"] = ini_block.clk_server.length() > 0 ? ini_block.clk_server : String("pool.ntp.org");
+  baseClock["offset"] = ini_block.clk_offset;
+  baseClock["dst"] = ini_block.clk_dst;
+  appendFeaturesToDoc(doc);
   // Keep the currently playing station. currentpreset is the live value; fall
   // back to the requested preset while a switch is still in progress (-1).
   doc["preset"] = (currentpreset >= 0) ? currentpreset : ini_block.newpreset;
@@ -990,7 +1024,9 @@ String getRadioConfigJsonForWeb() {
     JsonDocument doc;
     if (!deserializeJson(doc, stored) && !doc.overflowed()) {
       ensureRadioConfigStructure(doc);
-      ensureRadioConfigFeatures(doc);
+      if (!doc["features"].is<JsonObject>()) {
+        doc["features"].to<JsonObject>();
+      }
       maskWifiPasswordsForWeb(doc);
 
       // Alarms are owned by the authoritative alrm_config key (that is what the
@@ -1003,6 +1039,8 @@ String getRadioConfigJsonForWeb() {
           alarmDoc["alarms"].is<JsonArray>()) {
         doc["alarms"].set(alarmDoc["alarms"]);
       }
+
+      syncDocWithPersistedRuntime(doc);
 
       String output;
       serializeJson(doc, output);

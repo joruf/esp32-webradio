@@ -35,26 +35,6 @@ static int findProgmemSubstring(const char *hay, int hayLen, const char *needle)
 }
 
 /**
- * @brief Compute the served HTML length when @include_nav@ is expanded at runtime.
- *
- * @param progmemPage Page source in PROGMEM
- * @param rawLength Stored PROGMEM length (typically sizeof(symbol) - 1)
- * @return int Length of the page as sent to the browser
- */
-static int expandedHtmlLength(const char *progmemPage, int rawLength) {
-  const int navPos = findProgmemSubstring(progmemPage, rawLength, NAV_INCLUDE_PLACEHOLDER);
-
-  if (navPos < 0) {
-    return rawLength;
-  }
-
-  const int placeholderLen = (int)strlen_P(NAV_INCLUDE_PLACEHOLDER);
-  const int navLen = (int)(sizeof(web_nav_menu_html) - 1);
-
-  return rawLength - placeholderLen + navLen;
-}
-
-/**
  * @brief Find the closing '>' of an opening tag that starts with @p tag.
  *
  * @param progmemHtml HTML source in PROGMEM
@@ -81,6 +61,70 @@ static int findOpeningTagClose(const char *progmemHtml, int length, int start, c
   }
 
   return -1;
+}
+
+/**
+ * @brief Extra bytes injected before <html> and <body> tag closers in dark mode.
+ *
+ * @param progmemHtml HTML source in PROGMEM
+ * @param length Number of bytes to scan
+ * @return int Additional bytes streamed when dark mode is active
+ */
+static int darkModeInjectedExtraBytes(const char *progmemHtml, int length) {
+  int extra = 0;
+
+  if (findOpeningTagClose(progmemHtml, length, 0, "<html") >= 0) {
+    extra += (int)strlen_P(HTML_DARK_HTML_ATTR);
+  }
+  if (findOpeningTagClose(progmemHtml, length, 0, "<body") >= 0) {
+    extra += (int)strlen_P(HTML_DARK_BODY_ATTR);
+  }
+
+  return extra;
+}
+
+/**
+ * @brief Compute the exact number of bytes streamed for an HTML page.
+ *
+ * Accounts for @include_nav@ expansion and optional dark-mode attribute injection.
+ *
+ * @param progmemPage Page source in PROGMEM
+ * @param rawLength Stored PROGMEM length (typically sizeof(symbol) - 1)
+ * @param darkMode True when dark-mode attributes are injected into <html>/<body>
+ * @return int Total response body length in bytes
+ */
+static int servedHtmlLength(const char *progmemPage, int rawLength, bool darkMode) {
+  const int navPos = findProgmemSubstring(progmemPage, rawLength, NAV_INCLUDE_PLACEHOLDER);
+
+  if (navPos < 0) {
+    int len = rawLength;
+    if (darkMode) {
+      len += darkModeInjectedExtraBytes(progmemPage, rawLength);
+    }
+    return len;
+  }
+
+  const int placeholderLen = (int)strlen_P(NAV_INCLUDE_PLACEHOLDER);
+  const int navLen = (int)(sizeof(web_nav_menu_html) - 1);
+  const int tailLen = rawLength - navPos - placeholderLen;
+  int len = navPos + navLen + tailLen;
+
+  if (darkMode) {
+    len += darkModeInjectedExtraBytes(progmemPage, navPos);
+  }
+
+  return len;
+}
+
+/**
+ * @brief Compute the served HTML length when @include_nav@ is expanded at runtime.
+ *
+ * @param progmemPage Page source in PROGMEM
+ * @param rawLength Stored PROGMEM length (typically sizeof(symbol) - 1)
+ * @return int Length of the page as sent to the browser without dark-mode injection
+ */
+static int expandedHtmlLength(const char *progmemPage, int rawLength) {
+  return servedHtmlLength(progmemPage, rawLength, false);
 }
 
 /**

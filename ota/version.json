@@ -1,14 +1,14 @@
 {
-  "version": "v2.47",
+  "version": "v2.49",
   "released": "2026-07-06",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.47.bin",
-  "notes": "Fixed Web UI first-load hang: large assets (app.js/app.css) could stall near completion when the browser fetched them in parallel. HTTP responses now retry partial TCP writes, send Content-Length, flush less aggressively, and defer the SSE live stream until static assets have loaded.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.49.bin",
+  "notes": "Web UI save feedback: all settings pages now show bottom-right success/error toasts when configuration is saved (sound EQ, volume, config, scheduler, display, OTA URL, maintenance).",
   "history": [
     {
-      "version": "v2.47",
+      "version": "v2.49",
       "released": "2026-07-06",
-      "notes": "Fixed Web UI first-load hang: large assets (app.js/app.css) could stall near completion when the browser fetched them in parallel. HTTP responses now retry partial TCP writes, send Content-Length, flush less aggressively, and defer the SSE live stream until static assets have loaded."
+      "notes": "Web UI save feedback: all settings pages now show bottom-right success/error toasts when configuration is saved (sound EQ, volume, config, scheduler, display, OTA URL, maintenance)."
     },
     {
       "version": "v2.46",

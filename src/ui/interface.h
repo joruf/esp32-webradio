@@ -143,16 +143,17 @@ void handleWebpage(const String &pagename) {
 
     dbgprint("Length of page is %d", l);
     lastModified = String(FIRMWARE);
-    etag = httpBuildWeakEtag(pagename, expandedHtmlLength(p, l));
+    const bool darkMode = isDarkModeActive();
+    const int serveLen = (ct == "text/html") ? servedHtmlLength(p, l, darkMode) : l;
+    etag = httpBuildWeakEtag(pagename, serveLen);
     if (httpIsAssetNotModified(etag, lastModified)) {
       httpSendNotModified(etag, lastModified, 600);
       cmdclient.flush();
       return;
     }
-    const int serveLen = (ct == "text/html") ? expandedHtmlLength(p, l) : l;
     cmdclient.print(httpheader(ct, 600, etag, lastModified, serveLen));
 
-    if (l > 0 && !streamWebPage(cmdclient, p, l, ct, isDarkModeActive(), TCPCHUNKSIZE)) {
+    if (l > 0 && !streamWebPage(cmdclient, p, l, ct, darkMode, TCPCHUNKSIZE)) {
       dbgprint("HTTP client disconnected while sending %s", pagename.c_str());
     }
     cmdclient.flush();

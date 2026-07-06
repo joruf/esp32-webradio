@@ -767,7 +767,7 @@ const char app_js[] PROGMEM = R"=====(
     }
 
     function saveConfigPatch(patch, options) {
-        options = options || {};
+        options = $.extend({ silentLog: false, skipReadyCheck: false }, options || {});
 
         if (!options.skipReadyCheck && !radioConfigReady) {
             if (!options.silentLog) {
@@ -786,9 +786,10 @@ const char app_js[] PROGMEM = R"=====(
             contentType: "application/json; charset=UTF-8",
             data: JSON.stringify(patch),
             success: function(response) {
-                if (response.indexOf("failed") >= 0) {
+                var message = String(response || "").trim() || "Configuration saved";
+                if (message.toLowerCase().indexOf("failed") >= 0) {
                     if (!options.silentLog) {
-                        showCommandLog(response, { type: "error" });
+                        showCommandLog(message, { type: "error" });
                     }
                     return;
                 }
@@ -799,7 +800,7 @@ const char app_js[] PROGMEM = R"=====(
                 }
 
                 if (!options.silentLog) {
-                    showCommandLog(response);
+                    showCommandLog(message, { type: "success" });
                 }
                 if (options.applyAudio) {
                     applyAudioSettingsFromConfig(loadedRadioConfig);
@@ -820,11 +821,12 @@ const char app_js[] PROGMEM = R"=====(
         if (!canPersistRadioConfig()) {
             return;
         }
-        saveConfigPatch(collectConfigPatch(), options);
+        saveConfigPatch(collectConfigPatch(), $.extend({ silentLog: false }, options || {}));
     }
 
     function applySoundSelectChange(fieldId, value) {
         if (configFormLoading) {
+            showCommandLog("Configuration is still loading. Please wait and try again.", { type: "error" });
             return;
         }
 
@@ -843,12 +845,13 @@ const char app_js[] PROGMEM = R"=====(
                 break;
         }
 
-        persistRadioConfig();
+        persistRadioConfig({ silentLog: false });
         updateSoundToneSummary();
     }
 
     function applyConfigSelectChange(fieldId, value) {
         if (configFormLoading) {
+            showCommandLog("Configuration is still loading. Please wait and try again.", { type: "error" });
             return;
         }
 
@@ -864,7 +867,7 @@ const char app_js[] PROGMEM = R"=====(
                 return;
         }
 
-        persistRadioConfig();
+        persistRadioConfig({ silentLog: false });
     }
 
     function bindSoundChangeHandlers() {
@@ -1086,7 +1089,7 @@ const char app_js[] PROGMEM = R"=====(
         }
 
         renderPresetList();
-        persistRadioConfig();
+        persistRadioConfig({ silentLog: false });
     }
 
     function renderPresetList() {
@@ -1365,7 +1368,7 @@ const char app_js[] PROGMEM = R"=====(
     }
 
     function saveSchedulerAlarms(options) {
-        options = options || {};
+        options = $.extend({ silent: false }, options || {});
         var validation = validateSchedulerAlarmsBeforeSave();
         var config;
         var json;
@@ -1414,7 +1417,7 @@ const char app_js[] PROGMEM = R"=====(
                     return;
                 }
                 if (!options.silent) {
-                    showCommandLog(successPrefix + responseText);
+                    showCommandLog(successPrefix + responseText, { type: "success" });
                 }
             },
             error: function(xhr) {
@@ -2754,6 +2757,10 @@ const char app_js[] PROGMEM = R"=====(
                 $(this).val(level);
                 setSoundVolumeUi(level);
                 httpGet("volume=" + level, { silent: true });
+            })
+            .on("change.soundVolume", function() {
+                var level = roundVolumeToStep($(this).val());
+                showCommandLog("Volume set to " + level + "%", { type: "success" });
             });
     }
 
@@ -2785,6 +2792,10 @@ const char app_js[] PROGMEM = R"=====(
                 $(this).val(level);
                 $(valueSelector).text(level);
                 httpGet("volume=" + level, { silent: true });
+            })
+            .on("change.volumeSlider", function() {
+                var level = roundVolumeToStep($(this).val());
+                showCommandLog("Volume set to " + level + "%", { type: "success" });
             });
     }
 
@@ -2835,7 +2846,7 @@ const char app_js[] PROGMEM = R"=====(
     }
 
     function saveRadioConfig(options) {
-        options = options || {};
+        options = $.extend({ silentLog: false, applyAudio: true }, options || {});
 
         if (!radioConfigReady) {
             if (!options.silentLog) {
@@ -2844,9 +2855,7 @@ const char app_js[] PROGMEM = R"=====(
             return;
         }
 
-        saveConfigPatch(collectRadioConfig(), $.extend({
-            applyAudio: options.applyAudio !== false
-        }, options));
+        saveConfigPatch(collectRadioConfig(), options);
     }
 
     $(document).on("click", "#add-alarm", function() {
@@ -2890,12 +2899,12 @@ const char app_js[] PROGMEM = R"=====(
 
     $(document).on("blur", ".alarm-time-input", function() {
         if (normalizeAlarmTimeInput($(this))) {
-            saveSchedulerAlarms({ silent: true });
+            saveSchedulerAlarms();
         }
     });
 
     $(document).on("change", ".alarm-day-checkbox, .alarm-enabled", function() {
-        saveSchedulerAlarms({ silent: true });
+        saveSchedulerAlarms();
     });
 
     $(document).on("click", "#add-wifi", function() {

@@ -12,16 +12,26 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.47",
+  "version": "v2.49",
   "released": "2026-07-06",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.47.bin",
-  "notes": "Fixed Web UI first-load hang: parallel downloads of app.js/app.css could stall near completion. Partial TCP writes retried, Content-Length added, less aggressive flush, SSE deferred after page load.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.49.bin",
+  "notes": "Web UI save feedback on all settings pages (success/error toasts bottom-right).",
   "history": [
+    {
+      "version": "v2.49",
+      "released": "2026-07-06",
+      "notes": "Web UI save feedback on all settings pages (success/error toasts bottom-right)."
+    },
+    {
+      "version": "v2.48",
+      "released": "2026-07-06",
+      "notes": "Fixed Web UI settings (tone, volume, preset, features) not persisting: getconfig overlays live NVS values; radio_config blob rebuilt on save."
+    },
     {
       "version": "v2.47",
       "released": "2026-07-06",
-      "notes": "Fixed Web UI first-load hang: parallel downloads of app.js/app.css could stall near completion. Partial TCP writes retried, Content-Length added, less aggressive flush, SSE deferred after page load."
+      "notes": "Fixed Web UI pages truncated in dark mode (Content-Length includes nav + dark-mode bytes). Parallel asset download stall fix retained."
     },
     {
       "version": "v2.46",
