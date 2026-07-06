@@ -543,10 +543,16 @@ const char app_css[] PROGMEM = R"=====(
 	.sound-card { margin-bottom: 0; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06); }
 	.sound-card > .panel-heading { padding: 12px 16px; font-weight: 600; font-size: 1.02em; border-bottom: 1px solid rgba(0, 0, 0, 0.08); }
 	.sound-card > .panel-body { padding: 16px; }
-	.snooze-status { margin: 0 0 14px; padding: 12px 14px; border-radius: 6px; background: rgba(51, 122, 183, 0.1); border: 1px solid rgba(51, 122, 183, 0.28); }
-	.snooze-countdown-line { margin: 0 0 6px; font-size: 0.95em; }
-	.snooze-countdown-line:last-child { margin-bottom: 0; }
+	.snooze-status { margin: 0 0 10px; padding: 8px 12px; border-radius: 6px; background: rgba(51, 122, 183, 0.1); border: 1px solid rgba(51, 122, 183, 0.28); }
+	.snooze-countdown-line { margin: 0; font-size: 0.85em; }
 	.snooze-countdown-line strong { font-variant-numeric: tabular-nums; }
+	.snooze-slider-toolbar { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; align-items: center; margin-top: 4px; }
+	.snooze-slider-meta { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; gap: 4px 8px; align-items: center; min-width: 0; }
+	.snooze-slider-label { margin: 0; font-weight: 600; font-size: 0.8em; text-transform: uppercase; letter-spacing: 0.04em; color: #555; grid-column: 1; grid-row: 1; }
+	.snooze-slider-value { grid-column: 2; grid-row: 1; font-size: 0.85em; font-weight: 700; font-variant-numeric: tabular-nums; color: #337ab7; line-height: 1; text-align: right; min-width: 2.4em; }
+	.snooze-slider-meter { grid-column: 1 / -1; grid-row: 2; height: 5px; border-radius: 999px; background: #e8e8e8; overflow: hidden; }
+	.snooze-slider-meter-fill { display: block; height: 100%; width: 0%; border-radius: inherit; background: linear-gradient(90deg, #f0ad4e, #d9534f); transition: width 0.35s linear; }
+	.snooze-slider-input { grid-column: 2; grid-row: 1; width: 100%; margin: 0; accent-color: #337ab7; min-height: 28px; align-self: center; }
 	.sound-card-heading { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
 	.sound-card-icon { font-size: 1.35em; line-height: 1; opacity: 0.85; flex-shrink: 0; }
 	.sound-card-heading-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -605,6 +611,8 @@ const char app_css[] PROGMEM = R"=====(
 	body.theme-dark .sound-param label,
 	body.theme-dark .sound-eq-axis { color: #aaa; }
 	body.theme-dark .snooze-status { background: rgba(91, 155, 213, 0.12); border-color: rgba(91, 155, 213, 0.35); }
+	body.theme-dark .snooze-slider-meter { background: #333; }
+	body.theme-dark .snooze-slider-value { color: #7eb8e8; }
 	body.theme-dark .sound-eq-visual { background: linear-gradient(180deg, #252525 0%, #1c1c1c 100%); border-color: #444; }
 	body.theme-dark .sound-band { background: #222; border-color: #444; }
 	body.theme-dark .sound-master-meter { background: #333; }

@@ -2557,6 +2557,12 @@ const char app_js[] PROGMEM = R"=====(
 
     var snoozeCountdownTimer = null;
     var snoozeEndEpoch = 0;
+    var snoozeTotalSec = 0;
+    var snoozeSliderSyncInProgress = false;
+    var snoozeSliderUserDragging = false;
+    // Slider index maps to minutes: 0, 1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60
+    var SNOOZE_MINUTE_STEPS = [0, 1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60];
+    var SNOOZE_SLIDER_MAX_INDEX = SNOOZE_MINUTE_STEPS.length - 1;
 
     function pad2(num) {
         var n = parseInt(num, 10) || 0;
@@ -2564,22 +2570,108 @@ const char app_js[] PROGMEM = R"=====(
     }
 
     /**
+     * @param {number} mins Duration in minutes
+     * @return {number} Slider index for the discrete step list
+     */
+    function snoozeMinutesToIndex(mins) {
+        mins = parseInt(mins, 10) || 0;
+        var i;
+
+        for (i = 0; i < SNOOZE_MINUTE_STEPS.length; i++) {
+            if (SNOOZE_MINUTE_STEPS[i] === mins) {
+                return i;
+            }
+        }
+
+        return snapRemainingMinutesToIndex(mins);
+    }
+
+    /**
+     * @param {number} mins Remaining minutes while the timer is running
+     * @return {number} Nearest allowed step (1, 5, 10, ... 60)
+     */
+    function snapRemainingMinutesToStep(mins) {
+        mins = parseInt(mins, 10) || 0;
+        if (mins <= 0) {
+            return 0;
+        }
+        if (mins <= 1) {
+            return 1;
+        }
+
+        var snapped = Math.floor(mins / 5) * 5;
+        if (snapped < 5) {
+            return 1;
+        }
+
+        return Math.min(60, snapped);
+    }
+
+    /**
+     * @param {number} mins Remaining minutes
+     * @return {number} Slider index snapped to the allowed steps
+     */
+    function snapRemainingMinutesToIndex(mins) {
+        return snoozeMinutesToIndex(snapRemainingMinutesToStep(mins));
+    }
+
+    /**
+     * @param {number} index Slider index
+     * @return {number} Duration in minutes for that index
+     */
+    function snoozeIndexToMinutes(index) {
+        index = parseInt(index, 10) || 0;
+        if (index < 0) {
+            return 0;
+        }
+        if (index >= SNOOZE_MINUTE_STEPS.length) {
+            return SNOOZE_MINUTE_STEPS[SNOOZE_MINUTE_STEPS.length - 1];
+        }
+
+        return SNOOZE_MINUTE_STEPS[index];
+    }
+
+    /**
+     * @param {number} totalSec Remaining seconds
+     * @return {string} Compact countdown label (e.g. "25m", "45s")
+     */
+    function formatSnoozeRemainingShort(totalSec) {
+        var sec = Math.max(0, parseInt(totalSec, 10) || 0);
+        var m;
+        var s;
+
+        if (sec <= 0) {
+            return "0";
+        }
+
+        m = Math.floor(sec / 60);
+        s = sec % 60;
+        if (m > 0) {
+            return m + "m";
+        }
+
+        return s + "s";
+    }
+
+    /**
+     * @param {number} mins Duration in minutes
+     * @return {string} Compact duration label (e.g. "5m", "Off")
+     */
+    function formatSnoozeMinutesShort(mins) {
+        mins = parseInt(mins, 10) || 0;
+        if (mins <= 0) {
+            return "Off";
+        }
+
+        return mins + "m";
+    }
+
+    /**
      * @param {number} totalSec Remaining seconds
      * @return {string} Human-readable countdown (e.g. "12m 05s")
      */
     function formatSnoozeRemaining(totalSec) {
-        var sec = Math.max(0, parseInt(totalSec, 10) || 0);
-        var h = Math.floor(sec / 3600);
-        var m = Math.floor((sec % 3600) / 60);
-        var s = sec % 60;
-
-        if (h > 0) {
-            return h + "h " + pad2(m) + "m " + pad2(s) + "s";
-        }
-        if (m > 0) {
-            return m + "m " + pad2(s) + "s";
-        }
-        return s + "s";
+        return formatSnoozeRemainingShort(totalSec);
     }
 
     function stopSnoozeCountdown() {
@@ -2592,11 +2684,103 @@ const char app_js[] PROGMEM = R"=====(
     function hideSnoozeStatus() {
         stopSnoozeCountdown();
         snoozeEndEpoch = 0;
+        snoozeTotalSec = 0;
         if ($("#snooze-status").length) {
             $("#snooze-status").prop("hidden", true);
             $("#snooze-off-at").text("--:--");
             $("#snooze-remaining").text("--:--");
         }
+        setSnoozeSliderUi(0, false, 0);
+    }
+
+    /**
+     * @param {number} mins Duration in minutes for the value label
+     * @param {boolean} isCountdown True while the device timer is running
+     * @param {number} remainingSec Remaining seconds while counting down
+     */
+    function updateSnoozeSliderLabel(mins, isCountdown, remainingSec) {
+        var $label = $("#snooze-slider-value");
+        if (!$label.length) {
+            return;
+        }
+
+        if (isCountdown) {
+            $label.text(formatSnoozeRemainingShort(remainingSec));
+            return;
+        }
+
+        $label.text(formatSnoozeMinutesShort(mins));
+    }
+
+    /**
+     * @param {number} valueIndex Current slider index (0 = Off … 13 = 60 min)
+     * @param {number} maxIndex Always the full-scale maximum index (60 min)
+     */
+    function updateSnoozeSliderMeter(valueIndex, maxIndex) {
+        var meter = document.getElementById("snooze-slider-meter");
+        if (!meter) {
+            return;
+        }
+
+        maxIndex = Math.max(1, parseInt(maxIndex, 10) || SNOOZE_SLIDER_MAX_INDEX);
+        valueIndex = Math.max(0, Math.min(maxIndex, parseInt(valueIndex, 10) || 0));
+        meter.style.width = ((valueIndex / maxIndex) * 100) + "%";
+    }
+
+    /**
+     * Keep the slider on the fixed 0–60 minute scale (indices 0–13).
+     *
+     * @param {number} index Slider index for the current position
+     * @param {boolean} isActive True while the countdown is running
+     * @param {number} remainingSec Remaining seconds (for the value label while active)
+     */
+    function setSnoozeSliderUi(index, isActive, remainingSec) {
+        var $slider = $("#snooze-slider");
+        var idx;
+
+        if (!$slider.length) {
+            return;
+        }
+
+        idx = Math.max(0, Math.min(SNOOZE_SLIDER_MAX_INDEX, parseInt(index, 10) || 0));
+        remainingSec = Math.max(0, parseInt(remainingSec, 10) || 0);
+
+        snoozeSliderSyncInProgress = true;
+        $slider.attr("max", String(SNOOZE_SLIDER_MAX_INDEX));
+        $slider.val(String(idx));
+        updateSnoozeSliderLabel(
+            snoozeIndexToMinutes(idx),
+            isActive,
+            isActive ? remainingSec : 0
+        );
+        updateSnoozeSliderMeter(idx, SNOOZE_SLIDER_MAX_INDEX);
+        snoozeSliderSyncInProgress = false;
+    }
+
+    /**
+     * @param {number} remainingSec Remaining seconds on the device
+     * @return {number} Slider index on the fixed 0–60 scale
+     */
+    function snoozeRemainingSecToIndex(remainingSec) {
+        var remainingMins = Math.ceil(Math.max(0, parseInt(remainingSec, 10) || 0) / 60);
+        return snapRemainingMinutesToIndex(remainingMins);
+    }
+
+    function readSnoozeMinutesFromUi() {
+        var $slider = $("#snooze-slider");
+        if ($slider.length) {
+            return snoozeIndexToMinutes(parseInt($slider.val(), 10) || 0);
+        }
+
+        var $sel = $("#snooze");
+        if (!$sel.length) {
+            $sel = $("#sleeptime");
+        }
+        if (!$sel.length) {
+            return 0;
+        }
+
+        return parseInt($sel.val(), 10) || 0;
     }
 
     function updateSnoozeCountdownDisplay() {
@@ -2608,12 +2792,14 @@ const char app_js[] PROGMEM = R"=====(
         var remaining = snoozeEndEpoch - Math.floor(Date.now() / 1000);
         if (remaining <= 0) {
             hideSnoozeStatus();
-            $("#snooze").val("0");
             return;
         }
 
         $("#snooze-remaining").text(formatSnoozeRemaining(remaining));
         $("#snooze-status").prop("hidden", false);
+        if (!snoozeSliderUserDragging) {
+            setSnoozeSliderUi(snoozeRemainingSecToIndex(remaining), true, remaining);
+        }
     }
 
     function startSnoozeCountdown() {
@@ -2628,7 +2814,10 @@ const char app_js[] PROGMEM = R"=====(
      * @param {Object} data Live status payload
      */
     function applySnoozeStateFromServer(data) {
-        if (!$("#snooze").length || !$("#snooze-status").length) {
+        var hasSchedulerSnooze = $("#snooze-slider").length && $("#snooze-status").length;
+        var hasLegacySnooze = $("#snooze").length || $("#sleeptime").length;
+
+        if (!hasSchedulerSnooze && !hasLegacySnooze) {
             return;
         }
 
@@ -2640,8 +2829,15 @@ const char app_js[] PROGMEM = R"=====(
 
         if (sec <= 0) {
             hideSnoozeStatus();
-            $("#snooze").val("0");
+            if ($("#snooze").length) {
+                $("#snooze").val("0");
+            }
             return;
+        }
+
+        snoozeTotalSec = mins > 0 ? (mins * 60) : sec;
+        if (sec > snoozeTotalSec) {
+            snoozeTotalSec = sec;
         }
 
         if (offEpoch > 0) {
@@ -2652,11 +2848,17 @@ const char app_js[] PROGMEM = R"=====(
             snoozeEndEpoch = Math.floor(Date.now() / 1000) + sec;
         }
 
-        if (offAt) {
-            $("#snooze-off-at").text(offAt);
-        } else {
-            var offDate = new Date(snoozeEndEpoch * 1000);
-            $("#snooze-off-at").text(pad2(offDate.getHours()) + ":" + pad2(offDate.getMinutes()));
+        if (hasSchedulerSnooze) {
+            if (offAt) {
+                $("#snooze-off-at").text(offAt);
+            } else {
+                var offDate = new Date(snoozeEndEpoch * 1000);
+                $("#snooze-off-at").text(pad2(offDate.getHours()) + ":" + pad2(offDate.getMinutes()));
+            }
+
+            setSnoozeSliderUi(snoozeRemainingSecToIndex(sec), true, sec);
+            startSnoozeCountdown();
+            return;
         }
 
         if (mins > 0 && $("#snooze option[value='" + mins + "']").length) {
@@ -2667,7 +2869,7 @@ const char app_js[] PROGMEM = R"=====(
     }
 
     function loadSchedulerSnooze() {
-        if (!$("#snooze").length || !$("#alarm-list").length) {
+        if (!$("#snooze-slider").length && !$("#snooze").length) {
             return;
         }
 
@@ -2727,9 +2929,52 @@ const char app_js[] PROGMEM = R"=====(
 
         loadSchedulerAlarms();
         loadSchedulerSnooze();
+        bindSchedulerSnoozeSlider();
         loadRadioConfig().always(function() {
             updateAlarmFadeValueLabel();
         });
+    }
+
+    function bindSchedulerSnoozeSlider() {
+        var $slider = $("#snooze-slider");
+        if (!$slider.length) {
+            return;
+        }
+
+        $slider.attr("max", String(SNOOZE_SLIDER_MAX_INDEX));
+
+        $slider.off("mousedown.schedulerSnooze touchstart.schedulerSnooze")
+            .on("mousedown.schedulerSnooze touchstart.schedulerSnooze", function() {
+                snoozeSliderUserDragging = true;
+            });
+
+        $(document).off("mouseup.schedulerSnooze touchend.schedulerSnooze touchcancel.schedulerSnooze")
+            .on("mouseup.schedulerSnooze touchend.schedulerSnooze touchcancel.schedulerSnooze", function() {
+                snoozeSliderUserDragging = false;
+            });
+
+        $slider.off("input.schedulerSnooze change.schedulerSnooze")
+            .on("input.schedulerSnooze", function() {
+                if (snoozeSliderSyncInProgress) {
+                    return;
+                }
+
+                var idx = parseInt($(this).val(), 10) || 0;
+                var mins = snoozeIndexToMinutes(idx);
+                var isActive = snoozeEndEpoch > 0 && !snoozeSliderUserDragging;
+                var remainingSec = isActive ? Math.max(0, snoozeEndEpoch - Math.floor(Date.now() / 1000)) : 0;
+
+                updateSnoozeSliderLabel(mins, isActive, remainingSec);
+                updateSnoozeSliderMeter(idx, SNOOZE_SLIDER_MAX_INDEX);
+            })
+            .on("change.schedulerSnooze", function() {
+                snoozeSliderUserDragging = false;
+                if (snoozeSliderSyncInProgress) {
+                    return;
+                }
+
+                sendSnoozeTimer();
+            });
     }
 
     function initMaintenancePage() {
@@ -4146,15 +4391,7 @@ const char app_js[] PROGMEM = R"=====(
 
     /** Send snooze timer to the ESP32 and update the scheduler countdown. */
     function sendSnoozeTimer() {
-        var $sel = $("#snooze");
-        if (!$sel.length) {
-            $sel = $("#sleeptime");
-        }
-        if (!$sel.length) {
-            return;
-        }
-
-        var val = parseInt($sel.val(), 10) || 0;
+        var val = readSnoozeMinutesFromUi();
         var isScheduler = $("#alarm-list").length > 0;
 
         console.log("Sending Snooze: " + val + " min.");
@@ -4165,7 +4402,7 @@ const char app_js[] PROGMEM = R"=====(
             if (val === 0) {
                 hideSnoozeStatus();
                 if (isScheduler) {
-                    showCommandLog("Snooze timer turned off.");
+                    showCommandLog("Snooze timer turned off.", { type: "success" });
                 } else {
                     showNotification("Snooze turned off.", { type: "success" });
                 }
@@ -4175,10 +4412,17 @@ const char app_js[] PROGMEM = R"=====(
             if (isScheduler) {
                 $.getJSON("/?getJSON=1&_t=" + Date.now(), function(data) {
                     applySnoozeStateFromServer(data || {});
-                    showCommandLog("Snooze set to " + val + " min.");
+                    showCommandLog("Snooze set to " + val + " min.", { type: "success" });
                 });
             } else {
                 showNotification("Snooze set to " + val + " min.", { type: "success" });
+            }
+        }).fail(function() {
+            var message = "Failed to set snooze timer";
+            if (isScheduler) {
+                showCommandLog(message, { type: "error" });
+            } else {
+                showNotification(message, { type: "error" });
             }
         });
     }
@@ -4193,12 +4437,10 @@ const char app_js[] PROGMEM = R"=====(
         $(document).on("change", "#snooze, #sleeptime", function() {
             sendSnoozeTimer();
         });
-            $(document).on("change blur", "#feat-ota-url", function() {
+        $(document).on("change blur", "#feat-ota-url", function() {
                 if (canPersistRadioConfig()) {
                     persistRadioConfig({ silentLog: false });
                 }
             });
     });
-
-
 )=====";

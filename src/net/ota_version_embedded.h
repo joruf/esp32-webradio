@@ -12,12 +12,32 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.49",
+  "version": "v2.53",
   "released": "2026-07-06",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.49.bin",
-  "notes": "Web UI save feedback on all settings pages (success/error toasts bottom-right).",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.53.bin",
+  "notes": "Snooze slider: fixed 0–60 scale, countdown on full range.",
   "history": [
+    {
+      "version": "v2.53",
+      "released": "2026-07-06",
+      "notes": "Snooze slider: fixed 0–60 scale, countdown on full range."
+    },
+    {
+      "version": "v2.52",
+      "released": "2026-07-06",
+      "notes": "Snooze 50/50 layout; steps 0,1,5…60 min."
+    },
+    {
+      "version": "v2.51",
+      "released": "2026-07-06",
+      "notes": "Snooze slider: full width, compact display, 1/5/10…60 min steps."
+    },
+    {
+      "version": "v2.50",
+      "released": "2026-07-06",
+      "notes": "Scheduler snooze: countdown slider replaces select box."
+    },
     {
       "version": "v2.49",
       "released": "2026-07-06",

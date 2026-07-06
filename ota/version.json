@@ -1,10 +1,30 @@
 {
-  "version": "v2.49",
+  "version": "v2.53",
   "released": "2026-07-06",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.49.bin",
-  "notes": "Web UI save feedback: all settings pages now show bottom-right success/error toasts when configuration is saved (sound EQ, volume, config, scheduler, display, OTA URL, maintenance).",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.53.bin",
+  "notes": "Snooze slider keeps a fixed 0–60 min scale while counting down; dragging always sets a new duration.",
   "history": [
+    {
+      "version": "v2.53",
+      "released": "2026-07-06",
+      "notes": "Snooze slider keeps a fixed 0–60 min scale while counting down; dragging always sets a new duration."
+    },
+    {
+      "version": "v2.52",
+      "released": "2026-07-06",
+      "notes": "Scheduler snooze layout: 50/50 split between timer info and slider; steps 0, 1, 5, 10 … 60 min."
+    },
+    {
+      "version": "v2.51",
+      "released": "2026-07-06",
+      "notes": "Scheduler snooze slider: full width, compact labels, discrete steps at 1 min then every 5 min up to 60 min."
+    },
+    {
+      "version": "v2.50",
+      "released": "2026-07-06",
+      "notes": "Scheduler snooze timer: select box replaced with a live countdown slider that moves toward zero; dragging sets a new duration and restarts the countdown."
+    },
     {
       "version": "v2.49",
       "released": "2026-07-06",

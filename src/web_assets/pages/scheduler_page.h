@@ -28,27 +28,36 @@ const char scheduler_html[] PROGMEM = R"=====(
 			<div class="row panel panel-default sound-card">
 				<div class="panel-heading">Snooze Timer</div>
 				<div class="panel-body">
-					<p class="config-help">Snooze stops playback after the selected duration. The radio fades out gently when the timer ends.</p>
+					<p class="config-help">Set 1 min or 5-minute steps up to 60 min. While running, the slider moves toward zero; drag to set a new duration.</p>
 					<div id="snooze-status" class="snooze-status" hidden>
-						<p class="snooze-countdown-line">Radio turns off at <strong id="snooze-off-at">--:--</strong></p>
-						<p class="snooze-countdown-line">Remaining: <strong id="snooze-remaining">--:--</strong></p>
+						<p class="snooze-countdown-line">Off <strong id="snooze-off-at">--:--</strong> | left <strong id="snooze-remaining">--</strong></p>
 					</div>
-					<div class="row">
-						<div class="form-group col-xs-12 col-sm-6 col-md-3 col-lg-3">
-							<select class="form-control" id="snooze">
-								<option value="0">Off</option>
-								<option value="1">1 minute</option>
-								<option value="5">5 minutes</option>
-								<option value="10">10 minutes</option>
-								<option value="15">15 minutes</option>
-								<option value="20">20 minutes</option>
-								<option value="25">25 minutes</option>
-								<option value="30">30 minutes</option>
-								<option value="45">45 minutes</option>
-								<option value="60">60 minutes</option>
-							</select>
+					<div class="snooze-slider-toolbar">
+						<div class="snooze-slider-meta">
+							<label for="snooze-slider" class="snooze-slider-label">Timer</label>
+							<span class="snooze-slider-value" id="snooze-slider-value">Off</span>
+							<div class="snooze-slider-meter" aria-hidden="true">
+								<span class="snooze-slider-meter-fill" id="snooze-slider-meter"></span>
+							</div>
 						</div>
+						<input type="range" class="snooze-slider-input" id="snooze-slider" min="0" max="13" step="1" value="0" list="snooze-slider-ticks" aria-valuemin="0" aria-valuemax="13">
 					</div>
+					<datalist id="snooze-slider-ticks">
+						<option value="0" label="Off"></option>
+						<option value="1" label="1"></option>
+						<option value="2" label="5"></option>
+						<option value="3" label="10"></option>
+						<option value="4" label="15"></option>
+						<option value="5" label="20"></option>
+						<option value="6" label="25"></option>
+						<option value="7" label="30"></option>
+						<option value="8" label="35"></option>
+						<option value="9" label="40"></option>
+						<option value="10" label="45"></option>
+						<option value="11" label="50"></option>
+						<option value="12" label="55"></option>
+						<option value="13" label="60"></option>
+					</datalist>
 				</div>
 			</div>
 
