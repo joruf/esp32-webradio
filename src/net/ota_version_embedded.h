@@ -12,12 +12,17 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.53",
+  "version": "v2.54",
   "released": "2026-07-06",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.53.bin",
-  "notes": "Snooze slider: fixed 0–60 scale, countdown on full range.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.54.bin",
+  "notes": "Fixed scheduler snooze status text encoding.",
   "history": [
+    {
+      "version": "v2.54",
+      "released": "2026-07-06",
+      "notes": "Fixed scheduler snooze status text encoding."
+    },
     {
       "version": "v2.53",
       "released": "2026-07-06",
