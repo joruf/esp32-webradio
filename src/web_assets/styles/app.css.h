@@ -546,13 +546,17 @@ const char app_css[] PROGMEM = R"=====(
 	.snooze-status { margin: 0 0 10px; padding: 8px 12px; border-radius: 6px; background: rgba(51, 122, 183, 0.1); border: 1px solid rgba(51, 122, 183, 0.28); }
 	.snooze-countdown-line { margin: 0; font-size: 0.85em; }
 	.snooze-countdown-line strong { font-variant-numeric: tabular-nums; }
-	.snooze-slider-toolbar { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; align-items: center; margin-top: 4px; }
-	.snooze-slider-meta { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; gap: 4px 8px; align-items: center; min-width: 0; }
-	.snooze-slider-label { margin: 0; font-weight: 600; font-size: 0.8em; text-transform: uppercase; letter-spacing: 0.04em; color: #555; grid-column: 1; grid-row: 1; }
-	.snooze-slider-value { grid-column: 2; grid-row: 1; font-size: 0.85em; font-weight: 700; font-variant-numeric: tabular-nums; color: #337ab7; line-height: 1; text-align: right; min-width: 2.4em; }
-	.snooze-slider-meter { grid-column: 1 / -1; grid-row: 2; height: 5px; border-radius: 999px; background: #e8e8e8; overflow: hidden; }
-	.snooze-slider-meter-fill { display: block; height: 100%; width: 0%; border-radius: inherit; background: linear-gradient(90deg, #f0ad4e, #d9534f); transition: width 0.35s linear; }
-	.snooze-slider-input { grid-column: 2; grid-row: 1; width: 100%; margin: 0; accent-color: #337ab7; min-height: 28px; align-self: center; }
+	.snooze-slider-toolbar { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+	.snooze-slider-header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+	.snooze-slider-label { margin: 0; font-weight: 600; font-size: 0.8em; text-transform: uppercase; letter-spacing: 0.04em; color: #555; }
+	.snooze-slider-value { font-size: 0.85em; font-weight: 700; font-variant-numeric: tabular-nums; color: #337ab7; line-height: 1; text-align: right; min-width: 2.4em; }
+	.range-slider-ticked { --range-segments: 10; --range-tick-color: rgba(0, 0, 0, 0.28); --range-track-color: #e8e8e8; --range-fill: 0%; width: 100%; margin: 0; height: 28px; -webkit-appearance: none; appearance: none; background: transparent; cursor: pointer; accent-color: #337ab7; }
+	.range-slider-ticked::-webkit-slider-runnable-track { height: 5px; border-radius: 999px; background: repeating-linear-gradient(to right, var(--range-tick-color) 0 1px, transparent 1px calc(100% / var(--range-segments))), linear-gradient(90deg, #f0ad4e, #d9534f) 0 var(--range-fill), var(--range-track-color) var(--range-fill)); }
+	.range-slider-ticked::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #337ab7; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); margin-top: -5.5px; }
+	.range-slider-ticked::-moz-range-track { height: 5px; border-radius: 999px; background: repeating-linear-gradient(to right, var(--range-tick-color) 0 1px, transparent 1px calc(100% / var(--range-segments))), var(--range-track-color); border: none; }
+	.range-slider-ticked::-moz-range-progress { height: 5px; border-radius: 999px; background: linear-gradient(90deg, #f0ad4e, #d9534f); }
+	.range-slider-ticked::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #337ab7; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); }
+	.snooze-slider-input::-webkit-slider-runnable-track { transition: background 0.35s linear; }
 	.sound-card-heading { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
 	.sound-card-icon { font-size: 1.35em; line-height: 1; opacity: 0.85; flex-shrink: 0; }
 	.sound-card-heading-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -611,8 +615,8 @@ const char app_css[] PROGMEM = R"=====(
 	body.theme-dark .sound-param label,
 	body.theme-dark .sound-eq-axis { color: #aaa; }
 	body.theme-dark .snooze-status { background: rgba(91, 155, 213, 0.12); border-color: rgba(91, 155, 213, 0.35); }
-	body.theme-dark .snooze-slider-meter { background: #333; }
 	body.theme-dark .snooze-slider-value { color: #7eb8e8; }
+	body.theme-dark .range-slider-ticked { --range-tick-color: rgba(255, 255, 255, 0.32); --range-track-color: #333; }
 	body.theme-dark .sound-eq-visual { background: linear-gradient(180deg, #252525 0%, #1c1c1c 100%); border-color: #444; }
 	body.theme-dark .sound-band { background: #222; border-color: #444; }
 	body.theme-dark .sound-master-meter { background: #333; }

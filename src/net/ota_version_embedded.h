@@ -12,12 +12,27 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.54",
+  "version": "v2.57",
   "released": "2026-07-06",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.54.bin",
-  "notes": "Fixed scheduler snooze status text encoding.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.57.bin",
+  "notes": "Orange-red gradient on all range sliders.",
   "history": [
+    {
+      "version": "v2.57",
+      "released": "2026-07-06",
+      "notes": "Orange-red gradient on all range sliders."
+    },
+    {
+      "version": "v2.56",
+      "released": "2026-07-06",
+      "notes": "Step tick marks on all range sliders."
+    },
+    {
+      "version": "v2.55",
+      "released": "2026-07-06",
+      "notes": "Snooze slider full-width with integrated fill; alarm fade tick marks."
+    },
     {
       "version": "v2.54",
       "released": "2026-07-06",

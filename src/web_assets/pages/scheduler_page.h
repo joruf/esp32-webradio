@@ -33,14 +33,11 @@ const char scheduler_html[] PROGMEM = R"=====(
 						<p class="snooze-countdown-line">Off <strong id="snooze-off-at">--:--</strong> | left <strong id="snooze-remaining">--</strong></p>
 					</div>
 					<div class="snooze-slider-toolbar">
-						<div class="snooze-slider-meta">
+						<div class="snooze-slider-header">
 							<label for="snooze-slider" class="snooze-slider-label">Timer</label>
 							<span class="snooze-slider-value" id="snooze-slider-value">Off</span>
-							<div class="snooze-slider-meter" aria-hidden="true">
-								<span class="snooze-slider-meter-fill" id="snooze-slider-meter"></span>
-							</div>
 						</div>
-						<input type="range" class="snooze-slider-input" id="snooze-slider" min="0" max="13" step="1" value="0" list="snooze-slider-ticks" aria-valuemin="0" aria-valuemax="13">
+						<input type="range" class="snooze-slider-input range-slider-ticked" id="snooze-slider" min="0" max="13" step="1" value="0" list="snooze-slider-ticks" aria-valuemin="0" aria-valuemax="13">
 					</div>
 					<datalist id="snooze-slider-ticks">
 						<option value="0" label="Off"></option>
@@ -66,7 +63,21 @@ const char scheduler_html[] PROGMEM = R"=====(
 				<div class="panel-body">
 					<div class="form-group display-setting-card">
 						<label for="feat-alarm-fade">Alarm volume fade</label>
-						<input type="range" class="form-control" id="feat-alarm-fade" min="5" max="60" step="5" value="15">
+						<input type="range" class="form-control range-slider-ticked" id="feat-alarm-fade" min="5" max="60" step="5" value="15" list="feat-alarm-fade-ticks">
+						<datalist id="feat-alarm-fade-ticks">
+							<option value="5" label="5"></option>
+							<option value="10" label="10"></option>
+							<option value="15" label="15"></option>
+							<option value="20" label="20"></option>
+							<option value="25" label="25"></option>
+							<option value="30" label="30"></option>
+							<option value="35" label="35"></option>
+							<option value="40" label="40"></option>
+							<option value="45" label="45"></option>
+							<option value="50" label="50"></option>
+							<option value="55" label="55"></option>
+							<option value="60" label="60"></option>
+						</datalist>
 						<div class="config-help">Time to gradually change the volume: fade in from silence to your current volume when an alarm starts, and fade out to silence when the snooze timer ends. Duration: <strong id="feat-alarm-fade-value">15 sec</strong></div>
 					</div>
 					<p class="alarm-help">Configure alarm schedules below. Each alarm needs at least one weekday. Enter start and shut-off as <strong>hh:mm</strong> (click hours or minutes to edit each pair). Use <strong>Save Alarm</strong> or <strong>Remove Alarm</strong> to store changes; the result appears in the command log above.</p>

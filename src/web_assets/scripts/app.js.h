@@ -698,6 +698,7 @@ const char app_js[] PROGMEM = R"=====(
         if ($("#sound-volume-meter").length) {
             $("#sound-volume-meter").css("width", level + "%");
         }
+        updateRangeSliderFill(document.getElementById("sound-volume"));
     }
 
     function initSoundSelectOptions() {
@@ -2713,18 +2714,42 @@ const char app_js[] PROGMEM = R"=====(
     }
 
     /**
-     * @param {number} valueIndex Current slider index (0 = Off … 13 = 60 min)
-     * @param {number} maxIndex Always the full-scale maximum index (60 min)
+     * @param {HTMLInputElement|HTMLElement|string} sliderEl Range input or selector
      */
-    function updateSnoozeSliderMeter(valueIndex, maxIndex) {
-        var meter = document.getElementById("snooze-slider-meter");
-        if (!meter) {
+    function updateRangeSliderFill(sliderEl) {
+        var slider = sliderEl;
+        var min;
+        var max;
+        var value;
+        var fillPct;
+
+        if (typeof slider === "string") {
+            slider = document.querySelector(slider);
+        }
+        if (!slider || slider.type !== "range") {
             return;
         }
 
-        maxIndex = Math.max(1, parseInt(maxIndex, 10) || SNOOZE_SLIDER_MAX_INDEX);
-        valueIndex = Math.max(0, Math.min(maxIndex, parseInt(valueIndex, 10) || 0));
-        meter.style.width = ((valueIndex / maxIndex) * 100) + "%";
+        min = parseFloat(slider.min);
+        max = parseFloat(slider.max);
+        value = parseFloat(slider.value);
+        if (!isFinite(min)) {
+            min = 0;
+        }
+        if (!isFinite(max)) {
+            max = 100;
+        }
+        if (!isFinite(value)) {
+            value = min;
+        }
+
+        fillPct = max > min ? ((value - min) / (max - min)) * 100 : 0;
+        fillPct = Math.max(0, Math.min(100, fillPct));
+        slider.style.setProperty("--range-fill", fillPct + "%");
+    }
+
+    function updateSnoozeSliderFill() {
+        updateRangeSliderFill(document.getElementById("snooze-slider"));
     }
 
     /**
@@ -2753,7 +2778,7 @@ const char app_js[] PROGMEM = R"=====(
             isActive,
             isActive ? remainingSec : 0
         );
-        updateSnoozeSliderMeter(idx, SNOOZE_SLIDER_MAX_INDEX);
+        updateSnoozeSliderFill();
         snoozeSliderSyncInProgress = false;
     }
 
@@ -2912,6 +2937,7 @@ const char app_js[] PROGMEM = R"=====(
             var fade = normalizeAlarmFadeValue($("#feat-alarm-fade").val());
             $("#feat-alarm-fade").val(String(fade));
             $("#feat-alarm-fade-value").text(fade + " sec");
+            updateRangeSliderFill(document.getElementById("feat-alarm-fade"));
         }
 
         $(document)
@@ -2965,7 +2991,7 @@ const char app_js[] PROGMEM = R"=====(
                 var remainingSec = isActive ? Math.max(0, snoozeEndEpoch - Math.floor(Date.now() / 1000)) : 0;
 
                 updateSnoozeSliderLabel(mins, isActive, remainingSec);
-                updateSnoozeSliderMeter(idx, SNOOZE_SLIDER_MAX_INDEX);
+                updateSnoozeSliderFill();
             })
             .on("change.schedulerSnooze", function() {
                 snoozeSliderUserDragging = false;
@@ -3055,6 +3081,7 @@ const char app_js[] PROGMEM = R"=====(
             if (valueEl) {
                 valueEl.innerHTML = volume;
             }
+            updateRangeSliderFill(slider);
         }
     }
 
@@ -3286,7 +3313,44 @@ const char app_js[] PROGMEM = R"=====(
         refreshEventLog();
     }
 
+    /**
+     * Draw step tick marks on every range slider from min, max and step.
+     */
+    function initRangeSliderTicks() {
+        $("input[type='range']").each(function() {
+            var slider = this;
+            var min = parseFloat(slider.min);
+            var max = parseFloat(slider.max);
+            var step = parseFloat(slider.step);
+            var segments;
+
+            if (!isFinite(min)) {
+                min = 0;
+            }
+            if (!isFinite(max)) {
+                max = 100;
+            }
+            if (!isFinite(step) || step <= 0) {
+                step = 1;
+            }
+
+            segments = Math.round((max - min) / step);
+            if (segments < 1) {
+                segments = 1;
+            }
+
+            slider.classList.add("range-slider-ticked");
+            slider.style.setProperty("--range-segments", String(segments));
+            updateRangeSliderFill(slider);
+            $(slider).off("input.rangeFill change.rangeFill")
+                .on("input.rangeFill change.rangeFill", function() {
+                    updateRangeSliderFill(this);
+                });
+        });
+    }
+
     $(function() {
+        initRangeSliderTicks();
         setInterval(function() {
             if (!shouldRunLiveUpdates()) {
                 syncThemeFromServer();
