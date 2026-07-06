@@ -1,10 +1,15 @@
 {
-  "version": "v2.46",
-  "released": "2026-07-05",
+  "version": "v2.47",
+  "released": "2026-07-06",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.46.bin",
-  "notes": "Scheduler snooze timer: when you pick a duration on scheduler.html the device stores the shut-off time and the page shows a live countdown (remaining time and radio off at HH:MM). Active snooze state is restored on page load via getJSON.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.47.bin",
+  "notes": "Fixed Web UI first-load hang: large assets (app.js/app.css) could stall near completion when the browser fetched them in parallel. HTTP responses now retry partial TCP writes, send Content-Length, flush less aggressively, and defer the SSE live stream until static assets have loaded.",
   "history": [
+    {
+      "version": "v2.47",
+      "released": "2026-07-06",
+      "notes": "Fixed Web UI first-load hang: large assets (app.js/app.css) could stall near completion when the browser fetched them in parallel. HTTP responses now retry partial TCP writes, send Content-Length, flush less aggressively, and defer the SSE live stream until static assets have loaded."
+    },
     {
       "version": "v2.46",
       "released": "2026-07-05",

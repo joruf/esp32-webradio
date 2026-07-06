@@ -12,12 +12,17 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.46",
-  "released": "2026-07-05",
+  "version": "v2.47",
+  "released": "2026-07-06",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.46.bin",
-  "notes": "Scheduler snooze timer: live countdown on scheduler.html with shut-off time (HH:MM) and remaining time; state restored on page load from getJSON.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.47.bin",
+  "notes": "Fixed Web UI first-load hang: parallel downloads of app.js/app.css could stall near completion. Partial TCP writes retried, Content-Length added, less aggressive flush, SSE deferred after page load.",
   "history": [
+    {
+      "version": "v2.47",
+      "released": "2026-07-06",
+      "notes": "Fixed Web UI first-load hang: parallel downloads of app.js/app.css could stall near completion. Partial TCP writes retried, Content-Length added, less aggressive flush, SSE deferred after page load."
+    },
     {
       "version": "v2.46",
       "released": "2026-07-05",
@@ -62,11 +67,6 @@ const char ota_version_embedded_json[] PROGMEM = R"=====(
       "version": "v2.38",
       "released": "2026-07-02",
       "notes": "Saving a setting now only changes that one parameter: partial config saves no longer revert the current volume, station or tone and no longer reset unrelated feature flags to their defaults. Alarm volume fade-in is fixed (no volume jump, effective immediately) and is set in 5-second increments. Added host-based unit tests (pio test -e native)."
-    },
-    {
-      "version": "v2.37",
-      "released": "2026-07-02",
-      "notes": "OTA page can now install a specific release (including older ones = downgrade) picked from an online-detected list of firmware images that really exist. Manual .bin uploads now show a brick-risk warning and are validated (size, ESP32 0xE9 signature and chip type) before flashing. Online volume now changes only in 5-step increments."
     }
   ]
 }

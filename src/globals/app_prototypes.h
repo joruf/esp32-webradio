@@ -17,7 +17,8 @@ const char *analyzeCmd(const char *par, const char *val);
 void chomp(String &str);
 String httpheader(String contentstype, uint16_t cacheMaxAgeSec = 0,
                   const String &etag = "",
-                  const String &lastModified = "");
+                  const String &lastModified = "",
+                  int contentLength = -1);
 void recoverHttpServerState();
 bool nvsKeyExists(const char *key);
 void nvsRequestSettingsSave();

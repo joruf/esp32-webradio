@@ -4130,7 +4130,9 @@ const char app_js[] PROGMEM = R"=====(
             if (!shouldRunLiveUpdates()) {
                 return;
             }
-            ensureMp3StreamLiveUpdates();
+            // Defer SSE until static assets have finished loading. Opening /?events
+            // in parallel with app.js (~230 KiB) used to stall the single HTTP worker.
+            setTimeout(ensureMp3StreamLiveUpdates, 400);
     };
 
     /** Send snooze timer to the ESP32 and update the scheduler countdown. */

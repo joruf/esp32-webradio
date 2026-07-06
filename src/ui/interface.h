@@ -149,14 +149,13 @@ void handleWebpage(const String &pagename) {
       cmdclient.flush();
       return;
     }
-    cmdclient.print(httpheader(ct, 600, etag, lastModified)); // Send header (10 minutes cache)
+    const int serveLen = (ct == "text/html") ? expandedHtmlLength(p, l) : l;
+    cmdclient.print(httpheader(ct, 600, etag, lastModified, serveLen));
 
     if (l > 0 && !streamWebPage(cmdclient, p, l, ct, isDarkModeActive(), TCPCHUNKSIZE)) {
       dbgprint("HTTP client disconnected while sending %s", pagename.c_str());
     }
     cmdclient.flush();
-    // The HTTP response ends with another blank line:
-    cmdclient.println();
     dbgprint("Response send");
   }
 }

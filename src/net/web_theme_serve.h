@@ -84,6 +84,40 @@ static int findOpeningTagClose(const char *progmemHtml, int length, int start, c
 }
 
 /**
+ * @brief Write a byte buffer to a client, retrying partial TCP writes.
+ *
+ * @param client Active HTTP client
+ * @param data Source bytes (RAM)
+ * @param length Number of bytes to send
+ * @return bool False if the client disconnected before all bytes were sent
+ */
+static bool writeClientBytes(WiFiClient &client, const uint8_t *data, int length) {
+  int sent = 0;
+  uint16_t idleRetries = 0;
+
+  while (sent < length) {
+    if (!client.connected()) {
+      return false;
+    }
+
+    const int n = client.write(data + sent, (size_t)(length - sent));
+    if (n > 0) {
+      sent += n;
+      idleRetries = 0;
+      yield();
+      continue;
+    }
+
+    if (++idleRetries > 200) {
+      return false;
+    }
+    delay(1);
+  }
+
+  return true;
+}
+
+/**
  * @brief Write a PROGMEM C string to a connected client.
  *
  * @param client Active HTTP client
@@ -91,38 +125,50 @@ static int findOpeningTagClose(const char *progmemHtml, int length, int start, c
  */
 static void writeProgmemCString(WiFiClient &client, const char *progmemStr) {
   char buffer[64];
-  size_t offset = 0;
+  size_t bufLen = 0;
+  size_t pos = 0;
 
   for (;;) {
-    const char c = pgm_read_byte(progmemStr + offset);
+    const char c = pgm_read_byte(progmemStr + pos++);
     if (c == '\0') {
       break;
     }
 
-    buffer[offset++] = c;
-    if (offset >= sizeof(buffer)) {
-      client.write((const uint8_t *)buffer, offset);
-      offset = 0;
+    buffer[bufLen++] = c;
+    if (bufLen >= sizeof(buffer)) {
+      if (!writeClientBytes(client, (const uint8_t *)buffer, (int)bufLen)) {
+        return;
+      }
+      bufLen = 0;
       yield();
     }
   }
 
-  if (offset > 0) {
-    client.write((const uint8_t *)buffer, offset);
+  if (bufLen > 0) {
+    writeClientBytes(client, (const uint8_t *)buffer, (int)bufLen);
   }
 }
 
 /**
  * @brief Write a byte range from PROGMEM in chunks.
  *
+ * Partial TCP writes are retried so a full chunk is never skipped when the
+ * socket buffer is momentarily full (e.g. while several assets load in parallel).
+ *
  * @param client Active HTTP client
  * @param progmemData Source data in PROGMEM
  * @param length Number of bytes to write
- * @param chunkSize Maximum bytes per write
+ * @param chunkSize Maximum bytes per write attempt
  * @return bool False if the client disconnected before the range was sent
  */
 static bool writeProgmemRange(WiFiClient &client, const char *progmemData, int length, int chunkSize) {
-  const char *p = progmemData;
+  char buffer[1024];
+  const int maxChunk = (int)sizeof(buffer);
+  int flushedSince = 0;
+
+  if (chunkSize > maxChunk) {
+    chunkSize = maxChunk;
+  }
 
   while (length > 0) {
     if (!client.connected()) {
@@ -130,12 +176,29 @@ static bool writeProgmemRange(WiFiClient &client, const char *progmemData, int l
     }
 
     const int chunk = (length <= chunkSize) ? length : chunkSize;
-    client.write((const uint8_t *)p, chunk);
-    client.flush();
-    yield();
+    for (int i = 0; i < chunk; i++) {
+      buffer[i] = pgm_read_byte(progmemData + i);
+    }
 
-    p += chunk;
+    if (!writeClientBytes(client, (const uint8_t *)buffer, chunk)) {
+      return false;
+    }
+
+    progmemData += chunk;
     length -= chunk;
+    flushedSince += chunk;
+
+    // Flush periodically; a flush on every 1 KiB blocked the main loop during
+    // parallel asset downloads and made large responses stall near the end.
+    if (flushedSince >= 8192) {
+      client.flush();
+      flushedSince = 0;
+      yield();
+    }
+  }
+
+  if (flushedSince > 0) {
+    client.flush();
   }
 
   return true;

@@ -1057,16 +1057,21 @@ void handlehttp() {
  *
  * @param contentstype The Content-Type header value (e.g., "text/html")
  * @param cacheMaxAgeSec Cache lifetime in seconds, 0 disables caching
+ * @param contentLength Body length in bytes, or -1 to omit Content-Length
  * @return String Complete HTTP header
  */
 String httpheader(String contentstype, uint16_t cacheMaxAgeSec,
                   const String &etag,
-                  const String &lastModified) {
+                  const String &lastModified,
+                  int contentLength) {
   String header = String("HTTP/1.1 200 OK\nContent-type:") + contentstype +
                   String("\n"
                          "Server: " NAME "\n"
-                         "Connection: close\n"
-                         "Cache-Control: ");
+                         "Connection: close\n");
+  if (contentLength >= 0) {
+    header += String("Content-Length: ") + String(contentLength) + String("\n");
+  }
+  header += String("Cache-Control: ");
   if (cacheMaxAgeSec > 0) {
     header += String("max-age=") + String(cacheMaxAgeSec) + "\n";
     if (etag.length() > 0) {

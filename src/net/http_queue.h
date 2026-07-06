@@ -74,7 +74,6 @@ static void httpBeginSse(WiFiClient &client) {
   client.print("Cache-Control: no-cache\r\n");
   client.print("Connection: keep-alive\r\n");
   client.print("Access-Control-Allow-Origin: *\r\n\r\n");
-  client.flush();
 }
 
 /**
