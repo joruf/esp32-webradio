@@ -471,6 +471,11 @@ const char app_js[] PROGMEM = R"=====(
 
     var configFormLoading = false;
 
+    /** Last volume reported by the device (getJSON / getconfig). Null until first sync. */
+    var lastKnownDeviceVolume = null;
+    /** True after the Web UI has applied the device volume to local sliders at least once. */
+    var volumeUiSyncedFromDevice = false;
+
     var toneHaOptions = [
         [8, "-12 dB"], [9, "-10.5 dB"], [10, "-9 dB"], [11, "-7.5 dB"], [12, "-6 dB"],
         [13, "-4.5 dB"], [14, "-3 dB"], [15, "-1.5 dB"], [0, "Off"],
@@ -683,12 +688,154 @@ const char app_js[] PROGMEM = R"=====(
         fill.setAttribute("d", path + " L360,100 L0,100 Z");
     }
 
-    function setSoundVolumeUi(value) {
-        var level = parseInt(value, 10);
-        if (isNaN(level)) {
+    /**
+     * @param {number} value Volume 0-100 from the device
+     * @return {number|null} Snapped volume or null if invalid
+     */
+    function rememberDeviceVolume(value) {
+        var parsed = parseInt(value, 10);
+        var level;
+
+        if (isNaN(parsed)) {
+            return null;
+        }
+
+        level = roundVolumeToStep(parsed);
+        lastKnownDeviceVolume = level;
+        volumeUiSyncedFromDevice = true;
+        $("input[data-volume-control='1']").prop("disabled", false);
+        return level;
+    }
+
+    /**
+     * @param {HTMLElement|null} slider Range input element
+     * @return {boolean}
+     */
+    function isVolumeSliderUserDriven(slider) {
+        return !!(slider && slider.getAttribute("data-volume-user") === "1");
+    }
+
+    /**
+     * Mark a volume slider as actively driven by the user (pointer/keyboard).
+     *
+     * @param {HTMLElement|null} slider Range input element
+     */
+    function markVolumeSliderUserDriven(slider) {
+        if (slider) {
+            slider.setAttribute("data-volume-user", "1");
+        }
+    }
+
+    /**
+     * Clear the user-driven flag after the interaction ends.
+     *
+     * @param {HTMLElement|null} slider Range input element
+     */
+    function clearVolumeSliderUserDriven(slider) {
+        if (slider) {
+            slider.removeAttribute("data-volume-user");
+        }
+    }
+
+    /**
+     * Apply a device volume to one slider without sending volume= back to the radio.
+     *
+     * @param {HTMLElement|null} slider Range input element
+     * @param {string|null} valueId Optional element id for the numeric label
+     * @param {number} level Volume 0-100
+     */
+    function applyVolumeToSliderUi(slider, valueId, level) {
+        if (!slider) {
             return;
         }
-        level = Math.max(0, Math.min(100, level));
+        level = roundVolumeToStep(level);
+        if (parseInt(slider.value, 10) !== level) {
+            slider.value = String(level);
+        }
+        if (valueId) {
+            var valueEl = document.getElementById(valueId);
+            if (valueEl) {
+                valueEl.textContent = String(level);
+            }
+        }
+        updateRangeSliderFill(slider);
+    }
+
+    /**
+     * Send volume to the device only after a real user gesture on that slider.
+     * Spurious input/change events (browser form restore) are ignored and the
+     * slider is restored to the last known device volume.
+     *
+     * @param {HTMLElement|null} slider Range input element
+     * @param {string|null} valueId Optional label element id
+     * @return {number|null} Sent level, or null when the event was ignored
+     */
+    function sendVolumeFromUiIfUserDriven(slider, valueId) {
+        var level;
+
+        if (!slider) {
+            return null;
+        }
+
+        level = roundVolumeToStep(slider.value);
+        slider.value = String(level);
+        if (valueId) {
+            var valueEl = document.getElementById(valueId);
+            if (valueEl) {
+                valueEl.textContent = String(level);
+            }
+        }
+        updateRangeSliderFill(slider);
+
+        if (!isVolumeSliderUserDriven(slider)) {
+            if (lastKnownDeviceVolume !== null) {
+                applyVolumeToSliderUi(slider, valueId, lastKnownDeviceVolume);
+            }
+            return null;
+        }
+
+        if (!volumeUiSyncedFromDevice && lastKnownDeviceVolume === null) {
+            // Still waiting for the first device reading; do not push a default.
+            return null;
+        }
+
+        lastKnownDeviceVolume = level;
+        httpGet("volume=" + level, { silent: true });
+        slider.setAttribute("data-volume-sent", "1");
+        return level;
+    }
+
+    /**
+     * Bind pointer/keyboard gates so only intentional drags send volume=.
+     *
+     * @param {JQuery} $slider jQuery collection of volume range inputs
+     */
+    function bindVolumeSliderUserGate($slider) {
+        if (!$slider || !$slider.length) {
+            return;
+        }
+
+        $slider.attr("data-volume-control", "1");
+        $slider.off(".volumeGate")
+            .on("pointerdown.volumeGate mousedown.volumeGate touchstart.volumeGate keydown.volumeGate", function() {
+                markVolumeSliderUserDriven(this);
+            })
+            .on("pointerup.volumeGate mouseup.volumeGate touchend.volumeGate touchcancel.volumeGate", function() {
+                var slider = this;
+                setTimeout(function() {
+                    clearVolumeSliderUserDriven(slider);
+                }, 50);
+            })
+            .on("blur.volumeGate", function() {
+                clearVolumeSliderUserDriven(this);
+            });
+    }
+
+    function setSoundVolumeUi(value) {
+        var level = rememberDeviceVolume(value);
+        if (level === null) {
+            return;
+        }
         if ($("#sound-volume").length) {
             $("#sound-volume").val(level);
         }
@@ -3018,20 +3165,26 @@ const char app_js[] PROGMEM = R"=====(
     }
 
     function bindSoundVolumeSlider() {
-        if (!$("#sound-volume").length) {
+        var $slider = $("#sound-volume");
+        if (!$slider.length) {
             return;
         }
 
-        $("#sound-volume").off("input.soundVolume change.soundVolume")
+        $slider.prop("disabled", !volumeUiSyncedFromDevice);
+        bindVolumeSliderUserGate($slider);
+        $slider.off("input.soundVolume change.soundVolume")
             .on("input.soundVolume", function() {
-                var level = roundVolumeToStep($(this).val());
-                $(this).val(level);
-                setSoundVolumeUi(level);
-                httpGet("volume=" + level, { silent: true });
+                var level = sendVolumeFromUiIfUserDriven(this, "sound-volume-value");
+                if (level !== null && $("#sound-volume-meter").length) {
+                    $("#sound-volume-meter").css("width", level + "%");
+                }
             })
             .on("change.soundVolume", function() {
-                var level = roundVolumeToStep($(this).val());
-                showCommandLog("Volume set to " + level + "%", { type: "success" });
+                if (this.getAttribute("data-volume-sent") !== "1") {
+                    return;
+                }
+                this.removeAttribute("data-volume-sent");
+                showCommandLog("Volume set to " + roundVolumeToStep($(this).val()) + "%", { type: "success" });
             });
     }
 
@@ -3053,36 +3206,43 @@ const char app_js[] PROGMEM = R"=====(
 
     function bindVolumeSlider(sliderSelector, valueSelector) {
         var slider = $(sliderSelector);
+        var valueId = valueSelector ? String(valueSelector).replace(/^#/, "") : null;
         if (!slider.length) {
             return;
         }
 
+        slider.prop("disabled", !volumeUiSyncedFromDevice);
+        bindVolumeSliderUserGate(slider);
         slider.off("input.volumeSlider change.volumeSlider")
             .on("input.volumeSlider", function() {
-                var level = roundVolumeToStep($(this).val());
-                $(this).val(level);
-                $(valueSelector).text(level);
-                httpGet("volume=" + level, { silent: true });
+                sendVolumeFromUiIfUserDriven(this, valueId);
             })
             .on("change.volumeSlider", function() {
-                var level = roundVolumeToStep($(this).val());
-                showCommandLog("Volume set to " + level + "%", { type: "success" });
+                if (this.getAttribute("data-volume-sent") !== "1") {
+                    return;
+                }
+                this.removeAttribute("data-volume-sent");
+                showCommandLog("Volume set to " + roundVolumeToStep($(this).val()) + "%", { type: "success" });
             });
     }
 
     function syncVolumeSlider(sliderId, valueId, volume) {
         var slider = document.getElementById(sliderId);
+        var level;
+
         if (!slider || volume === undefined) {
             return;
         }
-        if (parseInt(slider.value, 10) !== parseInt(volume, 10)) {
-            slider.value = volume;
-            var valueEl = document.getElementById(valueId);
-            if (valueEl) {
-                valueEl.innerHTML = volume;
-            }
-            updateRangeSliderFill(slider);
+        if (isVolumeSliderUserDriven(slider)) {
+            return;
         }
+
+        level = rememberDeviceVolume(volume);
+        if (level === null) {
+            return;
+        }
+
+        applyVolumeToSliderUi(slider, valueId, level);
     }
 
     function bindIndexVolumeSlider() {
@@ -3118,7 +3278,7 @@ const char app_js[] PROGMEM = R"=====(
     }
 
     function saveRadioConfig(options) {
-        options = $.extend({ silentLog: false, applyAudio: true }, options || {});
+        options = $.extend({ silentLog: false, applyAudio: false }, options || {});
 
         if (!radioConfigReady) {
             if (!options.silentLog) {

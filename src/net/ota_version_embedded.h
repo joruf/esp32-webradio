@@ -12,12 +12,17 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.57",
-  "released": "2026-07-06",
+  "version": "v2.58",
+  "released": "2026-07-19",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.57.bin",
-  "notes": "Orange-red gradient on all range sliders.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.58.bin",
+  "notes": "Web UI syncs volume from device before allowing slider changes.",
   "history": [
+    {
+      "version": "v2.58",
+      "released": "2026-07-19",
+      "notes": "Web UI syncs volume from device before allowing slider changes."
+    },
     {
       "version": "v2.57",
       "released": "2026-07-06",

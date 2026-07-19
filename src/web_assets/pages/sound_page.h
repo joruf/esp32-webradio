@@ -36,7 +36,7 @@ const char sound_html[] PROGMEM = R"=====(
 								<span class="sound-master-meter-fill" id="sound-volume-meter"></span>
 							</div>
 							<span class="sound-master-value"><span id="sound-volume-value">0</span><small>%</small></span>
-							<input type="range" class="sound-master-slider" id="sound-volume" min="0" max="100" step="5" aria-valuemin="0" aria-valuemax="100">
+							<input type="range" class="sound-master-slider" id="sound-volume" min="0" max="100" step="5" value="0" autocomplete="off" data-volume-control="1" aria-valuemin="0" aria-valuemax="100">
 						</div>
 					</div>
 				</section>
