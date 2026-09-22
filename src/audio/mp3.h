@@ -265,7 +265,10 @@ void mp3StreamTask(void *parameter) {
 
     mp3loop();            // Keep the audio queue filled (state machine + data pump)
     streamWatchdogPoll(); // Handle stalled-stream detection in the same task
-    pollAlarmFallback();  // Offline alarm beep/chirp after watchdog gives up
+    // Only touch SPI/VS1053 sine path while an offline wake tone is active.
+    if (isAlarmFallbackPlaying()) {
+      pollAlarmFallback();
+    }
 
     // Yield ~1 ms so loop() (HTTP/UI) and other tasks still get CPU time.
     vTaskDelay(1);

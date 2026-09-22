@@ -1,10 +1,15 @@
 {
-  "version": "v2.67",
+  "version": "v2.68",
   "released": "2026-09-22",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.67.bin",
-  "notes": "Fix Offline wake sound/interval NVS persistence (ArduinoJson |nullptr, feat_* boot load, feat_fb_int key length).",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.68.bin",
+  "notes": "Reduce stream stutter: SPI-safe VU render, skip idle volume SPI claims, soft-reconnect keeps audio queue.",
   "history": [
+    {
+      "version": "v2.68",
+      "released": "2026-09-22",
+      "notes": "Reduce stream stutter: SPI-safe VU render, skip idle volume SPI claims, soft-reconnect keeps audio queue."
+    },
     {
       "version": "v2.67",
       "released": "2026-09-22",
@@ -68,12 +73,12 @@
     {
       "version": "v2.53",
       "released": "2026-07-06",
-      "notes": "Snooze slider keeps a fixed 0–60 min scale while counting down; dragging always sets a new duration."
+      "notes": "Snooze slider keeps a fixed 0\u201360 min scale while counting down; dragging always sets a new duration."
     },
     {
       "version": "v2.52",
       "released": "2026-07-06",
-      "notes": "Scheduler snooze layout: 50/50 split between timer info and slider; steps 0, 1, 5, 10 … 60 min."
+      "notes": "Scheduler snooze layout: 50/50 split between timer info and slider; steps 0, 1, 5, 10 \u2026 60 min."
     },
     {
       "version": "v2.51",
@@ -203,7 +208,7 @@
     {
       "version": "v2.24",
       "released": "2026-06-25",
-      "notes": "BLUETFT dashboard: song title wraps across multiple lines (22 characters per line, up to 8 lines below station name). Web UI: faster page load — WiFi signal API uses scan cache (optional scan=1), OTA check returns embedded manifest without blocking HTTP, theme and preset list load after static assets, improved yield during large CSS/JS transfers."
+      "notes": "BLUETFT dashboard: song title wraps across multiple lines (22 characters per line, up to 8 lines below station name). Web UI: faster page load \u2014 WiFi signal API uses scan cache (optional scan=1), OTA check returns embedded manifest without blocking HTTP, theme and preset list load after static assets, improved yield during large CSS/JS transfers."
     },
     {
       "version": "v2.23",

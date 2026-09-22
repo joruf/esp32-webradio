@@ -610,6 +610,12 @@ static void handleTftUpdate() {
       updateWifiStatusDisplay();
       lastLiveDashboardMs = millis();
     }
+    // Draw VU only while SPI is claimed (levels are computed in loop via vuMeter.update).
+    if (radioFeatures.vu_meter && datamode != STOPPED) {
+      renderVuMeterOnTFT(getVuMeterTrebleLevel(), getVuMeterBassLevel(), true);
+    } else {
+      renderVuMeterOnTFT(0, 0, false);
+    }
 #endif
     handleTftInfoDisplay();
     dsp_update();
@@ -642,10 +648,20 @@ static void handleVs1053VolumeAndTone() {
     return;
   }
 
+  // Skip the SPI claim when neither volume nor tone changed; claiming every
+  // 100 ms contended with playChunk and caused brief stream underruns.
+  const uint8_t chipVol = getChipVolume();
+  const bool volumeChanged = (vs1053player->getVolume() != chipVol);
+  if (!volumeChanged && !reqtone) {
+    return;
+  }
+
   if (!claimSPI("hspec")) {
     return;
   }
-  vs1053player->setVolume(getChipVolume()); // Map external 0-100 to audible 40-100
+  if (volumeChanged) {
+    vs1053player->setVolume(chipVol); // Map external 0-100 to audible 40-100
+  }
 
   if (reqtone) {
     reqtone = false;

@@ -54,17 +54,15 @@ public:
   }
 
   /**
-   * @brief Recalculate and optionally render the VU meter on the TFT.
+   * @brief Recalculate VU levels only (no TFT/SPI).
+   *
+   * Rendering must happen under claimSPI() (see handleTftUpdate) so VU bar
+   * draws cannot interleave with VS1053 playChunk on the shared SPI bus.
    */
   void update(void) {
     if (!radioFeatures.vu_meter) {
-      if (trebleLevel_ > 0 || bassLevel_ > 0) {
-        trebleLevel_ = 0;
-        bassLevel_ = 0;
-        if (displaytype == T_BLUETFT || displaytype == T_ILI9341) {
-          renderVuMeterOnTFT(0, 0, false);
-        }
-      }
+      trebleLevel_ = 0;
+      bassLevel_ = 0;
       return;
     }
 
@@ -128,11 +126,6 @@ public:
       } else {
         peak_ = 0;
       }
-    }
-
-    if (displaytype == T_BLUETFT || displaytype == T_ILI9341) {
-      const bool visible = (datamode != STOPPED && (trebleLevel_ > 0 || bassLevel_ > 0));
-      renderVuMeterOnTFT(trebleLevel_, bassLevel_, visible);
     }
   }
 

@@ -22,9 +22,9 @@ static void requestSoftStreamReconnect(void) {
   datacount = 0;
   outqp = outchunk.buf;
   metaint = 0;
-  if (dataqueue) {
-    xQueueReset(dataqueue);
-  }
+  // Keep any queued decoder chunks so playback can continue while the producer
+  // reconnects. Wiping the queue caused an immediate audible gap on every stall
+  // recovery (up to ~1.6 s of buffer at QSIZ=800).
   if (host.length() > 0) {
     hostreq = true;
   }
