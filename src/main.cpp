@@ -97,7 +97,6 @@
 #include "config/radio_config.h"
 #include "net/captive_portal.h"
 #include "audio/sd.h"
-#include "ui/alarm.h"
 #include "system/loop.h"
 #include "net/wifi_signal.h"
 #include "system/setup.h"
@@ -107,6 +106,7 @@
 #include "config/features_config.h"
 #include "audio/vu_meter.h"
 #include "audio/stream_watchdog.h"
+#include "ui/alarm.h"
 #include "net/ota_check.h"
 #include "net/upgrade.h"
 #include "net/live_status.h"
@@ -177,7 +177,11 @@ void loop() {
   }
 
   // WiFi reconnect logic - fully non-blocking so it never stalls audio buffering.
-  if (WiFi.status() != WL_CONNECTED) {
+  // Skip while the configuration soft-AP is active: WiFi.reconnect() would tear
+  // down the AP and make captive-portal setup impossible.
+  if (wifiConfigApActive) {
+    wasConnected = false;
+  } else if (WiFi.status() != WL_CONNECTED) {
     if (wasConnected) {
       // First detection of a dropped link (dedup in the event log guards repeats).
       eventLogRecordWarning("WiFi connection lost");
@@ -192,6 +196,7 @@ void loop() {
     // Connection (re)established: restart the network services once.
     wasConnected = true;
     NetworkFound = true;
+    wifiConfigApActive = false;
     ipaddress = WiFi.localIP().toString();
     cmdserver.begin();
     ArduinoOTA.begin();

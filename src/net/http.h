@@ -154,6 +154,23 @@ void mk_lsan() {
       {
         lpw = buf.substring(inx + 1);  // Isolate password
         lssid = buf.substring(0, inx); // Holds SSID now
+        if (lpw.length() == 0 || lpw == "********") {
+          dbgprint("Skip WiFi SSID %s with invalid/masked password (wifi_%02d)", lssid.c_str(), i);
+          continue;
+        }
+        // Skip duplicate SSIDs so WiFiMulti does not try the same network twice
+        // with possibly stale/wrong passwords from a bad config merge.
+        bool duplicate = false;
+        for (size_t di = 0; di < wifilist.size(); di++) {
+          if (wifilist[di].ssid && lssid.equals(wifilist[di].ssid)) {
+            duplicate = true;
+            break;
+          }
+        }
+        if (duplicate) {
+          dbgprint("Skip duplicate WiFi SSID %s (wifi_%02d)", lssid.c_str(), i);
+          continue;
+        }
         dbgprint("Added %s to list of networks", lssid.c_str());
         winfo.inx = i;                      // Create new element for wifilist ;
         winfo.ssid = strdup(lssid.c_str()); // Set ssid of element

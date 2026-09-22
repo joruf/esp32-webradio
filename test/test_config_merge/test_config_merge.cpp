@@ -170,6 +170,36 @@ void test_empty_patch_is_noop(void) {
   TEST_ASSERT_EQUAL_INT(15, base["features"]["alarm_fade_sec"].as<int>());
 }
 
+/**
+ * Features string fields must be readable after a merge.
+ * ArduinoJson `| nullptr` uses operator|<nullptr_t> and always returns null.
+ */
+void test_features_string_fields_readable_after_merge(void) {
+  JsonDocument base;
+  buildBase(base);
+  base["features"]["alarm_fallback_sound"] = "beep";
+  base["features"]["ota_check_url"] = "https://example.com/old.json";
+
+  JsonDocument patch;
+  patch["features"]["alarm_fallback_sound"] = "arcade";
+  patch["features"]["alarm_fallback_interval_sec"] = 10;
+  patch["features"]["ota_check_url"] = "https://example.com/new.json";
+
+  mergeRadioConfigPatch(base, patch);
+
+  JsonObject feat = base["features"].as<JsonObject>();
+  TEST_ASSERT_EQUAL_STRING("arcade", feat["alarm_fallback_sound"].as<const char *>());
+  TEST_ASSERT_EQUAL_INT(10, feat["alarm_fallback_interval_sec"].as<int>());
+  TEST_ASSERT_EQUAL_STRING("https://example.com/new.json",
+                           feat["ota_check_url"].as<const char *>());
+
+  // Guard the known pitfall that broke Offline wake sound persistence.
+  const char *broken = feat["alarm_fallback_sound"] | nullptr;
+  TEST_ASSERT_NULL(broken);
+  const char *ok = feat["alarm_fallback_sound"].as<const char *>();
+  TEST_ASSERT_EQUAL_STRING("arcade", ok);
+}
+
 int main(int, char **) {
   UNITY_BEGIN();
   RUN_TEST(test_features_patch_keeps_other_params);
@@ -180,5 +210,6 @@ int main(int, char **) {
   RUN_TEST(test_alarms_patch_replaces_array);
   RUN_TEST(test_empty_alarms_patch_is_noop);
   RUN_TEST(test_empty_patch_is_noop);
+  RUN_TEST(test_features_string_fields_readable_after_merge);
   return UNITY_END();
 }

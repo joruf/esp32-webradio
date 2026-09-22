@@ -12,116 +12,46 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.58",
-  "released": "2026-07-19",
+  "version": "v2.67",
+  "released": "2026-09-22",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.58.bin",
-  "notes": "Web UI syncs volume from device before allowing slider changes.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.67.bin",
+  "notes": "Fix Offline wake sound/interval NVS persistence (ArduinoJson |nullptr, feat_* boot load, feat_fb_int key length).",
   "history": [
     {
-      "version": "v2.58",
-      "released": "2026-07-19",
-      "notes": "Web UI syncs volume from device before allowing slider changes."
+      "version": "v2.67",
+      "released": "2026-09-22",
+      "notes": "Fix Offline wake sound/interval NVS persistence (ArduinoJson |nullptr, feat_* boot load, feat_fb_int key length)."
     },
     {
-      "version": "v2.57",
-      "released": "2026-07-06",
-      "notes": "Orange-red gradient on all range sliders."
+      "version": "v2.66",
+      "released": "2026-09-22",
+      "notes": "Fix Offline wake sound persistence: ArduinoJson |nullptr read, boot loads feat_* NVS keys."
     },
     {
-      "version": "v2.56",
-      "released": "2026-07-06",
-      "notes": "Step tick marks on all range sliders."
+      "version": "v2.65",
+      "released": "2026-09-22",
+      "notes": "Fix Offline wake sound and OTA URL not persisting (ArduinoJson | nullptr string read)."
     },
     {
-      "version": "v2.55",
-      "released": "2026-07-06",
-      "notes": "Snooze slider full-width with integrated fill; alarm fade tick marks."
+      "version": "v2.64",
+      "released": "2026-09-22",
+      "notes": "Replace Mario/Tetris with original Arcade wake jingle; rename Play every label."
     },
     {
-      "version": "v2.54",
-      "released": "2026-07-06",
-      "notes": "Fixed scheduler snooze status text encoding."
+      "version": "v2.63",
+      "released": "2026-09-22",
+      "notes": "Offline wake melodies: Mario and Tetris sine motifs (cascade and other sounds unchanged)."
     },
     {
-      "version": "v2.53",
-      "released": "2026-07-06",
-      "notes": "Snooze slider: fixed 0–60 scale, countdown on full range."
+      "version": "v2.60",
+      "released": "2026-09-22",
+      "notes": "Offline wake sound: test button and selectable repeat interval."
     },
     {
-      "version": "v2.52",
-      "released": "2026-07-06",
-      "notes": "Snooze 50/50 layout; steps 0,1,5…60 min."
-    },
-    {
-      "version": "v2.51",
-      "released": "2026-07-06",
-      "notes": "Snooze slider: full width, compact display, 1/5/10…60 min steps."
-    },
-    {
-      "version": "v2.50",
-      "released": "2026-07-06",
-      "notes": "Scheduler snooze: countdown slider replaces select box."
-    },
-    {
-      "version": "v2.49",
-      "released": "2026-07-06",
-      "notes": "Web UI save feedback on all settings pages (success/error toasts bottom-right)."
-    },
-    {
-      "version": "v2.48",
-      "released": "2026-07-06",
-      "notes": "Fixed Web UI settings (tone, volume, preset, features) not persisting: getconfig overlays live NVS values; radio_config blob rebuilt on save."
-    },
-    {
-      "version": "v2.47",
-      "released": "2026-07-06",
-      "notes": "Fixed Web UI pages truncated in dark mode (Content-Length includes nav + dark-mode bytes). Parallel asset download stall fix retained."
-    },
-    {
-      "version": "v2.46",
-      "released": "2026-07-05",
-      "notes": "Scheduler snooze timer: live countdown on scheduler.html with shut-off time (HH:MM) and remaining time; state restored on page load from getJSON."
-    },
-    {
-      "version": "v2.45",
-      "released": "2026-07-05",
-      "notes": "Hardened config persistence: partial saves skip alrm_config writes, empty alarm patches ignored, no boot auto-reset on invalid alrm_config, legacy alrm_start/stop keys removed, Web UI no longer injects default alarms."
-    },
-    {
-      "version": "v2.44",
-      "released": "2026-07-05",
-      "notes": "Fixed alarm schedules silently reset to factory default (6:30-7:30) when saving unrelated settings. Partial saves seed alarms from authoritative alrm_config; Web UI no longer substitutes defaults on load errors; alarm reductions logged as warnings."
-    },
-    {
-      "version": "v2.43",
-      "released": "2026-07-03",
-      "notes": "Fixed alarm schedule inconsistency: the Web UI could show a stale default alarm while the firmware scheduled a different one (alarms live in the alrm_config NVS key, the UI read a cached copy in radio_config). The UI now always shows the real active schedule, the cache is healed on boot, and alarm saves keep both in sync."
-    },
-    {
-      "version": "v2.42",
-      "released": "2026-07-03",
-      "notes": "Fixed a rare Web UI hang (device online but unreachable for minutes): the live-status SSE push could block the main loop on a dead browser connection. SSE now only writes when the send buffer has room, drops a stuck client, and no longer calls the blocking flush."
-    },
-    {
-      "version": "v2.41",
-      "released": "2026-07-03",
-      "notes": "The scheduler setting 'Alarm volume fade' now works both ways: alarms fade the volume in from silence, and the snooze/sleep timer fades the volume out gently over the same duration before stopping."
-    },
-    {
-      "version": "v2.40",
-      "released": "2026-07-03",
-      "notes": "Power Log now records runtime errors and warnings (WiFi, stream, OTA, config, VS1053) with deduplication and Error/Warning badges on the Power Log page."
-    },
-    {
-      "version": "v2.39",
-      "released": "2026-07-02",
-      "notes": "New Power Log page: the last 20 shutdown and boot events are stored in NVS and shown in the Web UI. Planned shutdowns store their reason; unexpected ones (power loss, brownout, crash, watchdog) are inferred on the next boot. Boots are logged with date/time when NTP is available, otherwise as unknown time."
-    },
-    {
-      "version": "v2.38",
-      "released": "2026-07-02",
-      "notes": "Saving a setting now only changes that one parameter: partial config saves no longer revert the current volume, station or tone and no longer reset unrelated feature flags to their defaults. Alarm volume fade-in is fixed (no volume jump, effective immediately) and is set in 5-second increments. Added host-based unit tests (pio test -e native)."
+      "version": "v2.59",
+      "released": "2026-09-22",
+      "notes": "Alarm offline wake tone (beep/chirp) after stream watchdog gives up."
     }
   ]
 }

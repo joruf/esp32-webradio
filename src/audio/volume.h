@@ -92,6 +92,7 @@ void playSound(bool _enable) {
  * @brief Completes stream stop after a fade-out (mute, stop playback, backlight off).
  */
 static void finishStreamStop(void) {
+  stopAlarmFallback();
   playSound(false);
   datamode = STOPREQD;
   enableBacklight(false);
@@ -136,6 +137,20 @@ static void updateVolumeFade(void) {
   } else {
     volumeFadeCurrent = start - (uint8_t)((uint32_t)start * elapsed / volumeFadeDurationMs);
   }
+}
+
+/**
+ * @brief Cancel any in-progress volume fade immediately.
+ *
+ * Used by the offline alarm sine path so beep/chirp plays at full current
+ * volume without waiting for a fade-in from silence.
+ */
+void cancelVolumeFade(void) {
+  volumeFadeActive = false;
+  volumeFadeStopPending = false;
+  volumeFadeStartPending = false;
+  volumeFadeDurationMs = VOLUME_FADE_MS;
+  volumeFadeCurrent = muteflag ? 0 : ini_block.reqvol;
 }
 
 /**

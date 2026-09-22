@@ -9,6 +9,7 @@
 #include "config/features_config.h"
 #include "globals/globals.h"
 #include "globals/app_prototypes.h"
+#include "audio/alarm_fallback.h"
 
 static const uint32_t STREAM_WATCHDOG_STALL_MS = 60000UL;
 
@@ -63,7 +64,13 @@ public:
    * @brief Poll stream health and reconnect when stalled.
    */
   void poll(void) {
-    if (!features.stream_watchdog || localfile || datamode == STOPPED) {
+    if (isAlarmFallbackPlaying()) {
+      return;
+    }
+
+    // During an alarm session always watch for dead streams so offline tone can start,
+    // even if the stream_watchdog feature toggle is off.
+    if ((!radioFeatures.stream_watchdog && !isAlarmSessionActive()) || localfile || datamode == STOPPED) {
       lastActivityMs_ = 0;
       return;
     }
@@ -82,6 +89,9 @@ public:
       if (!gaveUpLogged_) {
         gaveUpLogged_ = true;
         eventLogRecordError("Stream watchdog gave up after 5 reconnects");
+        if (isAlarmSessionActive()) {
+          startAlarmFallback();
+        }
       }
       return;
     }
@@ -93,6 +103,14 @@ public:
     eventLogRecordWarning("Stream stalled, reconnecting");
     lastActivityMs_ = millis();
     requestSoftStreamReconnect();
+  }
+
+  /** Reset reconnect bookkeeping when a new alarm/stream attempt begins. */
+  void reset(void) {
+    lastActivityMs_ = 0;
+    stallMs_ = 0;
+    reconnectAttempts_ = 0;
+    gaveUpLogged_ = false;
   }
 
 private:
@@ -114,6 +132,10 @@ inline uint32_t getStreamStallMs(void) {
 
 inline void streamWatchdogPoll(void) {
   streamWatchdog.poll();
+}
+
+inline void streamWatchdogReset(void) {
+  streamWatchdog.reset();
 }
 
 #endif

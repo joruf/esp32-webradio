@@ -197,8 +197,8 @@ static String buildDiagnosticsJson(void) {
   json += "\"rssi\":" + String(WiFi.status() == WL_CONNECTED ? WiFi.RSSI() : 0) + ",";
   json += "\"stream_state\":" + String((int)datamode) + ",";
   json += "\"stream_stall_ms\":" + String(getStreamStallMs()) + ",";
-  json += "\"watchdog_enabled\":" + String(features.stream_watchdog ? "true" : "false") + ",";
-  json += "\"vu_meter\":" + String(features.vu_meter ? "true" : "false") + ",";
+  json += "\"watchdog_enabled\":" + String(radioFeatures.stream_watchdog ? "true" : "false") + ",";
+  json += "\"vu_meter\":" + String(radioFeatures.vu_meter ? "true" : "false") + ",";
   json += "\"vu_level\":" + String(getVuMeterLevel()) + ",";
   json += "\"epoch\":" + String((unsigned long)(timeinfo.tm_year ? (unsigned long)time(nullptr) : 0UL)) + ",";
   json += "\"snooze_sec\":" + String(sleeptimer_ms > 0 ? sleeptimer_ms / 1000 : 0) + ",";
@@ -208,7 +208,7 @@ static String buildDiagnosticsJson(void) {
   json += "\"alarm_count\":" + String(alarm_schedule.count) + ",";
   json += "\"preset\":" + String(ini_block.newpreset) + ",";
   json += "\"volume\":" + String(ini_block.reqvol) + ",";
-  json += "\"ota_check_url\":\"" + jsonEscapeString(features.ota_check_url.c_str()) + "\",";
+  json += "\"ota_check_url\":\"" + jsonEscapeString(radioFeatures.ota_check_url.c_str()) + "\",";
   json += "\"ota_update_available\":" + String(otaChecker.isUpdateAvailable() ? "true" : "false") + ",";
   json += "\"ota_latest_version\":\"" + jsonEscapeString(otaChecker.latestVersion().c_str()) + "\",";
   json += "\"ota_capable\":" + String(otaSlot ? "true" : "false") + ",";

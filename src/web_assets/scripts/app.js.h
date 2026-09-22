@@ -883,6 +883,7 @@ const char app_js[] PROGMEM = R"=====(
         }
 
         if ($("#feat-dark-start").length || $("#feat-dark-end").length || $("#feat-alarm-fade").length ||
+            $("#feat-alarm-fallback").length || $("#feat-alarm-fallback-interval").length ||
             $("#feat-vu-meter").length || $("#feat-watchdog").length) {
             patch.features = collectDisplayFeatures();
         } else if ($("#feat-ota-url").length) {
@@ -1616,6 +1617,7 @@ const char app_js[] PROGMEM = R"=====(
             renderGpioList();
         }
         if ($("#feat-dark-start").length || $("#feat-dark-end").length || $("#feat-alarm-fade").length ||
+            $("#feat-alarm-fallback").length || $("#feat-alarm-fallback-interval").length ||
             $("#feat-vu-meter").length || $("#feat-watchdog").length) {
             var feat = loadedRadioConfig.features || getDefaultRadioConfig().features;
             if ($("#feat-dark-start").length) {
@@ -1626,6 +1628,24 @@ const char app_js[] PROGMEM = R"=====(
             }
             if ($("#feat-alarm-fade").length) {
                 $("#feat-alarm-fade").val(feat.alarm_fade_sec !== undefined ? feat.alarm_fade_sec : 15);
+            }
+            if ($("#feat-alarm-fallback").length) {
+                var fb = (feat.alarm_fallback_sound || "beep").toLowerCase();
+                var allowedFb = ["beep", "chirp", "birds", "water", "cascade", "arcade"];
+                if (fb === "mario" || fb === "tetris") {
+                    fb = "arcade";
+                } else if (allowedFb.indexOf(fb) < 0) {
+                    fb = "beep";
+                }
+                $("#feat-alarm-fallback").val(fb);
+            }
+            if ($("#feat-alarm-fallback-interval").length) {
+                var allowed = [2, 3, 5, 10, 15, 30, 60];
+                var iv = parseInt(feat.alarm_fallback_interval_sec, 10);
+                if (allowed.indexOf(iv) < 0) {
+                    iv = 5;
+                }
+                $("#feat-alarm-fallback-interval").val(String(iv));
             }
             if ($("#feat-vu-meter").length) {
                 $("#feat-vu-meter").prop("checked", feat.vu_meter !== false);
@@ -1926,6 +1946,8 @@ const char app_js[] PROGMEM = R"=====(
                 dark_start: 20,
                 dark_end: 7,
                 alarm_fade_sec: 15,
+                alarm_fallback_sound: "beep",
+                alarm_fallback_interval_sec: 5,
                 vu_meter: true,
                 stream_watchdog: true,
                 ota_check_url: "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/version.json"
@@ -2144,6 +2166,22 @@ const char app_js[] PROGMEM = R"=====(
         }
         if ($("#feat-alarm-fade").length) {
             merged.alarm_fade_sec = Math.max(5, Math.min(60, Math.round((parseInt($("#feat-alarm-fade").val(), 10) || 15) / 5) * 5));
+        }
+        if ($("#feat-alarm-fallback").length) {
+            var sound = String($("#feat-alarm-fallback").val() || "beep").toLowerCase();
+            var allowedFbSave = ["beep", "chirp", "birds", "water", "cascade", "arcade"];
+            if (sound === "mario" || sound === "tetris") {
+                sound = "arcade";
+            }
+            merged.alarm_fallback_sound = (allowedFbSave.indexOf(sound) >= 0) ? sound : "beep";
+        }
+        if ($("#feat-alarm-fallback-interval").length) {
+            var allowedIv = [2, 3, 5, 10, 15, 30, 60];
+            var interval = parseInt($("#feat-alarm-fallback-interval").val(), 10);
+            if (allowedIv.indexOf(interval) < 0) {
+                interval = 5;
+            }
+            merged.alarm_fallback_interval_sec = interval;
         }
         if ($("#feat-vu-meter").length) {
             merged.vu_meter = $("#feat-vu-meter").is(":checked");
@@ -3098,6 +3136,36 @@ const char app_js[] PROGMEM = R"=====(
                 }
                 updateAlarmFadeValueLabel();
                 saveDisplayFeatures({ silentLog: false });
+            })
+            .off("change.schedulerFallback", "#feat-alarm-fallback, #feat-alarm-fallback-interval")
+            .on("change.schedulerFallback", "#feat-alarm-fallback, #feat-alarm-fallback-interval", function() {
+                if (configFormLoading) {
+                    return;
+                }
+                saveDisplayFeatures({ silentLog: false });
+            })
+            .off("click.schedulerFallbackTest", "#feat-alarm-fallback-test")
+            .on("click.schedulerFallbackTest", "#feat-alarm-fallback-test", function() {
+                var $btn = $(this);
+                if ($btn.data("testing")) {
+                    return;
+                }
+                var sound = String($("#feat-alarm-fallback").val() || "beep").toLowerCase();
+                var allowedFbTest = ["beep", "chirp", "birds", "water", "cascade", "arcade"];
+                if (sound === "mario" || sound === "tetris") {
+                    sound = "arcade";
+                } else if (allowedFbTest.indexOf(sound) < 0) {
+                    sound = "beep";
+                }
+                var interval = parseInt($("#feat-alarm-fallback-interval").val(), 10) || 5;
+                var playMs = Math.min(8000, Math.max(2500, interval * 1000));
+                $btn.data("testing", true).prop("disabled", true);
+                // One request: apply dropdown selection and start (avoids race / stale sound).
+                httpGet("alarmtone=start:" + sound, { silent: false });
+                setTimeout(function() {
+                    httpGet("alarmtone=stop", { silent: true });
+                    $btn.data("testing", false).prop("disabled", false);
+                }, playMs);
             });
 
         loadSchedulerAlarms();

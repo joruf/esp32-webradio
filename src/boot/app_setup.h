@@ -177,6 +177,8 @@ void radioSetup() {
       }
     }
   }
+  // Dedicated feat_* keys are authoritative when the radio_config blob lags.
+  applyFeatureNvsKeyOverrides();
   otaChecker.check(false);
   loadAlarmConfigFromNvs(); // Load or migrate alarm JSON configuration
   syncAlarmsToRadioConfig(); // Heal a stale alarms copy in the radio_config blob
@@ -234,19 +236,16 @@ void radioSetup() {
   }
 
   /*
-  timer = timerBegin(0, 80, true);                   // User 1st timer with prescaler 80
-  timerAttachInterrupt(timer, &timer100, true);      // Call timer100() on timer alarm
-  timerAlarmWrite(timer, 100000, true);              // Alarm every 100 msec
-  timerAlarmEnable(timer);                           // Enable the timer
+  Legacy ESP32 Arduino 2.x timer setup (kept for reference):
+  timer = timerBegin(0, 80, true);
+  timerAttachInterrupt(timer, &timer100, true);
+  timerAlarmWrite(timer, 100000, true);
+  timerAlarmEnable(timer);
   */
-  timer = timerBegin(0, 80, true); // Timer 0 initialisieren, Teiler 80 (80 MHz / 80 = 1 MHz -> 1 Ticker pro
-                                   // Mikrosekunde), true = hochzählen
-  timerAttachInterrupt(
-      timer, &timer100,
-      true); // Interrupt-Funktion anhängen (v2-Standard verlangt das dritte Argument 'true' für Edge-Trigger)
-  timerAlarmWrite(timer, 100000, true); // Alarm setzen: 100.000 Ticks = 100ms, true = Autoreload (wiederholen)
-  timerAlarmEnable(timer);              // Den Timer aktivieren
-
+  // ESP32 Arduino 3.x: 1 MHz timer, alarm every 100000 us (100 ms), autoreload.
+  timer = timerBegin(1000000);
+  timerAttachInterrupt(timer, &timer100);
+  timerAlarm(timer, 100000, true, 0);
   delay(1000); // Show IP for a while
   configTime(ini_block.clk_offset * 3600, ini_block.clk_dst * 3600,
              ini_block.clk_server.c_str()); // GMT offset, daylight offset in seconds

@@ -126,12 +126,12 @@ void handleSleepTimer() {
       if (datamode != STOPPED) {
         // Gentle "sleep" shutdown: fade the volume down over the configured
         // "Alarm volume fade" duration, then stop (mirrors the alarm fade-in).
-        dbgprint("Snooze timer expired, fading out over %d s", features.alarm_fade_sec);
+        dbgprint("Snooze timer expired, fading out over %d s", radioFeatures.alarm_fade_sec);
 #if !defined(BLUETFT)
         showTextOnTFT(1, "Stream stopped");
 #endif
         showTextOnTFT(3, "Radio off");
-        startAlarmVolumeFadeOut(features.alarm_fade_sec);
+        startAlarmVolumeFadeOut(radioFeatures.alarm_fade_sec);
       }
     }
   } else {
@@ -150,12 +150,16 @@ void handleSleepTimer() {
 static bool tryStartRadioAlarm(int8_t alrm_start_hour, int8_t alrm_start_min) {
   if (timeinfo.tm_hour == alrm_start_hour && timeinfo.tm_min == alrm_start_min) {
 
+    setAlarmSessionActive(true);
+    streamWatchdogReset();
+    stopAlarmFallback();
+
     runStream(true, ini_block.newpreset);
 
     hostreq = true;
 
     muteflag = false;
-    startAlarmVolumeFade(features.alarm_fade_sec);
+    startAlarmVolumeFade(radioFeatures.alarm_fade_sec);
 
     enableBacklight(true);
     showTextOnTFT(1, msgRadioAlarmOn);
@@ -179,6 +183,7 @@ static bool tryStartRadioAlarm(int8_t alrm_start_hour, int8_t alrm_start_min) {
  */
 static bool tryStopRadioAlarm(int8_t alrm_stop_hour, int8_t alrm_stop_min) {
   if (timeinfo.tm_hour == alrm_stop_hour && timeinfo.tm_min == alrm_stop_min) {
+    endAlarmSession();
     runStream(false);
     showTextOnTFT(1, msgRadioAlarmOff);
     radioAlarmStatusChanged = ALRM_STOP;

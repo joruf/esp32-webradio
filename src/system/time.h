@@ -70,7 +70,7 @@ void applyClockConfiguration(bool restartNtp) {
     return;
   }
 
-  if (restartNtp && sntp_enabled()) {
+  if (restartNtp && esp_sntp_enabled()) {
     sntp_restart();
   }
 

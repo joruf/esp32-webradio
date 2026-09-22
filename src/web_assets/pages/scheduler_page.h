@@ -80,6 +80,39 @@ const char scheduler_html[] PROGMEM = R"=====(
 						</datalist>
 						<div class="config-help">Time to gradually change the volume: fade in from silence to your current volume when an alarm starts, and fade out to silence when the snooze timer ends. Duration: <strong id="feat-alarm-fade-value">15 sec</strong></div>
 					</div>
+					<div class="form-group display-setting-card">
+						<label>Offline wake sound</label>
+						<div class="alarm-fallback-row">
+							<div class="alarm-fallback-field">
+								<label class="alarm-fallback-sublabel" for="feat-alarm-fallback">Sound</label>
+								<select class="form-control" id="feat-alarm-fallback">
+									<option value="beep">Beep</option>
+									<option value="chirp">Chirp</option>
+									<option value="birds">Birds</option>
+									<option value="water">Water</option>
+									<option value="cascade">Cascade</option>
+									<option value="arcade">Arcade</option>
+								</select>
+							</div>
+							<div class="alarm-fallback-field">
+								<label class="alarm-fallback-sublabel" for="feat-alarm-fallback-interval">Play every</label>
+								<select class="form-control" id="feat-alarm-fallback-interval">
+									<option value="2">2 sec</option>
+									<option value="3">3 sec</option>
+									<option value="5" selected>5 sec</option>
+									<option value="10">10 sec</option>
+									<option value="15">15 sec</option>
+									<option value="30">30 sec</option>
+									<option value="60">60 sec</option>
+								</select>
+							</div>
+							<div class="alarm-fallback-field alarm-fallback-test">
+								<label class="alarm-fallback-sublabel" for="feat-alarm-fallback-test">&nbsp;</label>
+								<button type="button" class="btn btn-regular" id="feat-alarm-fallback-test"><span class="btn-icon" aria-hidden="true">&#128266;</span> Test</button>
+							</div>
+						</div>
+						<div class="config-help">Played only for alarms when the radio stream cannot be restored after watchdog reconnects. Soft sine patterns (beep, rising chirp, bird peeps, water bubble, descending cascade, arcade jingle). <strong>Play every</strong> is the gap between cycles: the pattern keeps repeating at this rate until the alarm ends.</div>
+					</div>
 					<p class="alarm-help">Configure alarm schedules below. Each alarm needs at least one weekday. Enter start and shut-off as <strong>hh:mm</strong> (click hours or minutes to edit each pair). Use <strong>Save Alarm</strong> or <strong>Remove Alarm</strong> to store changes; the result appears in the command log above.</p>
 					<div id="alarm-list"></div>
 					<button type="button" id="add-alarm" class="btn btn-primary"><span class="btn-icon" aria-hidden="true">&#10133;</span> Add Alarm</button>

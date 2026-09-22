@@ -104,6 +104,8 @@ extern bool updatereq;
 extern String pendingOtaBinUrl;
 extern volatile bool otaActive;       // True while OTA/firmware update is running
 extern bool NetworkFound;
+/** True while the configuration soft-AP is up (STA reconnect must not run). */
+extern bool wifiConfigApActive;
 extern String networks;
 extern int16_t playlist_num;
 extern File mp3file;

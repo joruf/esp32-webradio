@@ -572,6 +572,12 @@ const char app_css[] PROGMEM = R"=====(
 	.display-settings-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
 	.display-setting-card { margin: 0; padding: 12px; border: 1px solid #e8e8e8; border-radius: 6px; background: #fafafa; }
 	.display-setting-card label { margin-bottom: 8px; font-weight: 600; }
+	.alarm-fallback-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+	.alarm-fallback-field { flex: 1 1 140px; min-width: 120px; }
+	.alarm-fallback-field .form-control { width: 100%; }
+	.alarm-fallback-sublabel { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85em; color: #555; }
+	.alarm-fallback-test { flex: 0 0 auto; min-width: 0; }
+	.alarm-fallback-test .btn { white-space: nowrap; }
 	.display-hour-select { max-width: 220px; }
 	.display-toggle { margin: 8px 0 0 0; }
 	.display-toggle label { font-weight: 600; }
@@ -621,6 +627,7 @@ const char app_css[] PROGMEM = R"=====(
 	body.theme-dark .sound-band { background: #222; border-color: #444; }
 	body.theme-dark .sound-master-meter { background: #333; }
 	body.theme-dark .display-setting-card { background: #242424; border-color: #444; }
+	body.theme-dark .alarm-fallback-sublabel { color: #bbb; }
 	body.theme-dark .sound-eq-footer { border-top-color: #444; }
 	body.theme-dark .sound-eq-grid-line { stroke: #555; }
 	body.theme-dark .sound-band-summary { color: #7eb8e8; }

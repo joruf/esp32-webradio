@@ -1,13 +1,65 @@
-# PlatformIO local build directories (never upload these)
+# OS and editor
+.DS_Store
+Thumbs.db
+*~
+*.swp
+*.orig
+.history/
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.code-workspace
+.cursor/
+.cache/
+.clangd
+compile_commands.json
+
+# PlatformIO local build (must not be in git)
 .pio/
 .pioenvs/
 .piolibdeps/
-.history/
 
-# VS Code configurations
-.vscode/
-
-# Local build logs or cache
-*.info
+# Logs and temp
 *.log
+*.info
+*.tmp
+*.bak
 bin/
+
+# Secrets, keys, and machine-local paths
+.env
+.env.*
+!.env.example
+credentials.env
+credentials.env.age
+*.pem
+*.key
+key.properties
+*.jks
+*.keystore
+**/local.properties
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Doxygen / generated docs
+html/
+latex/
+
+# Android / Gradle (also covered by android-app/.gitignore)
+android-app/.gradle/
+android-app/**/build/
+android-app/.cxx/
+android-app/captures/
+android-app/.externalNativeBuild/
+*.apk
+*.aab
+
+# Firmware build artifacts (keep published OTA images in ota/releases/)
+*.elf
+*.map

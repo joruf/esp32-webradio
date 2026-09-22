@@ -16,12 +16,40 @@ struct FeatureSettings {
   bool vu_meter;
   bool stream_watchdog;
   uint16_t alarm_fade_sec;
+  /**
+   * Offline alarm tone after stream watchdog gives up.
+   * IDs: beep | chirp | birds | water | cascade | arcade
+   */
+  String alarm_fallback_sound;
+  /** Seconds between wake-tone cycles while the alarm is still active. */
+  uint16_t alarm_fallback_interval_sec;
   String ota_check_url;
 };
 
 /**
- * @brief Runtime feature flags loaded from radio configuration JSON.
+ * @brief Return true if sound is a supported offline wake tone ID.
  */
+inline bool isValidAlarmFallbackSoundId(const String &sound) {
+  return sound.equalsIgnoreCase("beep") || sound.equalsIgnoreCase("chirp") ||
+         sound.equalsIgnoreCase("birds") || sound.equalsIgnoreCase("water") ||
+         sound.equalsIgnoreCase("cascade") || sound.equalsIgnoreCase("arcade");
+}
+
+/**
+ * @brief Normalize a sound ID; legacy mario/tetris map to arcade, others to beep.
+ */
+inline String normalizeAlarmFallbackSoundId(const String &sound) {
+  String s = sound;
+  s.toLowerCase();
+  if (s == "mario" || s == "tetris") {
+    return String("arcade");
+  }
+  if (isValidAlarmFallbackSoundId(s)) {
+    return s;
+  }
+  return String("beep");
+}
+
 class FeaturesConfig {
 public:
   FeatureSettings data;
@@ -35,6 +63,8 @@ public:
     data.vu_meter = true;
     data.stream_watchdog = true;
     data.alarm_fade_sec = 15;
+    data.alarm_fallback_sound = "beep";
+    data.alarm_fallback_interval_sec = 5;
     data.ota_check_url = "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/version.json";
   }
 
@@ -55,7 +85,25 @@ public:
     data.stream_watchdog = feat["stream_watchdog"] | data.stream_watchdog;
     int fadeSec = (int)(feat["alarm_fade_sec"] | data.alarm_fade_sec);
     data.alarm_fade_sec = (uint16_t)snapValueToStep(fadeSec, 5, 5, 600);
-    const char *url = feat["ota_check_url"] | nullptr;
+    // Do not use `| nullptr`: ArduinoJson resolves that to operator|<nullptr_t>,
+    // which always returns null even when the string key is present.
+    const char *fallback = feat["alarm_fallback_sound"].as<const char *>();
+    if (fallback && strlen(fallback) > 0) {
+      data.alarm_fallback_sound = normalizeAlarmFallbackSoundId(String(fallback));
+    }
+    int intervalSec = (int)(feat["alarm_fallback_interval_sec"] | data.alarm_fallback_interval_sec);
+    static const int kIntervals[] = {2, 3, 5, 10, 15, 30, 60};
+    int best = 5;
+    int bestDiff = 9999;
+    for (unsigned i = 0; i < sizeof(kIntervals) / sizeof(kIntervals[0]); i++) {
+      int d = abs(intervalSec - kIntervals[i]);
+      if (d < bestDiff) {
+        bestDiff = d;
+        best = kIntervals[i];
+      }
+    }
+    data.alarm_fallback_interval_sec = (uint16_t)best;
+    const char *url = feat["ota_check_url"].as<const char *>();
     if (url && strlen(url) > 0) {
       data.ota_check_url = String(url);
     }
@@ -67,12 +115,17 @@ public:
    * @param doc Target document
    */
   void appendTo(JsonDocument &doc) {
-    JsonObject feat = doc["features"].to<JsonObject>();
+    // Prefer as<> over to<> so an existing features object is not cleared
+    // (clearing orphans string allocations in the JsonDocument pool).
+    JsonObject feat = doc["features"].is<JsonObject>() ? doc["features"].as<JsonObject>()
+                                                       : doc["features"].to<JsonObject>();
     feat["dark_start"] = data.dark_start;
     feat["dark_end"] = data.dark_end;
     feat["vu_meter"] = data.vu_meter;
     feat["stream_watchdog"] = data.stream_watchdog;
     feat["alarm_fade_sec"] = data.alarm_fade_sec;
+    feat["alarm_fallback_sound"] = data.alarm_fallback_sound;
+    feat["alarm_fallback_interval_sec"] = data.alarm_fallback_interval_sec;
     feat["ota_check_url"] = data.ota_check_url;
   }
 
@@ -101,7 +154,8 @@ public:
 
 FeaturesConfig featuresConfig;
 
-#define features (featuresConfig.data)
+/** Runtime feature flags (avoid macro name `features`, clashes with ESP-IDF). */
+#define radioFeatures (featuresConfig.data)
 
 inline void setFeatureDefaults(void) {
   featuresConfig.setDefaults();

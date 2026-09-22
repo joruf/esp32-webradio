@@ -35,7 +35,17 @@ bool isSoundPlaying();
 void stopStream();
 bool playStream(int16_t _preset); // true=sending play info succeeded; false= unable to send playing info
 void playSound(bool _enable);
+void cancelVolumeFade(void);
+uint8_t getChipVolume(void);
 void stop_mp3client();
+void stopAlarmFallback(void);
+void startAlarmFallback(void);
+void endAlarmSession(void);
+void setAlarmSessionActive(bool active);
+void pollAlarmFallback(void);
+bool isAlarmFallbackPlaying(void);
+bool isAlarmSessionActive(void);
+void streamWatchdogReset(void);
 void IRAM_ATTR enableBacklight(bool enable);
 void handleRenderData();
 String nvsGetHostFromPref(int16_t preset);

@@ -221,6 +221,7 @@ static bool setupAccessPoint() {
   captivePortalBegin();
   pfs = dbgprint("IP = %s", ipaddress.c_str());
   NetworkFound = true;
+  wifiConfigApActive = true; // Block STA reconnect so the soft-AP stays usable
   tftlog(pfs);
 
   return false;
@@ -239,12 +240,25 @@ bool connectwifi() {
   bool localAP = false;
   WifiInfo_t winfo;
 
+  wifiConfigApActive = false;
   WiFi.disconnect();
   WiFi.softAPdisconnect(true);
 
   if (wifilist.size() > 0) {
-    if (wifilist.size() == 1) {
+    // Prefer a single WiFi.begin when every stored entry shares the same SSID
+    // (duplicate LS rows break WiFiMulti auth and are common after config merges).
+    bool sameSsid = true;
+    for (size_t i = 1; i < wifilist.size(); i++) {
+      if (!wifilist[i].ssid || !wifilist[0].ssid ||
+          strcmp(wifilist[i].ssid, wifilist[0].ssid) != 0) {
+        sameSsid = false;
+        break;
+      }
+    }
+
+    if (wifilist.size() == 1 || sameSsid) {
       winfo = wifilist[0];
+      WiFi.mode(WIFI_STA);
       WiFi.begin(winfo.ssid, winfo.passphrase);
       dbgprint("BOOT: Connecting to WiFi network '%s'", winfo.ssid);
     } else {
@@ -253,8 +267,8 @@ bool connectwifi() {
     }
 
     // Wait max 15 seconds for connection
-    if (WiFi.waitForConnectResult() != WL_CONNECTED) {
-      dbgprint("BOOT: WiFi connection timed out after 15 seconds");
+    if (WiFi.waitForConnectResult(15000) != WL_CONNECTED) {
+      dbgprint("BOOT: WiFi connection timed out after 15 seconds (status %d)", (int)WiFi.status());
       eventLogRecordWarning("WiFi connect timed out, started config AP");
       localAP = true;
     }
@@ -271,6 +285,7 @@ bool connectwifi() {
 
   ipaddress = WiFi.localIP().toString();
   captivePortalStop();
+  wifiConfigApActive = false;
   tftlog((String("WiFi Name: ") + WiFi.SSID()).c_str());
   pfs = dbgprint("IP = %s", ipaddress.c_str());
   NetworkFound = true;

@@ -99,6 +99,10 @@ public:
   bool testComm(const char *header);     // Test communication with module
   inline bool data_request() const { return (digitalRead(dreq_pin) == HIGH); }
   void AdjustRate(long ppm2); // Fine tune the datarate
+  /** Start VS1053 hardware sine test; n selects frequency (datasheet table). */
+  void startSineTest(uint8_t n);
+  /** Stop sine test and clear SM_TESTS. */
+  void stopSineTest();
 };
 
 //**************************************************************************************************
@@ -341,6 +345,20 @@ void VS1053::softReset() {
   write_register(SCI_MODE, _BV(SM_SDINEW) | _BV(SM_RESET));
   delay(10);
   await_data_request();
+}
+
+void VS1053::startSineTest(uint8_t n) {
+  uint16_t mode = read_register(SCI_MODE);
+  write_register(SCI_MODE, mode | _BV(SM_TESTS));
+  uint8_t start[8] = {0x53, 0xEF, 0x6E, n, 0x00, 0x00, 0x00, 0x00};
+  playChunk(start, sizeof(start));
+}
+
+void VS1053::stopSineTest() {
+  uint8_t end[8] = {0x45, 0x78, 0x69, 0x74, 0x00, 0x00, 0x00, 0x00};
+  playChunk(end, sizeof(end));
+  uint16_t mode = read_register(SCI_MODE);
+  write_register(SCI_MODE, (uint16_t)((mode & ~_BV(SM_TESTS)) | _BV(SM_SDINEW)));
 }
 
 void VS1053::printDetails(const char *header) {

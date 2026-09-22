@@ -424,6 +424,41 @@ const char *analyzeCmd(const char *par, const char *val) {
   {
     eventLogSetShutdownReason("user request"); // Record why we restart
     resetreq = true;                           // Reset all
+  } else if (argument == "alarmtone") // Test offline alarm wake tones
+  {
+    value.toLowerCase();
+    // Combined "start:<sound>" so Test applies the dropdown selection in one request.
+    if (value.startsWith("start:")) {
+      String sound = value.substring(6);
+      if (isValidAlarmFallbackSoundId(sound)) {
+        radioFeatures.alarm_fallback_sound = normalizeAlarmFallbackSoundId(sound);
+      }
+      setAlarmSessionActive(true);
+      if (isAlarmFallbackPlaying()) {
+        stopAlarmFallback();
+      }
+      startAlarmFallback();
+      snprintf(reply, sizeof(reply), "Alarm fallback started (%s)",
+               radioFeatures.alarm_fallback_sound.c_str());
+    } else if (isValidAlarmFallbackSoundId(value)) {
+      radioFeatures.alarm_fallback_sound = normalizeAlarmFallbackSoundId(value);
+      snprintf(reply, sizeof(reply), "Alarm fallback sound set to %s",
+               radioFeatures.alarm_fallback_sound.c_str());
+    } else if (value == "start") {
+      setAlarmSessionActive(true);
+      if (isAlarmFallbackPlaying()) {
+        stopAlarmFallback();
+      }
+      startAlarmFallback();
+      snprintf(reply, sizeof(reply), "Alarm fallback started (%s)",
+               radioFeatures.alarm_fallback_sound.c_str());
+    } else if (value == "stop") {
+      endAlarmSession();
+      snprintf(reply, sizeof(reply), "Alarm fallback stopped");
+    } else {
+      snprintf(reply, sizeof(reply),
+               "Usage: alarmtone=beep|chirp|birds|water|cascade|arcade|start[:sound]|stop");
+    }
   } else if (argument.startsWith("update")) // Update request
   {
     otaChecker.check(true);

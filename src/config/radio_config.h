@@ -13,6 +13,54 @@
 
 void applyClockConfiguration(bool restartNtp);
 
+/**
+ * @brief Overlay radioFeatures from dedicated feat_* NVS keys (authoritative).
+ */
+void applyFeatureNvsKeyOverrides(void) {
+  if (nvsKeyExists("feat_dark_start")) {
+    radioFeatures.dark_start = constrain(nvsGetValue("feat_dark_start").toInt(), 0, 23);
+  }
+  if (nvsKeyExists("feat_dark_end")) {
+    radioFeatures.dark_end = constrain(nvsGetValue("feat_dark_end").toInt(), 0, 23);
+  }
+  if (nvsKeyExists("feat_vu_meter")) {
+    radioFeatures.vu_meter = nvsGetValue("feat_vu_meter").toInt() != 0;
+  }
+  if (nvsKeyExists("feat_watchdog")) {
+    radioFeatures.stream_watchdog = nvsGetValue("feat_watchdog").toInt() != 0;
+  }
+  if (nvsKeyExists("feat_alarm_fade")) {
+    radioFeatures.alarm_fade_sec = constrain(nvsGetValue("feat_alarm_fade").toInt(), 5, 600);
+  }
+  if (nvsKeyExists("feat_alarm_fb")) {
+    radioFeatures.alarm_fallback_sound =
+        normalizeAlarmFallbackSoundId(nvsGetValue("feat_alarm_fb"));
+  }
+  if (nvsKeyExists("feat_fb_int") || nvsKeyExists("feat_alarm_fb_int")) {
+    // feat_alarm_fb_int was >15 chars (NVS key limit); prefer short key.
+    String raw = nvsKeyExists("feat_fb_int") ? nvsGetValue("feat_fb_int")
+                                             : nvsGetValue("feat_alarm_fb_int");
+    int intervalSec = raw.toInt();
+    static const int kIntervals[] = {2, 3, 5, 10, 15, 30, 60};
+    int best = 5;
+    int bestDiff = 9999;
+    for (unsigned i = 0; i < sizeof(kIntervals) / sizeof(kIntervals[0]); i++) {
+      int d = abs(intervalSec - kIntervals[i]);
+      if (d < bestDiff) {
+        bestDiff = d;
+        best = kIntervals[i];
+      }
+    }
+    radioFeatures.alarm_fallback_interval_sec = (uint16_t)best;
+  }
+  if (nvsKeyExists("feat_ota_url")) {
+    String otaUrl = nvsGetValue("feat_ota_url");
+    if (otaUrl.length() > 0) {
+      radioFeatures.ota_check_url = otaUrl;
+    }
+  }
+}
+
 #define RADIO_CONFIG_MAX_LEN 8192
 #define RADIO_CONFIG_NVS_KEY "radio_config"
 #define RADIO_CONFIG_VERSION 3
@@ -341,10 +389,59 @@ static void ensureRadioConfigStructure(JsonDocument &doc) {
 /**
  * @brief Ensure the optional features object exists and contains all current fields.
  *
+ * Fills missing keys from firmware defaults, then syncs runtime from the document.
+ * Does not read individual feat_* NVS keys (those are applied at boot / rebuild).
+ *
  * @param doc Parsed radio configuration document
  */
 static void ensureRadioConfigFeatures(JsonDocument &doc) {
-  setFeatureDefaults();
+  // Snapshot defaults into the document for any missing keys without wiping
+  // values already present in doc. Using setFeatureDefaults()+applyFrom used to
+  // depend on applyFrom successfully reading every string field.
+  FeatureSettings defaults;
+  defaults.dark_start = 20;
+  defaults.dark_end = 7;
+  defaults.vu_meter = true;
+  defaults.stream_watchdog = true;
+  defaults.alarm_fade_sec = 15;
+  defaults.alarm_fallback_sound = "beep";
+  defaults.alarm_fallback_interval_sec = 5;
+  defaults.ota_check_url =
+      "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/version.json";
+
+  JsonObject feat =
+      doc["features"].is<JsonObject>() ? doc["features"].as<JsonObject>() : doc["features"].to<JsonObject>();
+  if (feat["dark_start"].isNull()) {
+    feat["dark_start"] = defaults.dark_start;
+  }
+  if (feat["dark_end"].isNull()) {
+    feat["dark_end"] = defaults.dark_end;
+  }
+  if (feat["vu_meter"].isNull()) {
+    feat["vu_meter"] = defaults.vu_meter;
+  }
+  if (feat["stream_watchdog"].isNull()) {
+    feat["stream_watchdog"] = defaults.stream_watchdog;
+  }
+  if (feat["alarm_fade_sec"].isNull()) {
+    feat["alarm_fade_sec"] = defaults.alarm_fade_sec;
+  }
+  {
+    const char *sound = feat["alarm_fallback_sound"].as<const char *>();
+    if (!sound || strlen(sound) == 0) {
+      feat["alarm_fallback_sound"] = defaults.alarm_fallback_sound;
+    }
+  }
+  if (feat["alarm_fallback_interval_sec"].isNull()) {
+    feat["alarm_fallback_interval_sec"] = defaults.alarm_fallback_interval_sec;
+  }
+  {
+    const char *url = feat["ota_check_url"].as<const char *>();
+    if (!url || strlen(url) == 0) {
+      feat["ota_check_url"] = defaults.ota_check_url;
+    }
+  }
+
   applyFeaturesFromDoc(doc);
   appendFeaturesToDoc(doc);
 }
@@ -585,27 +682,7 @@ String buildRadioConfigJsonFromNvs(bool maskWifiPasswords) {
       applyFeaturesFromDoc(featDoc);
     }
   }
-  if (nvsKeyExists("feat_dark_start")) {
-    features.dark_start = constrain(nvsGetValue("feat_dark_start").toInt(), 0, 23);
-  }
-  if (nvsKeyExists("feat_dark_end")) {
-    features.dark_end = constrain(nvsGetValue("feat_dark_end").toInt(), 0, 23);
-  }
-  if (nvsKeyExists("feat_vu_meter")) {
-    features.vu_meter = nvsGetValue("feat_vu_meter").toInt() != 0;
-  }
-  if (nvsKeyExists("feat_watchdog")) {
-    features.stream_watchdog = nvsGetValue("feat_watchdog").toInt() != 0;
-  }
-  if (nvsKeyExists("feat_alarm_fade")) {
-    features.alarm_fade_sec = constrain(nvsGetValue("feat_alarm_fade").toInt(), 5, 600);
-  }
-  if (nvsKeyExists("feat_ota_url")) {
-    String otaUrl = nvsGetValue("feat_ota_url");
-    if (otaUrl.length() > 0) {
-      features.ota_check_url = otaUrl;
-    }
-  }
+  applyFeatureNvsKeyOverrides();
   appendFeaturesToDoc(doc);
 
   if (doc.overflowed()) {
@@ -726,7 +803,23 @@ static bool applyRadioConfigDoc(JsonDocument &doc, bool maskWifiPasswords, bool 
         }
       }
     }
-    if (pass.length() == 0) {
+    // Never persist a masked placeholder as the real password.
+    if (pass.length() == 0 || pass == RADIO_CONFIG_MASKED_PASSWORD) {
+      continue;
+    }
+    // Deduplicate SSIDs (keep first entry with a real password).
+    bool dupSsid = false;
+    for (uint16_t prev = 0; prev < i; prev++) {
+      char prevKey[16];
+      sprintf(prevKey, "wifi_%02d", prev);
+      String prevVal = nvsKeyExists(prevKey) ? nvsGetValue(prevKey) : "";
+      int sep = prevVal.indexOf('/');
+      if (sep > 0 && prevVal.substring(0, sep) == String(ssid)) {
+        dupSsid = true;
+        break;
+      }
+    }
+    if (dupSsid) {
       continue;
     }
     sprintf(key, "wifi_%02d", i);
@@ -828,6 +921,11 @@ static bool applyRadioConfigDoc(JsonDocument &doc, bool maskWifiPasswords, bool 
   nvsAddValue("feat_vu_meter", String((int)(feat["vu_meter"] | true)));
   nvsAddValue("feat_watchdog", String((int)(feat["stream_watchdog"] | true)));
   nvsAddValue("feat_alarm_fade", String((int)(feat["alarm_fade_sec"] | 15)));
+  {
+    const char *fb = feat["alarm_fallback_sound"] | "beep";
+    nvsAddValue("feat_alarm_fb", normalizeAlarmFallbackSoundId(String(fb)));
+  }
+  nvsAddValue("feat_fb_int", String((int)(feat["alarm_fallback_interval_sec"] | 5)));
   nvsAddValue("feat_ota_url", String((const char *)(feat["ota_check_url"] | "")));
 
   // Apply the feature settings to the live in-memory struct as well, so changes
@@ -978,7 +1076,10 @@ bool syncAlarmsToRadioConfig() {
   }
 
   doc["alarms"].set(alarmsDoc["alarms"]);
-  ensureRadioConfigFeatures(doc);
+  // Keep live feature settings in the blob. Do not run ensureRadioConfigFeatures
+  // here: that path used to reset globals and could rewrite string features to
+  // defaults when the blob was stale.
+  appendFeaturesToDoc(doc);
 
   String outputJson;
   serializeJson(doc, outputJson);

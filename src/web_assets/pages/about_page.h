@@ -72,7 +72,7 @@ const char about_html[] PROGMEM = R"=====(
 				<div class="col-md-6">
 					<h3>Scheduler &amp; Timers</h3>
 					<ul>
-						<li><strong>Alarm clock:</strong> Multiple alarms with weekday selection, start/stop times and a gradual <strong>Alarm volume fade</strong> (5–60&nbsp;s in 5&nbsp;s steps) that fades the volume in when an alarm starts.</li>
+						<li><strong>Alarm clock:</strong> Multiple alarms with weekday selection, start/stop times and a gradual <strong>Alarm volume fade</strong> (5–60&nbsp;s in 5&nbsp;s steps) that fades the volume in when an alarm starts. If the stream cannot be restored after watchdog reconnects, a soft offline wake tone plays (beep, rising chirp, bird peeps, water bubble, descending cascade, or arcade jingle; selectable on the Scheduler page).</li>
 						<li><strong>Sleep / snooze timer:</strong> Stop playback automatically after a chosen number of minutes (index page or <code>/?snooze=XX</code>); the volume fades out gently over the same Alarm volume fade duration.</li>
 						<li><strong>NTP time:</strong> Configurable time server, UTC offset and daylight-saving for reliable alarm triggering.</li>
 					</ul>

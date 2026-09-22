@@ -41,10 +41,10 @@ public:
 
     bool remoteOk = false;
 
-    if (WiFi.status() == WL_CONNECTED && features.ota_check_url.length() > 0) {
+    if (WiFi.status() == WL_CONNECTED && radioFeatures.ota_check_url.length() > 0) {
       HTTPClient http;
       http.setTimeout(8000);
-      if (!http.begin(features.ota_check_url)) {
+      if (!http.begin(radioFeatures.ota_check_url)) {
         checkError_ = "Invalid OTA URL";
         dbgprint("OTA check: invalid URL");
       } else {
@@ -104,7 +104,7 @@ public:
     json += "\",\"bin_url\":\"";
     json += JsonUtil::escape(latestBinUrl_.c_str());
     json += "\",\"ota_check_url\":\"";
-    json += JsonUtil::escape(features.ota_check_url.c_str());
+    json += JsonUtil::escape(radioFeatures.ota_check_url.c_str());
     json += "\",\"ota_max_size\":";
     const esp_partition_t *otaPart = esp_ota_get_next_update_partition(NULL);
     json += String(otaPart ? (uint32_t)otaPart->size : 0UL);

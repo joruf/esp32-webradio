@@ -24,7 +24,7 @@ public:
    * @param bytes Bytes read in the current iteration
    */
   inline void feed(uint16_t bytes) {
-    if (!features.vu_meter || bytes == 0) {
+    if (!radioFeatures.vu_meter || bytes == 0) {
       return;
     }
 
@@ -57,7 +57,7 @@ public:
    * @brief Recalculate and optionally render the VU meter on the TFT.
    */
   void update(void) {
-    if (!features.vu_meter) {
+    if (!radioFeatures.vu_meter) {
       if (trebleLevel_ > 0 || bassLevel_ > 0) {
         trebleLevel_ = 0;
         bassLevel_ = 0;

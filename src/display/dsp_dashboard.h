@@ -1030,7 +1030,7 @@ inline void dspDashboardTick(void) {
 
   dspDashboardUpdateSnooze();
 
-  if (features.vu_meter && datamode != STOPPED) {
+  if (radioFeatures.vu_meter && datamode != STOPPED) {
     dspDashboardDrawVu(getVuMeterTrebleLevel(), getVuMeterBassLevel(), true);
   } else {
     dspDashboardDrawVu(0, 0, false);

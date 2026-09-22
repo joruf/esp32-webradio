@@ -123,6 +123,7 @@ bool updatereq = false;                // Request to update software from remote
 String pendingOtaBinUrl;               // Specific firmware bin URL to install (e.g. chosen older release)
 volatile bool otaActive = false;       // True while OTA/firmware update is running
 bool NetworkFound = false;             // True if WiFi network connected
+bool wifiConfigApActive = false;       // True while configuration soft-AP is active
 String networks;                       // Found networks in the surrounding
 int16_t playlist_num = 0;              // Nonzero for selection from playlist
 File mp3file;                          // File containing mp3 on SD card
