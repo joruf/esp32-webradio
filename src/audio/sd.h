@@ -1,4 +1,36 @@
 
+/** Active SD filesystem (SPI SD or SD_MMC). */
+static fs::FS *sdFilesystemPtr = &SD;
+
+/**
+ * @brief Return the mounted SD filesystem (SPI or MMC).
+ */
+static fs::FS &sdFilesystem(void) {
+  return sdFilesystemPtr != nullptr ? *sdFilesystemPtr : SD;
+}
+
+int listsdtracks(const char *dirname, int level = 0, bool send = true);
+
+/**
+ * @brief Finish SD mount: scan tracks and set SD_okay.
+ *
+ * @param ok Card present and readable
+ */
+static void finishSdMount(bool ok) {
+  const char *p;
+  SD_okay = ok;
+  if (!SD_okay) {
+    p = dbgprint("No SD card attached");
+    tftlog(p);
+    return;
+  }
+  dbgprint("Locate mp3 files on SD, may take a while...");
+  tftlog("Read SD card");
+  SD_nodecount = listsdtracks("/", 0, false);
+  p = dbgprint("%d tracks on SD", SD_nodecount);
+  tftlog(p);
+}
+
 //**************************************************************************************************
 //                                      S S C O N V *
 //**************************************************************************************************
@@ -127,7 +159,7 @@ String getSDfilename(String nodeID) {
     if (!claimSPI("sdopen")) {
       return String("");
     }
-    root = SD.open(p); // Open the directory (this level)
+    root = sdFilesystem().open(p); // Open the directory (this level)
     releaseSPI();      // Release SPI bus
     for (i = 1; i <= n; i++) {
       if (!claimSPI("sdopenxt")) {
@@ -154,7 +186,7 @@ String getSDfilename(String nodeID) {
 // file in the first directory           * of the second directory. * The list
 // will be sent to the web UI if parameter "send" is true. *
 //**************************************************************************************************
-int listsdtracks(const char *dirname, int level = 0, bool send = true) {
+int listsdtracks(const char *dirname, int level, bool send) {
   const uint16_t SD_MAXDEPTH = 4;           // Maximum depts.  Note: see mp3stream_html.
   static uint16_t fcount, oldfcount;        // Total number of files
   static uint16_t SD_node[SD_MAXDEPTH + 1]; // Node ISs, max levels deep
@@ -186,7 +218,7 @@ int listsdtracks(const char *dirname, int level = 0, bool send = true) {
   if (!claimSPI("sdopen2")) {
     return fcount;
   }
-  root = SD.open(dirname);          // Open the current directory level
+  root = sdFilesystem().open(dirname);          // Open the current directory level
   releaseSPI();                     // Release SPI bus
   if (!root || !root.isDirectory()) // Success?
   {
@@ -298,7 +330,7 @@ void handle_ID3(String &path) {
   showTextOnTFT(2, "Playing from local file"); // Assume no ID3
   p = (char *)path.c_str() + 1;                // Point to filename
   showStreamDataOnTFT(p, true);                // Show the filename as title (middle part)
-  mp3file = SD.open(path);                     // Open the file
+  mp3file = sdFilesystem().open(path);                     // Open the file
   mp3file.read((uint8_t *)&ID3head,
                sizeof(ID3head)); // Read first part of ID3 info
   if (strncmp(ID3head.fid, "ID3", 3) == 0) {
@@ -361,7 +393,7 @@ void handle_ID3(String &path) {
     showTextOnTFT(1, albttl); // Show album and title
   }
   mp3file.close();         // Close the file
-  mp3file = SD.open(path); // And open the file again
+  mp3file = sdFilesystem().open(path); // And open the file again
 }
 
 //**************************************************************************************************
@@ -392,24 +424,33 @@ bool connecttofile() {
   return true;
 }
 
-// Check SD Card on startup
+// Check SD Card on startup (SPI, shared bus with VS1053)
 void mountSDCard() {
   const char *p;
-  if (!SD.begin(ini_block.sd_cs_pin, SPI,
-                SDSPEED)) {                // try to init SD card driver
-    p = dbgprint("SD Card Mount Failed!"); // No success, check formatting (FAT)
-    tftlog(p);                             // Show error on TFT as well
-  } else {
-    SD_okay = (SD.cardType() != CARD_NONE); // See if known card
-    if (!SD_okay) {
-      p = dbgprint("No SD card attached"); // Card not readable
-      tftlog(p);                           // Show error on TFT as well
-    } else {
-      dbgprint("Locate mp3 files on SD, may take a while...");
-      tftlog("Read SD card");
-      SD_nodecount = listsdtracks("/", 0, false); // Build nodelist
-      p = dbgprint("%d tracks on SD", SD_nodecount);
-      tftlog(p); // Show number of tracks on TFT
-    }
+  sdFilesystemPtr = &SD;
+  if (!SD.begin(ini_block.sd_cs_pin, SPI, SDSPEED)) {
+    p = dbgprint("SD Card Mount Failed!");
+    tftlog(p);
+    SD_okay = false;
+    return;
   }
+  finishSdMount(SD.cardType() != CARD_NONE);
+}
+
+/**
+ * @brief Mount the ESP32-CAM onboard SD slot via SD_MMC (1-bit).
+ *
+ * Default pins: CLK=14, CMD=15, D0=2 (AI-Thinker).
+ */
+void mountSDCardMmc() {
+  const char *p;
+  sdFilesystemPtr = &SD_MMC;
+  if (!SD_MMC.begin("/sdcard", true)) {
+    p = dbgprint("SD_MMC Mount Failed!");
+    tftlog(p);
+    SD_okay = false;
+    sdFilesystemPtr = &SD;
+    return;
+  }
+  finishSdMount(SD_MMC.cardType() != CARD_NONE);
 }

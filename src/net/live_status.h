@@ -112,6 +112,8 @@ static String buildLiveStatusJson(void) {
   json += "\"station\":\"" + jsonEscapeString(stationName.c_str()) + "\",";
   json += "\"title\":\"" + jsonEscapeString(songTitle.c_str()) + "\",";
   json += "\"firmware\":\"" + jsonEscapeString(FIRMWARE) + "\",";
+  appendHardwareProfileStatusJson(json);
+  json += ",";
   json += "\"volume\":" + String(ini_block.reqvol) + ",";
   json += "\"time\":\"" + jsonEscapeString(timetxt) + "\",";
   json += "\"date\":\"" + jsonEscapeString(timetxt) + "\",";
@@ -158,6 +160,8 @@ static String buildDiagnosticsJson(void) {
 
   String json = "{";
   json += "\"firmware\":\"" + jsonEscapeString(FIRMWARE) + "\",";
+  appendHardwareProfileStatusJson(json);
+  json += ",";
   json += "\"build_date\":\"" + jsonEscapeString(__DATE__) + "\",";
   json += "\"build_time\":\"" + jsonEscapeString(__TIME__) + "\",";
   json += "\"sdk_version\":\"" + jsonEscapeString(ESP.getSdkVersion()) + "\",";

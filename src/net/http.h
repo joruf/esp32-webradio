@@ -1030,6 +1030,31 @@ void handlehttp() {
     return;
   }
 
+  if (http_getcmd.startsWith("gethwprofiles")) {
+    sendHttpJsonResponse(buildHardwareProfilesJson());
+    return;
+  }
+
+  if (http_getcmd.startsWith("applyhwprofile=")) {
+    String id = http_getcmd.substring(String("applyhwprofile=").length());
+    int amp = id.indexOf('&');
+    if (amp >= 0) {
+      id = id.substring(0, amp);
+    }
+    id.trim();
+    bool ok = applyHardwareProfile(id.c_str());
+    String json = String("{\"ok\":") + (ok ? "true" : "false") +
+                  ",\"hardware_profile\":\"" + id +
+                  "\",\"message\":\"" +
+                  (ok ? "Profile saved. Rebooting..." : "Unknown hardware profile") + "\"}";
+    sendHttpJsonResponse(json);
+    if (ok) {
+      delay(400);
+      ESP.restart();
+    }
+    return;
+  }
+
   if (http_getcmd.startsWith("geteventlog")) {
     sendHttpJsonResponse(eventLogGetJson());
     return;

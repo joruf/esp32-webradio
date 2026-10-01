@@ -10,6 +10,7 @@
 #include "alarm_config.h"
 #include "features_config.h"
 #include "radio_config_merge.h"
+#include "hardware_profile.h"
 
 void applyClockConfiguration(bool restartNtp);
 
@@ -183,25 +184,14 @@ static void appendDefaultPresets(JsonArray &presets) {
  * @param gpio Target GPIO array
  */
 static void appendDefaultGpio(JsonArray &gpio) {
-  struct GpioDefault {
-    int pin;
-    const char *command;
-  };
-
-  static const GpioDefault defaults[] = {
-      {0, "uppreset = 1"},
-      {12, "upvolume = 2"},
-      {13, "downvolume = 2"},
-      {14, "stop"},
-      {17, "resume"},
-      {34, "station = icecast.omroep.nl:80/radio1-bb-mp3"},
-  };
-
-  uint16_t i;
-  for (i = 0; i < sizeof(defaults) / sizeof(defaults[0]); i++) {
+  const HardwareProfile *profile = findHardwareProfile(HW_PROFILE_DEFAULT);
+  if (profile == NULL) {
+    return;
+  }
+  for (size_t i = 0; i < profile->gpio_count; i++) {
     JsonObject obj = gpio.add<JsonObject>();
-    obj["pin"] = defaults[i].pin;
-    obj["command"] = defaults[i].command;
+    obj["pin"] = profile->gpio[i].pin;
+    obj["command"] = profile->gpio[i].command;
   }
 }
 

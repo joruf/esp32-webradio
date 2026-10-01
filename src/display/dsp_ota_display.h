@@ -22,10 +22,8 @@ static uint32_t dspOtaLastDrawMs = 0;
  * @brief Force a full-screen black clear to remove any previous artifacts.
  */
 inline void dspOtaClearFullScreen(void) {
-  if (!tft) {
-    return;
-  }
-  tft->fillScreen(BLACK);
+  /* Use the display abstraction so DUMMYTFT (void* tft) stays compileable. */
+  dsp_erase();
 }
 
 /**

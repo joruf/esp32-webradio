@@ -65,6 +65,25 @@ const char config_html[] PROGMEM = R"=====(
 			</div>
 
 			<div class="row panel panel-default sound-card">
+				<div class="panel-heading">Hardware profile</div>
+				<div class="panel-body">
+					<p class="config-help">Select a wiring template. This sets all IO pins, SD backend and whether the Display Settings page is shown. The device reboots after applying. Use the matching OTA firmware image for your board (WROOM vs CAM).</p>
+					<div class="row">
+						<div class="form-group col-xs-12 col-sm-8">
+							<label for="hw-profile-select">Configuration template</label>
+							<select class="form-control" id="hw-profile-select"></select>
+						</div>
+						<div class="form-group col-xs-12 col-sm-4">
+							<label>&nbsp;</label>
+							<button type="button" id="hw-profile-apply" class="btn btn-primary btn-block"><span class="btn-icon" aria-hidden="true">&#128190;</span> Apply and reboot</button>
+						</div>
+					</div>
+					<p class="config-help" id="hw-profile-help"></p>
+					<p class="config-help">Build default for this firmware: <strong id="hw-profile-build-default">-</strong>. Active: <strong id="hw-profile-active">-</strong>.</p>
+				</div>
+			</div>
+
+			<div class="row panel panel-default sound-card">
 				<div class="panel-heading">Startup</div>
 				<div class="panel-body">
 					<div class="row">

@@ -1,0 +1,221 @@
+================================================================================
+ESP32-Webradio – Pin-Verbindungen (alle Hardware-Varianten)
+================================================================================
+
+Quelle:  src/config/hardware_profile.h
+Diagramme: fritzing/circuit_diagram_wroom_tft.*
+           fritzing/circuit_diagram_cam_headless.*
+           fritzing/build_circuit_diagram.py
+
+Diese Liste entspricht den Hardware-Profilen und den Fritzing-Schaltplänen.
+Signalnamen (CS, DCS, DREQ, SCK, MISO, MOSI, SDCS, …) wie in den Fritzing-Parts.
+
+
+================================================================================
+1) Variante wroom_tft
+   Profil-ID: wroom_tft
+   Board:     ESP32-WROOM (38-Pin)
+   Module:    VS1053 + TFT (ST7735) + SPI-SD (über VS1053-Breakout) + Drehencoder
+================================================================================
+
+Module:
+  - ESP32-WROOM
+  - VS1053 Breakout (Adafruit-kompatibel)
+  - TFT ST7735
+  - Drehencoder KY-040 (CLK/DT) + Taster (SW)
+  - SD-Karte über VS1053-Breakout-Slot (SDCS)
+
+
+--------------------------------------------------------------------------------
+1.1  Versorgung / Masse
+--------------------------------------------------------------------------------
+ESP32 3V3     <->  VS1053  3V3   (beide 3V3-Pins des Breakouts)
+ESP32 3V3     <->  VS1053  RST   (RST typisch fest auf 3V3, wie im Fritzing)
+ESP32 3V3     <->  TFT     VCC
+ESP32 3V3     <->  TFT     RST   (RST typisch fest auf 3V3, wie im Fritzing)
+ESP32 GND     <->  VS1053  GND   (beide GND-Pins des Breakouts)
+ESP32 GND     <->  TFT     GND
+ESP32 GND     <->  Encoder GND
+ESP32 GND     <->  Taster  GND
+
+
+--------------------------------------------------------------------------------
+1.2  Gemeinsamer SPI-Bus (ESP32 ↔ VS1053 ↔ TFT)
+--------------------------------------------------------------------------------
+ESP32 GPIO18 (SCK)   <->  VS1053 SCK
+ESP32 GPIO18 (SCK)   <->  TFT    SCK
+ESP32 GPIO19 (MISO)  <->  VS1053 MISO
+ESP32 GPIO19 (MISO)  <->  TFT    MISO
+ESP32 GPIO23 (MOSI)  <->  VS1053 MOSI
+ESP32 GPIO23 (MOSI)  <->  TFT    MOSI
+
+
+--------------------------------------------------------------------------------
+1.3  VS1053 Steuerung
+--------------------------------------------------------------------------------
+ESP32 GPIO5  <->  VS1053 CS
+ESP32 GPIO32 <->  VS1053 DCS
+ESP32 GPIO4  <->  VS1053 DREQ
+
+
+--------------------------------------------------------------------------------
+1.4  TFT (nur wroom_tft)
+--------------------------------------------------------------------------------
+ESP32 GPIO15 <->  TFT CS
+ESP32 GPIO2  <->  TFT DC
+ESP32 GPIO33 <->  TFT BL  (Backlight)
+
+
+--------------------------------------------------------------------------------
+1.5  SD (SPI über VS1053-Breakout)
+--------------------------------------------------------------------------------
+ESP32 GPIO21 <->  VS1053 SDCS
+  Hinweis: CS der SD-Karte geht an den SDCS-Pin des VS1053-Breakouts.
+            SPI-Daten laufen über den gemeinsamen Bus (SCK/MISO/MOSI).
+
+
+--------------------------------------------------------------------------------
+1.6  Drehencoder
+--------------------------------------------------------------------------------
+ESP32 GPIO25 <->  Encoder CLK
+ESP32 GPIO26 <->  Encoder DT
+ESP32 GPIO27 <->  Taster  SW (Signal)
+
+
+--------------------------------------------------------------------------------
+1.7  Sonstiges (Profil, kein Fritzing-Jumper)
+--------------------------------------------------------------------------------
+ESP32 GPIO35  IR-Empfänger (pin_ir=35 im Profil; nicht im Fritzing-Diagramm)
+
+
+--------------------------------------------------------------------------------
+1.8  Übersicht GPIO → Signal (wroom_tft)
+--------------------------------------------------------------------------------
+GPIO   Signal
+----   ------
+  2    TFT DC
+  4    VS1053 DREQ
+  5    VS1053 CS
+ 15    TFT CS
+ 18    SPI SCK
+ 19    SPI MISO
+ 21    SD CS → VS1053 SDCS
+ 23    SPI MOSI
+ 25    Encoder CLK
+ 26    Encoder DT
+ 27    Encoder SW
+ 32    VS1053 DCS
+ 33    TFT BL
+ 35    IR (optional)
+
+
+================================================================================
+2) Variante cam_headless
+   Profil-ID: cam_headless
+   Board:     ESP32-CAM AI-Thinker (ohne Kamera betrieben)
+   Module:    VS1053 + Drehencoder + onboard SD_MMC
+================================================================================
+
+Module:
+  - ESP32-CAM (AI-Thinker)
+  - VS1053 Breakout
+  - Drehencoder KY-040 (CLK/DT) + Taster (SW)
+  - SD: onboard SD_MMC (1-Bit), keine externe SPI-SD, kein TFT
+
+
+--------------------------------------------------------------------------------
+2.1  Versorgung / Masse
+--------------------------------------------------------------------------------
+ESP32-CAM 3V3  <->  VS1053 3V3   (beide 3V3-Pins des Breakouts)
+ESP32-CAM 3V3  <->  VS1053 RST   (RST typisch fest auf 3V3, wie im Fritzing)
+ESP32-CAM GND  <->  VS1053 GND   (beide GND-Pins des Breakouts)
+ESP32-CAM GND  <->  Encoder GND
+ESP32-CAM GND  <->  Taster  GND
+
+
+--------------------------------------------------------------------------------
+2.2  Gemeinsamer SPI-Bus (ESP32-CAM ↔ VS1053)
+--------------------------------------------------------------------------------
+ESP32-CAM GPIO18 (SCK)   <->  VS1053 SCK
+ESP32-CAM GPIO19 (MISO)  <->  VS1053 MISO
+ESP32-CAM GPIO23 (MOSI)  <->  VS1053 MOSI
+
+  Kein TFT an diesem SPI-Bus.
+
+
+--------------------------------------------------------------------------------
+2.3  VS1053 Steuerung
+--------------------------------------------------------------------------------
+ESP32-CAM GPIO5  <->  VS1053 CS
+ESP32-CAM GPIO32 <->  VS1053 DCS
+ESP32-CAM GPIO4  <->  VS1053 DREQ
+
+
+--------------------------------------------------------------------------------
+2.4  TFT
+--------------------------------------------------------------------------------
+  Nicht vorhanden (kein Display in cam_headless).
+
+
+--------------------------------------------------------------------------------
+2.5  SD (onboard SD_MMC, 1-Bit)
+--------------------------------------------------------------------------------
+  Interne Board-Verbindungen, keine externen Jumper zum VS1053:
+
+ESP32-CAM GPIO14  =  SD_MMC CLK   (onboard)
+ESP32-CAM GPIO15  =  SD_MMC CMD   (onboard)
+ESP32-CAM GPIO2   =  SD_MMC D0    (onboard)
+
+  pin_sd_cs = -1 (kein externes SPI-SD-CS)
+  VS1053 SDCS wird in dieser Variante nicht verdrahtet.
+
+
+--------------------------------------------------------------------------------
+2.6  Drehencoder
+--------------------------------------------------------------------------------
+ESP32-CAM GPIO25 <->  Encoder CLK
+ESP32-CAM GPIO26 <->  Encoder DT
+ESP32-CAM GPIO27 <->  Taster  SW (Signal)
+
+
+--------------------------------------------------------------------------------
+2.7  Hinweise CAM
+--------------------------------------------------------------------------------
+  - Ohne Kamera betreiben: GPIO 5/18/19/23/25/26/27/32 sind sonst Kamerapads.
+  - GPIO 12/13/16/17 für Extrafunktionen meiden (CAM/Flash-Strapping).
+  - Kein IR (pin_ir = -1).
+
+
+--------------------------------------------------------------------------------
+2.8  Übersicht GPIO → Signal (cam_headless)
+--------------------------------------------------------------------------------
+GPIO   Signal
+----   ------
+  2    SD_MMC D0 (onboard)
+  4    VS1053 DREQ
+  5    VS1053 CS
+ 14    SD_MMC CLK (onboard)
+ 15    SD_MMC CMD (onboard)
+ 18    SPI SCK
+ 19    SPI MISO
+ 23    SPI MOSI
+ 25    Encoder CLK
+ 26    Encoder DT
+ 27    Encoder SW
+ 32    VS1053 DCS
+
+
+================================================================================
+3) Kurzvergleich der Varianten
+================================================================================
+
+Signal / Funktion          wroom_tft              cam_headless
+-------------------------  ---------------------  ----------------------
+MCU                        ESP32-WROOM            ESP32-CAM
+VS1053 CS / DCS / DREQ     5 / 32 / 4             5 / 32 / 4
+SPI SCK / MISO / MOSI      18 / 19 / 23           18 / 19 / 23
+VS1053 RST                 → 3V3                  → 3V3
+TFT CS / DC / BL           15 / 2 / 33            – (kein TFT)
+SD                         SPI CS=21 → SDCS       SD_MMC 14/15/2 onboard
+Encoder CLK / DT / SW      25 / 26 / 27           25 / 26 / 27
+IR                         GPIO35                 –

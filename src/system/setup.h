@@ -397,21 +397,43 @@ static const struct iosetting klist[] = {
  */
 static bool processIoPrefEntry(int i) {
   int8_t *p = klist[i].gnr;
-  int8_t ival = klist[i].pdefault;
+  int8_t ival = hardwareProfileDefaultPin(klist[i].gname, klist[i].pdefault);
   String val;
 
   if (nvsKeyExists(klist[i].gname)) {
     val = nvsGetValue(klist[i].gname);
     if (val.length()) {
       ival = val.toInt();
-      reservepin(ival);
     }
   }
 
   *p = ival;
+  // Always reserve active pins (NVS or profile default). Fresh devices have no
+  // pin_* keys yet; without this, boot pinMode(INPUT_PULLUP) steals PSRAM/SPI/SD.
+  if (ival >= 0) {
+    reservepin(ival);
+  }
   dbgprint("%s set to %d", klist[i].gname, ival);
 
   return (val.length() > 0);
+}
+
+/**
+ * @brief Reserve board-fixed pins that are not listed as configurable I/O prefs.
+ *
+ * ESP32-CAM PSRAM uses GPIO16/17. SD_MMC 1-bit uses GPIO2/14/15. Touching those
+ * with pinMode before WiFi starts corrupts heap and crashes SoftAP init.
+ */
+static void reserveBoardFixedPins(void) {
+#if defined(BOARD_HAS_PSRAM)
+  reservepin(16);
+  reservepin(17);
+#endif
+  if (strcmp(hardwareProfileSdBackend(), "mmc") == 0) {
+    reservepin(2);  // SD_MMC D0
+    reservepin(14); // SD_MMC CLK
+    reservepin(15); // SD_MMC CMD
+  }
 }
 
 /**
@@ -426,6 +448,7 @@ void readIOprefs() {
       count++;
     }
   }
+  reserveBoardFixedPins();
 }
 
 /**

@@ -80,10 +80,32 @@ void checkRotaryEncoder() {
     return;
   }
 
-  // --- Long click: enter preset selection mode (process FIRST) ---
+  // --- Long click: SD track mode when available, otherwise preset selection ---
   if (longclick) {
+    longclick = false;
+    if (SD_okay && hardwareProfileTrackEncoder()) {
+      dbgprint("Long click detected - Enter SD track selection mode");
+      enc_menu_mode = TRACK;
+      showTextOnTFT(3, "SD track");
+      if (SD_currentnode.length() == 0 || SD_currentnode == "0") {
+        int nl = SD_nodelist.indexOf("\n");
+        if (nl > 0) {
+          SD_currentnode = SD_nodelist.substring(0, nl);
+        } else {
+          SD_currentnode = selectnextSDnode("0", +1);
+        }
+      }
+      {
+        String name = getSDfilename(SD_currentnode);
+        int slash = name.lastIndexOf('/');
+        if (slash >= 0) {
+          name = name.substring(slash + 1);
+        }
+        showTextOnTFT(2, name.c_str());
+      }
+      return;
+    }
     dbgprint("Long click detected - Enter preset selection mode");
-    longclick = false; // Clear immediately
     enc_menu_mode = PRESET;
     enc_preset = ini_block.newpreset;
 #if defined(BLUETFT)
@@ -91,7 +113,7 @@ void checkRotaryEncoder() {
 #endif
     encShowPresetNameOnTft(enc_preset);
     showTextOnTFT(3, msgPresetSelectTft);
-    return; // Exit, don't process single click in same cycle
+    return;
   }
 
   // --- Single click: depends on current mode (only if longclick was false) ---
@@ -130,8 +152,19 @@ void checkRotaryEncoder() {
       } else {
         runStream(true, enc_preset);
       }
+    } else if (enc_menu_mode == TRACK) {
+      dbgprint("Single click - Confirm SD track");
+      String fname = getSDfilename(SD_currentnode);
+      if (fname.length() > 0) {
+        host = String("localhost") + fname;
+        hostreq = true;
+        if (datamode != STOPPED) {
+          datamode = STOPREQD;
+        }
+      }
+      enc_menu_mode = VOLUME;
+      showTextOnTFT(3, "SD playing");
     }
-    // TRACK mode is not used
   }
 
   // --- Rotation handling ---
@@ -163,6 +196,18 @@ void checkRotaryEncoder() {
       }
       chomp(tmp);
       showTextOnTFT(2, tmp.c_str());
+      break;
+
+    case TRACK:
+      if (SD_okay) {
+        SD_currentnode = selectnextSDnode(SD_currentnode, rotationcount > 0 ? +1 : -1);
+        tmp = getSDfilename(SD_currentnode);
+        inx = tmp.lastIndexOf('/');
+        if (inx >= 0) {
+          tmp = tmp.substring(inx + 1);
+        }
+        showTextOnTFT(2, tmp.c_str());
+      }
       break;
 
     default:

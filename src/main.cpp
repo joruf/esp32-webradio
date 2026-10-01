@@ -46,6 +46,7 @@
 #include <time.h>
 #include <FS.h>
 #include <SD.h>
+#include <SD_MMC.h>
 #include <SPI.h>
 #include <ArduinoOTA.h>
 #include <esp_task_wdt.h>
@@ -65,6 +66,7 @@
 //**************************************************************************************************
 #include "audio/vs1053.h"
 #include "config/nvs.h"
+#include "config/hardware_profile.h"
 #include "system/event_log.h"
 #include "system/string.h"
 #include "system/isr.h"

@@ -63,3 +63,7 @@ android-app/.externalNativeBuild/
 # Firmware build artifacts (keep published OTA images in ota/releases/)
 *.elf
 *.map
+
+# Fritzing generator scratch
+fritzing/_build/
+fritzing/_export_svg/

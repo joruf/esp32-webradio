@@ -20,6 +20,8 @@ void radioSetup() {
   dbgprint("========================================");
   dbgprint("BOOT: ESP32 Webradio starting");
   dbgprint("BOOT: Firmware %s", FIRMWARE);
+  dbgprint("BOOT: Hardware profile default %s, active %s", HW_PROFILE_DEFAULT,
+           hardwareProfileActiveId().c_str());
   dbgprint("BOOT: CPU core %d at %d MHz", xPortGetCoreID(), ESP.getCpuFreqMHz());
   dbgprint("BOOT: Free heap %d bytes", ESP.getFreeHeap());
   const esp_partition_t *otaSlot = esp_ota_get_next_update_partition(NULL);
@@ -90,7 +92,15 @@ void radioSetup() {
   // Rotary encoder
   for (i = 0; (pinnr = progpin[i].gpio) >= 0; i++) // Check programmable input pins
   {
-    pinMode(pinnr, INPUT_PULLUP); // Input for control button
+    if (progpin[i].reserved) {
+      continue; // Skip SPI/VS/TFT/SD/PSRAM and other claimed pins
+    }
+    // Input-only RTC pins have no internal pull-up; avoid GPIO driver errors.
+    if (pinnr >= 34) {
+      pinMode(pinnr, INPUT);
+    } else {
+      pinMode(pinnr, INPUT_PULLUP); // Input for control button
+    }
     delay(10);
     // Check if pull-up active
     if ((progpin[i].cur = digitalRead(pinnr)) == HIGH) {
@@ -150,13 +160,19 @@ void radioSetup() {
   }
   enableBacklight(true); // Enable backlight (if configured)
 
-  // SD Card mount disabled. We dont have one
-  /*
-  if(ini_block.sd_cs_pin >= 0)                       // SD configured?
-  {
-    mountSDCard();
+  // SD card: SPI (external CS) or SD_MMC (ESP32-CAM onboard slot), per hardware profile
+  if (hardwareProfileSdEnabled()) {
+    const char *backend = hardwareProfileSdBackend();
+    if (strcmp(backend, "mmc") == 0) {
+      mountSDCardMmc();
+    } else if (strcmp(backend, "spi") == 0 && ini_block.sd_cs_pin >= 0) {
+      mountSDCard();
+    } else {
+      dbgprint("SD enabled in profile but backend '%s' not usable", backend);
+    }
+  } else {
+    dbgprint("SD mount skipped (hardware profile)");
   }
-  */
 
   mk_lsan(); // Make a list of acceptable networks
              // in preferences.
@@ -186,25 +202,8 @@ void radioSetup() {
   // tcpip_adapter_set_hostname(TCPIP_ADAPTER_IF_STA, NAME);
   WiFi.setHostname(NAME);
 
-  // Initialize VS1053 player
-  vs1053player->begin();
-  if (vs1053player->isReady()) {
-    uint16_t modeReg = vs1053player->read_register(0x00); // 0x00 ist SCI_MODE
-
-    if (modeReg == 0x0000 || modeReg == 0xFFFF) {
-      dbgprint("VS1053 not properly installed! Register-Dump: 0x%04X", modeReg);
-      eventLogRecordError("VS1053 invalid mode register (check wiring)");
-      vs1053Available = false;
-    } else {
-      dbgprint("VS1053 erfolgreich initialisiert. Mode-Register: 0x%04X", modeReg);
-      vs1053Available = true;
-    }
-  } else {
-    dbgprint("VS1053 not detected, continuing without audio decoder");
-    eventLogRecordError("VS1053 audio decoder not detected");
-    vs1053Available = false;
-  }
-
+  // Bring up WiFi / SoftAP before VS1053 so a missing or hanging decoder cannot
+  // block network provisioning (headless CAM without VS1053 / encoder).
   delay(10);
   p = dbgprint("BOOT: Connecting to WiFi"); // Show progress
   tftlog(p);                                // On TFT too
@@ -233,6 +232,25 @@ void radioSetup() {
   } else {
     dbgprint("BOOT: Station mode unavailable, configuration AP or offline mode active");
     currentpreset = ini_block.newpreset; // No network: newpreset is -1, so means do not start radio
+  }
+
+  // Initialize VS1053 after network is up (optional hardware)
+  vs1053player->begin();
+  if (vs1053player->isReady()) {
+    uint16_t modeReg = vs1053player->read_register(0x00); // 0x00 ist SCI_MODE
+
+    if (modeReg == 0x0000 || modeReg == 0xFFFF) {
+      dbgprint("VS1053 not properly installed! Register-Dump: 0x%04X", modeReg);
+      eventLogRecordError("VS1053 invalid mode register (check wiring)");
+      vs1053Available = false;
+    } else {
+      dbgprint("VS1053 erfolgreich initialisiert. Mode-Register: 0x%04X", modeReg);
+      vs1053Available = true;
+    }
+  } else {
+    dbgprint("VS1053 not detected, continuing without audio decoder");
+    eventLogRecordError("VS1053 audio decoder not detected");
+    vs1053Available = false;
   }
 
   /*

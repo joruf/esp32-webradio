@@ -113,7 +113,10 @@ const char about_html[] PROGMEM = R"=====(
 			<div class="row panel panel-default sound-card">
 				<div class="panel-heading">Hardware</div>
 				<div class="panel-body">
-					<p class="config-help">Typical build: ESP32 Dev Module, VS1053B audio breakout, ST7735 TFT (160×128), KY-040 rotary encoder. Pin assignments are configurable in the web UI and stored in NVS. SD card and IR remote are not used in the current firmware.</p>
+					<p class="config-help">Active hardware profile: <strong id="hw-profile-about">-</strong></p>
+					<p class="config-help">SD card: <strong id="hw-sd-about">-</strong></p>
+					<p class="config-help">Supported templates: <code>wroom_tft</code> (ESP32-WROOM + VS1053 + rotary + TFT) and <code>cam_headless</code> (ESP32-CAM without camera + VS1053 + rotary + onboard SD). Switch under Configuration. Use the matching OTA firmware image for your board.</p>
+					<p class="config-help">Firmware: <strong id="firmware-version">-</strong> <span id="firmware-date"></span></p>
 				</div>
 			</div>
 

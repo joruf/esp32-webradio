@@ -1,3 +1,10 @@
+/**
+ * @file nvs.h
+ * @brief NVS helpers for preferences storage.
+ */
+
+#ifndef ESP32_WEBRADIO_NVS_H
+#define ESP32_WEBRADIO_NVS_H
 
 /**
  * @brief Open NVS with my-app namespace.
@@ -246,3 +253,4 @@ String nvsGetHostFromPref() {
   // Get the contents
   return contents; // Return the station
 }
+#endif

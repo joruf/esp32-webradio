@@ -2702,9 +2702,131 @@ const char app_js[] PROGMEM = R"=====(
         initConfigSelectOptions();
         bindConfigChangeHandlers();
         initPresetDragDrop();
+        initHardwareProfileUi();
 
         loadRadioConfig().always(function() {
             startWifiSignalPolling();
+        });
+    }
+
+    /**
+     * Hide Display Settings nav when the active hardware profile has no display UI.
+     */
+    function applyHardwareUiChrome(data) {
+        var showDisplay = true;
+        if (data && typeof data.hardware_display_ui !== "undefined") {
+            showDisplay = !!data.hardware_display_ui;
+        }
+        $("a[href='display.html'], a[href=\"display.html\"]").toggle(showDisplay);
+    }
+
+    /**
+     * Fill About / Diagnostics hardware fields from profile JSON.
+     */
+    function fillHardwareAboutFields(data) {
+        if (!data) {
+            return;
+        }
+        if (document.getElementById("hw-profile-about")) {
+            document.getElementById("hw-profile-about").textContent =
+                (data.hardware_profile || "-") +
+                (data.hardware_profile_default ?
+                    " (build default: " + data.hardware_profile_default + ")" : "");
+        }
+        if (document.getElementById("hw-sd-about")) {
+            document.getElementById("hw-sd-about").textContent =
+                data.hardware_sd_enabled ?
+                    ("yes (" + (data.hardware_sd_backend || "?") + ")") : "no";
+        }
+    }
+
+    /**
+     * Load active hardware profile on every page (nav chrome + About fields).
+     */
+    function initHardwareProfileChrome() {
+        fetch("/?gethwprofiles&_t=" + Date.now())
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                applyHardwareUiChrome(data);
+                fillHardwareAboutFields(data);
+            })
+            .catch(function() {
+                /* Keep defaults if the device is still booting. */
+            });
+    }
+
+    function initHardwareProfileUi() {
+        if (!$("#hw-profile-select").length) {
+            return;
+        }
+
+        function fillProfiles(data) {
+            var $sel = $("#hw-profile-select");
+            var profiles = data.hardware_profiles || [];
+            var active = data.hardware_profile || data.hardware_profile_default || "";
+            var buildDefault = data.hardware_profile_default || "";
+            $sel.empty();
+            for (var i = 0; i < profiles.length; i++) {
+                var p = profiles[i];
+                $sel.append($("<option></option>").attr("value", p.id).text(p.label));
+            }
+            if (active) {
+                $sel.val(active);
+            }
+            $("#hw-profile-active").text(active || "-");
+            $("#hw-profile-build-default").text(buildDefault || "-");
+            updateHardwareProfileHelp($sel.val(), profiles);
+            applyHardwareUiChrome(data);
+            fillHardwareAboutFields(data);
+        }
+
+        function updateHardwareProfileHelp(id, profiles) {
+            var help = "";
+            for (var i = 0; i < (profiles || []).length; i++) {
+                if (profiles[i].id === id) {
+                    help = profiles[i].description || "";
+                    break;
+                }
+            }
+            $("#hw-profile-help").text(help);
+        }
+
+        fetch("/?gethwprofiles&_t=" + Date.now())
+            .then(function(r) { return r.json(); })
+            .then(fillProfiles)
+            .catch(function() {
+                $("#hw-profile-help").text("Could not load hardware profiles.");
+            });
+
+        $("#hw-profile-select").off("change.hwProfile").on("change.hwProfile", function() {
+            fetch("/?gethwprofiles&_t=" + Date.now())
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    updateHardwareProfileHelp($("#hw-profile-select").val(), data.hardware_profiles || []);
+                });
+        });
+
+        $("#hw-profile-apply").off("click.hwProfile").on("click.hwProfile", function() {
+            var id = $("#hw-profile-select").val();
+            if (!id) {
+                return;
+            }
+            if (!window.confirm("Apply hardware profile \"" + id + "\" and reboot now? Pin mappings and SD settings will change.")) {
+                return;
+            }
+            showCommandLog("Applying hardware profile " + id + "...");
+            fetch("/?applyhwprofile=" + encodeURIComponent(id) + "&_t=" + Date.now())
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.ok) {
+                        showCommandLog(data.message || "Rebooting...", { type: "success" });
+                    } else {
+                        showCommandLog(data.message || "Failed to apply profile", { type: "error" });
+                    }
+                })
+                .catch(function() {
+                    showCommandLog("Profile apply request failed (device may be rebooting).", { type: "warning" });
+                });
         });
     }
 
@@ -3584,6 +3706,7 @@ const char app_js[] PROGMEM = R"=====(
                 syncThemeFromServer();
             }
         }, 120000);
+        initHardwareProfileChrome();
         initConfigPage();
         initSoundPage();
         initDisplayPage();
@@ -4493,6 +4616,11 @@ const char app_js[] PROGMEM = R"=====(
                     document.getElementById("firmware-date").innerHTML = firmwareParts[1] || "-";
                 }
             }
+
+            if (typeof applyHardwareUiChrome === "function") {
+                applyHardwareUiChrome(data);
+            }
+            fillHardwareAboutFields(data);
 
             syncVolumeSlider("index-volume", "index-volume-value", data.volume);
             syncVolumeSlider("mp3-volume", "mp3-volume-value", data.volume);

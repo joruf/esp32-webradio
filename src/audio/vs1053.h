@@ -36,7 +36,12 @@ private:
   bool okay = true;             // VS1053 is working
 protected:
   inline void await_data_request() const {
+    // Timeout so a missing VS1053 (DREQ stuck low) cannot hang boot forever.
+    uint32_t start = millis();
     while ((dreq_pin >= 0) && (!digitalRead(dreq_pin))) {
+      if ((millis() - start) > 200) {
+        break;
+      }
       NOP(); // Very short delay
     }
   }
@@ -198,6 +203,7 @@ bool VS1053::testComm(const char *header) {
     dbgprint("VS1053 not properly installed!");
     // Allow testing without the VS1053 module
     pinMode(dreq_pin, INPUT_PULLUP); // DREQ is now input with pull-up
+    okay = false;
     return false;                    // Return bad result
   }
   // Further TESTING.  Check if SCI bus can write and read without errors.
@@ -271,6 +277,8 @@ void VS1053::begin() {
     dbgprint("endFillByte is %X", endFillByte);
     // printDetails("After last clocksetting");
     delay(100);
+  } else {
+    okay = false;
   }
 }
 
