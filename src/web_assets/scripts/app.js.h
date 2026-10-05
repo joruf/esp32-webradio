@@ -1591,7 +1591,7 @@ const char app_js[] PROGMEM = R"=====(
         radioConfigState.presets = loadedRadioConfig.presets || [];
         radioConfigState.gpio = loadedRadioConfig.gpio || [];
 
-        alarmState.version = loadedRadioConfig.version || 1;
+        alarmState.version = 1;
         alarmState.alarms = loadedRadioConfig.alarms || [];
 
         if ($("#clk-server").length) {

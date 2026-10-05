@@ -52,6 +52,7 @@ void handleWebpage(const String &pagename) {
   String ct; // Content type
   String etag;
   String lastModified;
+  String contentEncoding;
   const char *p;
   int l;                   // Size of requested page
   int TCPCHUNKSIZE = 1024; // Max number of bytes per write
@@ -109,34 +110,22 @@ void handleWebpage(const String &pagename) {
       p = eventlog_html;
       l = sizeof(eventlog_html) - 1;
     } else if (pagename.indexOf("app.css") >= 0 || pagename.indexOf("index.css") >= 0) {
-      p = app_css;
-      l = sizeof(app_css) - 1;
+      p = (const char *)app_css_gz;
+      l = (int)app_css_gz_len;
+      contentEncoding = "gzip";
     } else if (pagename.indexOf("app.js") >= 0 || pagename.indexOf("interface.js") >= 0) {
-      p = app_js;
-      l = sizeof(app_js) - 1;
+      p = (const char *)app_js_gz;
+      l = (int)app_js_gz_len;
+      contentEncoding = "gzip";
     } else if (pagename.indexOf("ota/version.json") >= 0) {
       p = ota_version_embedded_json;
       l = sizeof(ota_version_embedded_json) - 1;
-      /*
-      } else if (pagename.indexOf ("bootstrap.min.css") >= 0 ) {
-        p = bootstrap_css;
-        l = sizeof (bootstrap_css)-1;
-      } else if (pagename.indexOf ("bootstrap.min.js") >= 0 ) {
-        p = bootstrap_js;
-        l = sizeof (bootstrap_js)-1;
-      } else if (pagename.indexOf ("jquery.min.js") >= 0 ) {
-        p = jquery_js;
-        l = sizeof (jquery_js)-1;
-      } else if (pagename.indexOf ("favicon.ico") >= 0 ) {
-        p = (char*)favicon_ico;
-        l = sizeof (favicon_ico)-1;
-      */
     } else {
       p = "";
       l = sizeof("");
     }
 
-    if (*p == '\n') { // If page starts with newline:
+    if (contentEncoding.length() == 0 && *p == '\n') { // If page starts with newline:
       p++;            // Skip first character
       l--;
     }
@@ -144,14 +133,15 @@ void handleWebpage(const String &pagename) {
     dbgprint("Length of page is %d", l);
     lastModified = String(FIRMWARE);
     const bool darkMode = isDarkModeActive();
-    const int serveLen = (ct == "text/html") ? servedHtmlLength(p, l, darkMode) : l;
+    const int serveLen =
+        (ct == "text/html") ? servedHtmlLength(p, l, darkMode) : l;
     etag = httpBuildWeakEtag(pagename, serveLen);
     if (httpIsAssetNotModified(etag, lastModified)) {
       httpSendNotModified(etag, lastModified, 600);
       cmdclient.flush();
       return;
     }
-    cmdclient.print(httpheader(ct, 600, etag, lastModified, serveLen));
+    cmdclient.print(httpheader(ct, 600, etag, lastModified, serveLen, contentEncoding));
 
     if (l > 0 && !streamWebPage(cmdclient, p, l, ct, darkMode, TCPCHUNKSIZE)) {
       dbgprint("HTTP client disconnected while sending %s", pagename.c_str());

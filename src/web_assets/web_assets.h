@@ -8,8 +8,8 @@
  * Layout:
  *   pages/   – HTML views (symbols: *_html)
  *   partials/ – Shared HTML sources (e.g. nav_menu.html with @include_nav@)
- *   styles/  – CSS (app_css)
- *   scripts/ – JavaScript (app_js)
+ *   styles/  – CSS (app_css_gz, gzip-compressed)
+ *   scripts/ – JavaScript (app_js_gz, gzip-compressed)
  *   vendor/  – Optional third-party bundles (currently unused at runtime)
  *   icons/   – Favicon and similar static images
  */
@@ -26,8 +26,8 @@
 #include "web_assets/pages/about_page.h"
 #include "web_assets/pages/diagnostics_page.h"
 #include "web_assets/pages/eventlog_page.h"
-#include "web_assets/styles/app.css.h"
-#include "web_assets/scripts/app.js.h"
+#include "web_assets/styles/app.css.gz.h"
+#include "web_assets/scripts/app.js.gz.h"
 /* #include "web_assets/icons/favicon.ico.h" */
 
 #endif

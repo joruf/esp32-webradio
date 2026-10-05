@@ -18,7 +18,8 @@ void chomp(String &str);
 String httpheader(String contentstype, uint16_t cacheMaxAgeSec = 0,
                   const String &etag = "",
                   const String &lastModified = "",
-                  int contentLength = -1);
+                  int contentLength = -1,
+                  const String &contentEncoding = "");
 void recoverHttpServerState();
 bool nvsKeyExists(const char *key);
 void nvsRequestSettingsSave();

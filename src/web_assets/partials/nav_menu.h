@@ -1,4 +1,4 @@
-// Auto-generated from partials/nav_menu.html — do not edit manually.
+// Auto-generated from partials/nav_menu.html - do not edit manually.
 #ifndef WEB_NAV_MENU_H
 #define WEB_NAV_MENU_H
 

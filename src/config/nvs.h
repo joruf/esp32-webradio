@@ -15,7 +15,7 @@
 void nvsOpen() {
   if (!nvshandle) {
 
-    nvserr = nvs_open(NAME, NVS_READWRITE, &nvshandle); // open nvs
+    nvserr = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvshandle); // open nvs
     if (nvserr) {
       dbgprint("nvs_open failed!");
     }

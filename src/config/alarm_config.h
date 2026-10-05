@@ -73,14 +73,22 @@ esp_err_t nvsSetAlarmConfig(const String &json) {
 
   nvsOpen();
   nvserr = nvs_set_str(nvshandle, ALRM_CONFIG_NVS_KEY, json.c_str());
+  if (nvserr == ESP_ERR_NVS_NOT_ENOUGH_SPACE || nvserr == ESP_ERR_NVS_INVALID_HANDLE ||
+      nvserr == ESP_ERR_NVS_PAGE_FULL) {
+    // Fragmented NVS: drop the old value and retry once.
+    dbgprint("nvsSetAlarmConfig retry after erase (%d)", (int)nvserr);
+    nvs_erase_key(nvshandle, ALRM_CONFIG_NVS_KEY);
+    nvs_commit(nvshandle);
+    nvserr = nvs_set_str(nvshandle, ALRM_CONFIG_NVS_KEY, json.c_str());
+  }
   if (nvserr) {
-    dbgprint("nvsSetAlarmConfig failed!");
+    dbgprint("nvsSetAlarmConfig failed (%d)!", (int)nvserr);
     return nvserr;
   }
 
   nvserr = nvs_commit(nvshandle);
   if (nvserr) {
-    dbgprint("nvsSetAlarmConfig commit failed!");
+    dbgprint("nvsSetAlarmConfig commit failed (%d)!", (int)nvserr);
   }
   return nvserr;
 }

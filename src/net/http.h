@@ -1105,11 +1105,15 @@ void handlehttp() {
 String httpheader(String contentstype, uint16_t cacheMaxAgeSec,
                   const String &etag,
                   const String &lastModified,
-                  int contentLength) {
+                  int contentLength,
+                  const String &contentEncoding) {
   String header = String("HTTP/1.1 200 OK\nContent-type:") + contentstype +
                   String("\n"
                          "Server: " NAME "\n"
                          "Connection: close\n");
+  if (contentEncoding.length() > 0) {
+    header += String("Content-Encoding: ") + contentEncoding + String("\n");
+  }
   if (contentLength >= 0) {
     header += String("Content-Length: ") + String(contentLength) + String("\n");
   }

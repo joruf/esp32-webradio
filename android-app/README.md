@@ -57,7 +57,7 @@ The web interface of the radio appears inside the app. Use the menu (⋮) for **
 
 **Tips**
 
-- Prefer the **fixed IP** from your router or radio display. `ESP32Webradio.local` (mDNS) does not work reliably on all phones.
+- Prefer the **fixed IP** from your router or radio display. `radio.local` (mDNS) does not work reliably on all phones; on the Fritzbox LAN use `http://radio.fritz.box`.
 - Close the **browser on your PC** while using the app — the ESP32 handles only one HTTP client well at a time.
 - If the page stays empty after saving the address: menu → **Reload**, or force‑close the app and open it again.
 
@@ -117,7 +117,7 @@ Same as **First launch** under [Install on your Android device](#install-on-your
 
 ## Notes
 
-- `ESP32Webradio.local` (mDNS) may not work on all Android devices; prefer the **fixed IP** from your router.
+- `radio.local` (mDNS) may not work on all Android devices; prefer `http://radio.fritz.box` or the **fixed IP** from your router.
 - Only one HTTP client is served well by the ESP32 at a time — close the browser on PC while using the app if commands fail.
 
 ## License

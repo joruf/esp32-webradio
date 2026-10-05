@@ -1,7 +1,7 @@
 #ifndef FIRMWARE_CONFIG_H
 #define FIRMWARE_CONFIG_H
 
-#define FIRMWARE "v2.69 2026-09-30"
+#define FIRMWARE "v2.71 2026-10-05"
 #define WEBUI_CACHE_MAX_AGE 60
 #define UPDATEHOST "www.loresoft.de"
 #define BINFILE "/downloads/Esp32_radio.ino.esp32.bin"
@@ -20,7 +20,11 @@
 
 #define QSIZ 800
 #define DEBUG_BUFFER_SIZE 150
-#define NAME "ESP32Webradio"
+#define NAME "radio"
+/* NVS namespace must stay stable across renames of NAME (mDNS/hostname).
+ * Changing it makes the device look "factory reset" while old keys still
+ * occupy flash and starve new writes (alarm save fails, etc.). */
+#define NVS_NAMESPACE "ESP32Webradio"
 #define MAXPRESETS 200
 #define NVSBUFSIZE 150
 #define TIMEPOS -52

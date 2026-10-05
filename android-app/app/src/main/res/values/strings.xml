@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">ESP32 Webradio</string>
     <string name="settings_title">Radio address</string>
-    <string name="settings_host_hint">192.168.1.42 or ESP32Webradio.local</string>
+    <string name="settings_host_hint">192.168.1.42 or radio.local</string>
     <string name="settings_host_label">Host (IP or hostname)</string>
     <string name="settings_save">Save and open</string>
     <string name="settings_help">Phone and ESP32 must be on the same Wi‑Fi. Use the IP shown on the radio display or in your router.</string>
