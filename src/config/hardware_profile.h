@@ -23,6 +23,8 @@
 #define HW_PROFILE_WROOM_TFT "wroom_tft"
 /** Profile id: ESP32-CAM (no camera) + VS1053 + rotary encoder + onboard SD_MMC. */
 #define HW_PROFILE_CAM_HEADLESS "cam_headless"
+/** Profile id: Waveshare ESP32-S3-Touch-LCD-2.8B + VS1053 (no rotary encoder). */
+#define HW_PROFILE_S3_TOUCH_28B "s3_touch_28b"
 
 struct HwPinEntry {
   const char *key;
@@ -78,6 +80,29 @@ static const HwPinEntry kPinsCamHeadless[] = {
     {"pin_spi_mosi", 23},
 };
 
+/** Waveshare S3 Touch 2.8B pin map (USB-aware).
+ *  GPIO4 has an onboard battery divider - do not use for VS1053 CS/DCS/DREQ.
+ *  With MCP: CS/DCS on expander; MISO=GPIO0; DREQ=GPIO16; GT911 INT only at reset.
+ *  Without MCP: CS=0, DCS=16, DREQ=20 (D+), no MISO (write-only). SCK=43 MOSI=44.
+ *  Encoder off (0 used as CS or MISO). */
+static const HwPinEntry kPinsS3Touch28b[] = {
+#if defined(USE_MCP23017_VS1053)
+    {"pin_enc_clk", -1},  {"pin_enc_dt", -1},   {"pin_enc_sw", -1},
+    {"pin_vs_cs", -20},   {"pin_vs_dcs", -21},
+    {"pin_vs_dreq", 16},  {"pin_spi_miso", 0},
+#else
+    {"pin_enc_clk", -1},  {"pin_enc_dt", -1},   {"pin_enc_sw", -1},
+    {"pin_vs_cs", 0},     {"pin_vs_dcs", 16},
+    {"pin_vs_dreq", 20},  {"pin_spi_miso", -1},
+#endif
+    {"pin_ir", -1},       {"pin_sd_cs", -1},    {"pin_tft_cs", -1},
+    {"pin_tft_dc", -1},
+    {"pin_tft_scl", -1},  {"pin_tft_sda", -1},
+    {"pin_tft_bl", -1},   {"pin_tft_blx", -1},  {"pin_shutdown", -1},
+    {"pin_shutdownx", -1},{"pin_spi_sck", 43},
+    {"pin_spi_mosi", 44},
+};
+
 static const HardwareProfile kHardwareProfiles[] = {
     {
         HW_PROFILE_WROOM_TFT,
@@ -103,6 +128,19 @@ static const HardwareProfile kHardwareProfiles[] = {
         kPinsCamHeadless,
         sizeof(kPinsCamHeadless) / sizeof(kPinsCamHeadless[0]),
         /* No factory GPIOs: CAM SD uses 2/14/15; 12/13/16/17 are unsafe. */
+        nullptr,
+        0,
+    },
+    {
+        HW_PROFILE_S3_TOUCH_28B,
+        "ESP32-S3 Touch LCD 2.8B",
+        "Waveshare S3 Touch 2.8B, ST7701, VS1053 without USB pins: MCP CS/DCS + MISO0/DREQ4, or no-MCP CS0/DCS4/DREQ16 write-only. Touch swipe volume.",
+        true,  // display_ui
+        false, // sd_enabled
+        false, // track_encoder (0/4 used for VS1053)
+        "none",
+        kPinsS3Touch28b,
+        sizeof(kPinsS3Touch28b) / sizeof(kPinsS3Touch28b[0]),
         nullptr,
         0,
     },

@@ -1,6 +1,8 @@
 #ifndef BOOT_VALIDATION_H
 #define BOOT_VALIDATION_H
 
+#include "config/firmware_config.h"
+
 /**
  * @brief Count active NVS keys in the global key table.
  *
@@ -103,10 +105,18 @@ static void repairNvsConfig(String &actions) {
   bool repaired = false;
 
   if (!nvsKeyExists("volume")) {
-    nvsAddValue("volume", "72");
+    nvsAddValue("volume", String(RADIO_DEFAULT_VOLUME));
     repaired = true;
     actions += " volume";
   }
+#if defined(ST7701_28B)
+  else if (nvsGetValue("volume").toInt() <= 0) {
+    // Phantom GT911 swipes can persist volume 0; restore factory default on S3 touch LCD.
+    nvsAddValue("volume", String(RADIO_DEFAULT_VOLUME));
+    repaired = true;
+    actions += " volume_zero";
+  }
+#endif
 
   if (!nvsKeyExists("clk_server")) {
     nvsAddValue("clk_server", "pool.ntp.org");

@@ -127,7 +127,7 @@ void handleSleepTimer() {
         // Gentle "sleep" shutdown: fade the volume down over the configured
         // "Alarm volume fade" duration, then stop (mirrors the alarm fade-in).
         dbgprint("Snooze timer expired, fading out over %d s", radioFeatures.alarm_fade_sec);
-#if !defined(BLUETFT)
+#if !defined(RADIO_DASHBOARD_TFT)
         showTextOnTFT(1, "Stream stopped");
 #endif
         showTextOnTFT(3, "Radio off");

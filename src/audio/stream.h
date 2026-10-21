@@ -106,7 +106,7 @@ static void formatStreamTitle(char *streamtitle) {
   if ((p1 = strstr(streamtitle, " - "))) {
     p2 = p1 + 3;
 
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
     (void)p2;
 #else
     if (displaytype == T_NEXTION) {
@@ -124,7 +124,7 @@ static void formatStreamTitle(char *streamtitle) {
   }
 }
 
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
 #  include "display/dsp_dashboard.h"
 #  include "net/wifi_display.h"
 #endif
@@ -138,14 +138,14 @@ static void formatStreamTitle(char *streamtitle) {
  */
 void showStreamDataOnTFT(const char *ml, bool full) {
   char streamtitle[150];
-#if !defined(BLUETFT)
+#if !defined(RADIO_DASHBOARD_TFT)
   char displaytitle[150];
 #endif
 
   if (extractStreamTitle(ml, streamtitle, sizeof(streamtitle))) {
     metaSetTitle(streamtitle);
     addTitleToHistory(streamtitle);
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
     dspDashboardInvalidateTitle();
 #else
     strncpy(displaytitle, streamtitle, sizeof(displaytitle) - 1);
@@ -158,7 +158,7 @@ void showStreamDataOnTFT(const char *ml, bool full) {
     streamtitle[sizeof(streamtitle) - 1] = '\0';
     metaSetTitle(streamtitle);
     addTitleToHistory(streamtitle);
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
     dspDashboardInvalidateTitle();
 #else
     showTextOnTFT(1, streamtitle);
@@ -443,7 +443,7 @@ bool connectToWebradioServer() {
   }
 
   dbgprint("Connect to %s on port %d, extension %s", hostwoext.c_str(), port, extension.c_str());
-#if !defined(BLUETFT)
+#if !defined(RADIO_DASHBOARD_TFT)
   {
     const char *s = dbgprint("Connect to %s on port %d, extension %s", hostwoext.c_str(), port, extension.c_str());
     showTextOnTFT(1, s);
@@ -478,12 +478,20 @@ static const uint16_t STREAM_START_BOOT_WARMUP_MIN_CHUNKS = 72;
 static const uint32_t STREAM_START_BOOT_WARMUP_MIN_MS = 650;
 
 #include "stream_watchdog.h"
+#if defined(ST7701_28B)
+#include "display/st7701_backlight.h"
+#include "boot/st7701_boot_wdt.h"
+#include <esp_task_wdt.h>
+#endif
 
 static void processQDataChunk() {
   while (!claimSPI("chunk")) {
     vTaskDelay(1);
   }
-  vs1053player->playChunk(inchunk.buf, sizeof(inchunk.buf));
+  if (!vs1053player->playChunk(inchunk.buf, sizeof(inchunk.buf))) {
+    releaseSPI();
+    return;
+  }
   releaseSPI();
   totalcount += sizeof(inchunk.buf);
   streamWatchdogFeed((uint16_t)sizeof(inchunk.buf));
@@ -552,11 +560,27 @@ static void processQStopSong() {
  * @param parameter Task parameter (unused)
  */
 void playStreamFromQueue(void *parameter) {
+#if defined(ST7701_28B)
+  esp_task_wdt_add(NULL);
+#endif
   while (true) {
+#if defined(ST7701_28B)
+    esp_task_wdt_reset();
+    st7701FeedTaskWdt();
+#endif
     if (xQueueReceive(dataqueue, &inchunk, 5)) {
-      // Wait if FIFO is full
-      while (!vs1053player->data_request()) {
-        vTaskDelay(1);
+      if (!vs1053Available || !vs1053player) {
+        continue;
+      }
+      // Wait if FIFO is full (bounded: stuck DREQ must not hang the audio task)
+      {
+        uint32_t dreqDeadline = millis() + 400UL;
+        while (!vs1053player->data_request()) {
+          if ((int32_t)(millis() - dreqDeadline) >= 0) {
+            break;
+          }
+          vTaskDelay(1);
+        }
       }
 
       // Select the chunk type
@@ -591,34 +615,42 @@ static void handleTftInfoDisplay() {
   }
 }
 
+#if defined(RADIO_DASHBOARD_TFT) && !defined(ST7701_28B)
+static uint32_t lastLiveDashboardMs = 0;
+#endif
+
 /**
  * @brief Handle TFT update with SPI bus management.
  */
 static void handleTftUpdate() {
   bool spiClaimed = false;
-  static uint32_t lastLiveDashboardMs = 0;
 
   if (dsp_isUseSPI()) {
     spiClaimed = claimSPI("hspectft");
   }
 
   if (tft) {
+#if defined(RADIO_DASHBOARD_TFT)
+#if defined(ST7701_28B)
+    st7701PresentDashboardFrame();
+#else
     handle_tft_txt();
-#if defined(BLUETFT)
     if (datamode == STOPPED || (millis() - lastLiveDashboardMs) >= 2000UL) {
       dspDashboardRefreshLiveStatus();
       updateWifiStatusDisplay();
       lastLiveDashboardMs = millis();
     }
-    // Draw VU only while SPI is claimed (levels are computed in loop via vuMeter.update).
     if (radioFeatures.vu_meter && datamode != STOPPED) {
       renderVuMeterOnTFT(getVuMeterTrebleLevel(), getVuMeterBassLevel(), true);
     } else {
       renderVuMeterOnTFT(0, 0, false);
     }
 #endif
+#if !defined(ST7701_28B)
     handleTftInfoDisplay();
     dsp_update();
+#endif
+#endif /* RADIO_DASHBOARD_TFT */
   }
 
   if (spiClaimed) {

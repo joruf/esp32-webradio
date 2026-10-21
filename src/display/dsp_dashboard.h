@@ -14,6 +14,8 @@
 
 #include "globals/globals.h"
 #include "config/features_config.h"
+#include "display/dsp_status_icons.h"
+#include "net/web_ui_activity.h"
 
 extern int32_t sleeptimer_ms;
 extern int bitrate;
@@ -24,20 +26,79 @@ uint8_t getVuMeterTrebleLevel(void);
 uint8_t getVuMeterBassLevel(void);
 void utf8ascii(char *s);
 
-#if defined(BLUETFT)
+#if defined(BLUETFT) || defined(ST7701_28B)
 
+#if defined(ST7701_28B)
+/** Landscape UI on ST7701 panel (physical 480x640 portrait, rotation 1). */
+/** Draw width 638: leave 1 px free on left and right (panel stays 640). */
+#  define DSP_DASH_W 638U
+#  define DSP_DASH_H 480U
+#  define DSP_GUTTER_W 40U
+#  define DSP_HEADER_H 44U
+#  define DSP_FOOTER_H 40U
+#  define DSP_BAR_TOP (DSP_HEADER_H + 10U)
+#  define DSP_BAR_HEIGHT (DSP_DASH_H - DSP_HEADER_H - DSP_FOOTER_H - 28U)
+#  define DSP_BAR_WIDTH 20U
+#  define DSP_LEFT_BAR_X 8U
+#  define DSP_VU_BAR_W 10U
+#  define DSP_VU_GAP 6U
+#  define DSP_TEXT_PAD 8U
+#  define DSP_UI_TEXT_SIZE 2U
+#  define DSP_HEADER_TEXT_SIZE 2U
+#  define DSP_FOOTER_TEXT_SIZE 2U
+/** Small edge inset so scaled GFX glyphs are not clipped at panel borders. */
+#  define DSP_SAVER_MARGIN_PX 5U
+#  define DSP_FONT_W (6U * DSP_UI_TEXT_SIZE)
+#  define DSP_UI_LINE_H (8U * DSP_UI_TEXT_SIZE)
+#  define DSP_STATION_Y 52U
+#  define DSP_STATION_ROW_H 32U
+#  define DSP_TITLE_ROW_H 32U
+#  define DSP_LINE_STATION_Y (DSP_STATION_Y + DSP_STATION_ROW_H + 6U)
+#  define DSP_LINE_META_Y (DSP_DASH_H - DSP_FOOTER_H - 68U)
+#  define DSP_VOL_LABEL_Y (DSP_BAR_TOP + DSP_BAR_HEIGHT + 6U)
+#  define DSP_FOOTER_Y (DSP_DASH_H - DSP_FOOTER_H)
+#  define DSP_ROW_STATION_DRAW_Y DSP_STATION_Y
+#  define DSP_ROW_SHORT_Y (DSP_DASH_H - DSP_FOOTER_H - 52U)
+#  define DSP_ROW_WIFI_Y (DSP_DASH_H - DSP_FOOTER_H - 28U)
+#  define DSP_TITLE_MAX_CHARS 38U
+/** Volume % label: size 2 fits "100" inside the 40px left gutter (size 3 spilled + wrapped). */
+#  define DSP_TEXT_SIZE 2U
+/** Fixed header slots (no dynamic reflow that shifts content horizontally). */
+#  define DSP_ST7701_HEADER_ICON_X 446U
+#  define DSP_ST7701_HEADER_TIME_RIGHT (DSP_DASH_W - DSP_GUTTER_W - 8U)
+#else
+#  define DSP_FOOTER_H 0U
+#  define DSP_ROW_STATION_DRAW_Y 17U
+#  define DSP_ROW_SHORT_Y 97U
+#  define DSP_ROW_WIFI_Y 106U
+#  define DSP_TITLE_MAX_CHARS 22U
 #  define DSP_DASH_W 160U
 #  define DSP_DASH_H 128U
 #  define DSP_GUTTER_W 12U
 #  define DSP_HEADER_H 15U
-#  define DSP_CONTENT_X DSP_GUTTER_W
-#  define DSP_CONTENT_W (DSP_DASH_W - (2U * DSP_GUTTER_W))
 #  define DSP_BAR_TOP 16U
 #  define DSP_BAR_HEIGHT 98U
 #  define DSP_BAR_WIDTH 7U
 #  define DSP_LEFT_BAR_X 2U
 #  define DSP_VU_BAR_W 2U
 #  define DSP_VU_GAP 2U
+#  define DSP_FONT_W 6U
+#  define DSP_TEXT_PAD 3U
+#  define DSP_STATION_Y 17U
+#  define DSP_STATION_ROW_H 12U
+#  define DSP_TITLE_ROW_H 12U
+#  define DSP_LINE_STATION_Y 30U
+#  define DSP_LINE_META_Y 96U
+#  define DSP_VOL_LABEL_Y 116U
+#  define DSP_TEXT_SIZE 1
+#  define DSP_UI_TEXT_SIZE 1U
+#  define DSP_HEADER_TEXT_SIZE 1U
+#  define DSP_FOOTER_TEXT_SIZE 1U
+#  define DSP_UI_LINE_H 8U
+#endif
+
+#  define DSP_CONTENT_X DSP_GUTTER_W
+#  define DSP_CONTENT_W (DSP_DASH_W - (2U * DSP_GUTTER_W))
 #  define DSP_VU_TREBLE_X (DSP_DASH_W - DSP_GUTTER_W + 2U)
 #  define DSP_VU_BASS_X (DSP_VU_TREBLE_X + DSP_VU_BAR_W + DSP_VU_GAP)
 
@@ -52,23 +113,26 @@ void utf8ascii(char *s);
 #  define DSP_COL_WIFI_WEAK 0xFD20U
 #  define DSP_COL_WIFI_OFF 0x7BEFU
 #  define DSP_COL_LABEL 0xC618U
-#  define DSP_FONT_W 6U
-#  define DSP_TEXT_PAD 3U
 #  define DSP_TEXT_X (DSP_CONTENT_X + DSP_TEXT_PAD)
 #  define DSP_CHARS_PER_LINE ((DSP_CONTENT_W - DSP_TEXT_PAD - 1U) / DSP_FONT_W)
-#  define DSP_STATION_Y 17U
-#  define DSP_STATION_ROW_H 12U
 #  define DSP_TITLE_Y (DSP_STATION_Y + DSP_STATION_ROW_H + 3U)
-#  define DSP_TITLE_ROW_H 12U
 
 static bool dspDashboardChromeReady = false;
 static char dspDashboardLastDate[14] = "";
 static char dspDashboardLastTime[8] = "";
-static char dspDashboardLastHeaderState[24] = "";
+static char dspDashboardLastHeaderState[48] = "";
+#if defined(ST7701_28B)
+static uint8_t dspDashboardLastHeaderIcons = 255;
+static uint16_t dspDashboardLastHeaderIconX = 0xFFFFU;
+#endif
 inline void dspDashboardInvalidateHeader(void) {
   dspDashboardLastDate[0] = '\0';
   dspDashboardLastTime[0] = '\0';
   dspDashboardLastHeaderState[0] = '\0';
+#if defined(ST7701_28B)
+  dspDashboardLastHeaderIcons = 255;
+  dspDashboardLastHeaderIconX = 0xFFFFU;
+#endif
 }
 static uint8_t dspDashboardLastVol = 255;
 static uint8_t dspDashboardLastVuTreble = 255;
@@ -79,6 +143,13 @@ static char dspDashboardLastStationKey[88] = "";
 static char dspDashboardLastTitle[150] = "";
 static uint8_t dspDashboardLastTitleLines = 0;
 static char dspDashboardLastShortStatus[150] = "";
+#if defined(ST7701_28B)
+static char dspDashboardLastIpLine[56] = "";
+static char dspDashboardLastSaverTime[16] = "";
+static bool dspDashboardScreensaver = false;
+#else
+#define dspDashboardScreensaver false
+#endif
 
 #  define DSP_DASH_COLOR_LEGACY WHITE
 #  define DSP_DASH_COLOR_TITLE YELLOW
@@ -91,6 +162,13 @@ static char dspDashLegacyText[64] = "";
 static bool dspDashStationUpdateReq = false;
 static bool dspDashShortStatusUpdateReq = false;
 static bool dspDashLegacyUpdateReq = false;
+
+#if defined(ST7701_28B)
+/** True when stream/metadata set a dashboard text row update flag. */
+inline bool dspDashboardSt7701HasPendingText(void) {
+  return dspDashStationUpdateReq || dspDashShortStatusUpdateReq || dspDashLegacyUpdateReq;
+}
+#endif
 
 inline void dspDashboardInvalidateSnooze(void) { dspDashboardLastSnoozeSec = -1; }
 
@@ -230,6 +308,81 @@ inline void dspDashboardTruncate(char *dest, size_t destSize, const char *src, u
  * @param color Text color
  * @param text Line text (truncated to fit content width)
  */
+inline uint16_t dspDashboardTextWidthPx(const char *text, uint8_t textSize) {
+  if (!text) {
+    return 0;
+  }
+  return (uint16_t)(strlen(text) * 6U * textSize);
+}
+
+inline uint16_t dspDashboardTextHeightPx(uint8_t textSize) {
+  return (uint16_t)(8U * textSize);
+}
+
+/** Max characters that fit in @p maxPx at Adafruit/GFX 6px cell width. */
+inline uint8_t dspDashboardMaxCharsForWidthPx(uint16_t maxPx, uint8_t textSize) {
+  const uint16_t cellW = (uint16_t)(6U * textSize);
+  if (cellW == 0U || maxPx < cellW) {
+    return 1U;
+  }
+  return (uint8_t)(maxPx / cellW);
+}
+
+inline void dspDashboardTruncateToWidthPx(char *dest, size_t destSize, const char *src, uint16_t maxPx,
+                                        uint8_t textSize) {
+  dspDashboardTruncate(dest, destSize, src, dspDashboardMaxCharsForWidthPx(maxPx, textSize));
+}
+
+#if defined(ST7701_28B)
+/** GFX default wrap=true draws overflow at x=0 (split glyphs at panel edges). */
+inline void dspDashboardEnsureGfxTextDefaults(void) {
+  if (tft) {
+    dsp_setTextWrap(false);
+  }
+}
+#endif
+
+/** Erase a text band with the correct background (avoids RGB flicker from wrong clears). */
+inline void dspDashboardClearBand(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t bg) {
+  if (!tft || w == 0U || h == 0U) {
+    return;
+  }
+#if defined(ST7701_28B)
+  if (x >= DSP_DASH_W || y >= DSP_DASH_H) {
+    return;
+  }
+  if ((uint32_t)x + (uint32_t)w > DSP_DASH_W) {
+    w = (uint16_t)(DSP_DASH_W - x);
+  }
+  if ((uint32_t)y + (uint32_t)h > DSP_DASH_H) {
+    h = (uint16_t)(DSP_DASH_H - y);
+  }
+#endif
+  dsp_fillRect(x, y, w, h, bg);
+}
+
+inline void dspDashboardClearContentBand(uint16_t y, uint16_t h) {
+  dspDashboardClearBand(DSP_CONTENT_X, y, DSP_CONTENT_W, h, BLACK);
+}
+
+/** Largest Adafruit GFX text size that fits @p text inside @p maxW x @p maxH. */
+inline uint8_t dspDashboardFitTextSize(const char *text, uint16_t maxW, uint16_t maxH) {
+  const size_t len = (text && text[0]) ? strlen(text) : 0U;
+
+  if (len == 0U || maxW == 0U || maxH == 0U) {
+    return 1U;
+  }
+
+  for (uint16_t sz = 255U; sz >= 1U; sz--) {
+    const uint16_t w = (uint16_t)(len * 6U * sz);
+    const uint16_t h = dspDashboardTextHeightPx((uint8_t)sz);
+    if (w <= maxW && h <= maxH) {
+      return (uint8_t)sz;
+    }
+  }
+  return 1U;
+}
+
 inline void dspDashboardPrintContentLine(uint16_t y, uint16_t color, const char *text) {
   char clipped[DSP_CHARS_PER_LINE + 1];
 
@@ -237,10 +390,17 @@ inline void dspDashboardPrintContentLine(uint16_t y, uint16_t color, const char 
     return;
   }
 
+#if defined(ST7701_28B)
+  dspDashboardTruncateToWidthPx(clipped, sizeof(clipped), text,
+                                (uint16_t)(DSP_CONTENT_W - 2U * DSP_TEXT_PAD), DSP_UI_TEXT_SIZE);
+#else
   dspDashboardTruncate(clipped, sizeof(clipped), text, DSP_CHARS_PER_LINE);
+#endif
+  const uint16_t lineH = dspDashboardTextHeightPx(DSP_UI_TEXT_SIZE) + 4U;
+  dspDashboardClearContentBand(y, lineH);
   dsp_setTextColorFgBg(color, BLACK);
-  dsp_setTextSize(1);
-  dsp_setCursor(DSP_TEXT_X, y);
+  dsp_setTextSize(DSP_UI_TEXT_SIZE);
+  dsp_setCursor(DSP_TEXT_X, y + 2U);
   dsp_print(clipped);
 }
 
@@ -327,19 +487,79 @@ inline void dspDashboardDrawChrome(void) {
     return;
   }
 
+#if defined(ST7701_28B)
+  dspDashboardEnsureGfxTextDefaults();
+#endif
+
   dsp_fillRect(0, 0, DSP_DASH_W, DSP_HEADER_H, DSP_COL_HEADER_BG);
   dsp_fillRect(0, DSP_HEADER_H - 1, DSP_DASH_W, 1, DSP_COL_LINE);
   dsp_fillRect(DSP_GUTTER_W - 1, DSP_HEADER_H, 1, DSP_DASH_H - DSP_HEADER_H, DSP_COL_LINE);
   dsp_fillRect(DSP_DASH_W - DSP_GUTTER_W, DSP_HEADER_H, 1, DSP_DASH_H - DSP_HEADER_H, DSP_COL_LINE);
-  dsp_fillRect(DSP_CONTENT_X, 30, DSP_CONTENT_W, 1, DSP_COL_LINE);
-  dsp_fillRect(DSP_CONTENT_X, 96, DSP_CONTENT_W, 1, DSP_COL_LINE);
+  dsp_fillRect(DSP_CONTENT_X, DSP_LINE_STATION_Y, DSP_CONTENT_W, 1, DSP_COL_LINE);
+  dsp_fillRect(DSP_CONTENT_X, DSP_LINE_META_Y, DSP_CONTENT_W, 1, DSP_COL_LINE);
+  dsp_setTextSize(DSP_TEXT_SIZE);
 
   dsp_fillRect(DSP_LEFT_BAR_X, DSP_BAR_TOP, DSP_BAR_WIDTH, DSP_BAR_HEIGHT, DSP_COL_VOL_BG);
   dsp_fillRect(DSP_VU_TREBLE_X, DSP_BAR_TOP, DSP_VU_BAR_W, DSP_BAR_HEIGHT, DSP_COL_VU_BG);
   dsp_fillRect(DSP_VU_BASS_X, DSP_BAR_TOP, DSP_VU_BAR_W, DSP_BAR_HEIGHT, DSP_COL_VU_BG);
 
+#if defined(ST7701_28B)
+  dsp_fillRect(0, DSP_FOOTER_Y, DSP_DASH_W, DSP_FOOTER_H, DSP_COL_HEADER_BG);
+  dsp_fillRect(0, DSP_FOOTER_Y, DSP_DASH_W, 1, DSP_COL_LINE);
+#endif
+
   dspDashboardChromeReady = true;
 }
+
+#if defined(ST7701_28B)
+/** Playback dot in the left gutter (fixed; must not use text cursor / wrap). */
+inline void dspDashboardDrawPlayIndicator(void) {
+  const uint16_t py = (DSP_HEADER_H > 8U) ? (uint16_t)((DSP_HEADER_H - 6U) / 2U) : 2U;
+  const uint16_t px = 10U;
+  dsp_fillRect(0, 0, DSP_GUTTER_W, DSP_HEADER_H, DSP_COL_HEADER_BG);
+  dsp_fillRect(px, py, 6U, 6U, (datamode != STOPPED) ? GREEN : DSP_COL_HEADER_BG);
+}
+
+/**
+ * @brief Right-aligned clock X and icon strip X (stable; no fallback jump to far right).
+ */
+inline void dspDashboardHeaderClockLayout(const char *timeStr, uint16_t *outTimeX, uint16_t *outIconX) {
+  const uint16_t timeW = dspDashboardTextWidthPx(timeStr, DSP_HEADER_TEXT_SIZE);
+  uint16_t timeX = (timeW < DSP_ST7701_HEADER_TIME_RIGHT) ? (uint16_t)(DSP_ST7701_HEADER_TIME_RIGHT - timeW)
+                                                          : DSP_TEXT_X;
+
+  *outTimeX = timeX;
+  *outIconX = DSP_ST7701_HEADER_ICON_X;
+}
+
+/**
+ * @brief WiFi + Web UI traffic icons in the header (right side, before clock).
+ */
+inline void dspDashboardDrawHeaderStatusIcons(uint16_t iconX) {
+  const bool wifiUp = (WiFi.status() == WL_CONNECTED);
+  uint8_t quality = 0;
+  if (wifiUp) {
+    quality = dspDashboardRssiToPercent(WiFi.RSSI());
+  }
+  const bool traffic = webUiActivityLive();
+  const uint8_t iconKey =
+      (uint8_t)((wifiUp ? 0x80U : 0U) | (quality / 25U) | (traffic ? 0x08U : 0U));
+
+  if (iconKey == dspDashboardLastHeaderIcons && iconX == dspDashboardLastHeaderIconX) {
+    return;
+  }
+  dspDashboardLastHeaderIcons = iconKey;
+  dspDashboardLastHeaderIconX = iconX;
+
+  const uint16_t blockW = DSP_ICON_COMM_W + DSP_ICON_GAP + DSP_ICON_WIFI_W;
+  const uint16_t iconY = (DSP_HEADER_H > DSP_ICON_WIFI_H) ? (uint16_t)((DSP_HEADER_H - DSP_ICON_WIFI_H) / 2U) : 0U;
+
+  dspDashboardClearBand(iconX, iconY, blockW, DSP_ICON_WIFI_H + 2U, DSP_COL_HEADER_BG);
+  dspStatusDrawWebTrafficIcon(iconX, iconY, traffic, DSP_COL_HEADER_BG);
+  dspStatusDrawWifiIcon((uint16_t)(iconX + DSP_ICON_COMM_W + DSP_ICON_GAP), iconY, wifiUp, quality,
+                        DSP_COL_HEADER_BG);
+}
+#endif
 
 /**
  * @brief Update header date and time labels.
@@ -349,10 +569,16 @@ inline void dspDashboardDrawChrome(void) {
 inline void dspDashboardDrawHeader(const char *timetxt) {
   char dateLine[14];
   char timeLine[8];
-  char headerState[24];
+  char headerState[48];
   const char *dateStr;
   const char *timeStr;
   uint16_t timeX;
+  const uint16_t headerTextY =
+#if defined(ST7701_28B)
+      (uint16_t)((DSP_HEADER_H - DSP_UI_LINE_H) / 2U + 2U);
+#else
+      3U;
+#endif
 
   if (!tft) {
     return;
@@ -365,9 +591,15 @@ inline void dspDashboardDrawHeader(const char *timetxt) {
   dspDashboardSplitTimeText(timetxt, dateLine, sizeof(dateLine), timeLine, sizeof(timeLine));
   dateStr = dateLine[0] ? dateLine : "--";
   timeStr = timeLine[0] ? timeLine : "--:--";
-  snprintf(headerState, sizeof(headerState), "%s|%s|%c", dateStr, timeStr, (datamode != STOPPED) ? 'P' : 'S');
+  snprintf(headerState, sizeof(headerState), "%s|%s|%c|%c", dateStr, timeStr,
+           (datamode != STOPPED) ? 'P' : 'S', webUiActivityLive() ? 'A' : '-');
 
   if (strcmp(headerState, dspDashboardLastHeaderState) == 0) {
+#if defined(ST7701_28B)
+    uint16_t iconX = 0U;
+    dspDashboardHeaderClockLayout(timeStr, &timeX, &iconX);
+    dspDashboardDrawHeaderStatusIcons(iconX);
+#endif
     return;
   }
 
@@ -377,22 +609,52 @@ inline void dspDashboardDrawHeader(const char *timetxt) {
   dspDashboardLastDate[sizeof(dspDashboardLastDate) - 1] = '\0';
   strncpy(dspDashboardLastTime, timeStr, sizeof(dspDashboardLastTime) - 1);
   dspDashboardLastTime[sizeof(dspDashboardLastTime) - 1] = '\0';
+#if defined(ST7701_28B)
+  dspDashboardLastHeaderIcons = 255;
+  dspDashboardLastHeaderIconX = 0xFFFFU;
+#endif
 
+#if defined(ST7701_28B)
+  dspDashboardDrawPlayIndicator();
+#else
   dsp_fillRect(0, 0, DSP_GUTTER_W, DSP_HEADER_H, DSP_COL_HEADER_BG);
+  dsp_fillRect(3, 5, 4, 4, (datamode != STOPPED) ? GREEN : DSP_COL_HEADER_BG);
+#endif
   dsp_fillRect(DSP_CONTENT_X, 0, DSP_CONTENT_W, DSP_HEADER_H, DSP_COL_HEADER_BG);
   dsp_fillRect(DSP_DASH_W - DSP_GUTTER_W, 0, DSP_GUTTER_W, DSP_HEADER_H, DSP_COL_HEADER_BG);
   dsp_fillRect(0, DSP_HEADER_H - 1, DSP_DASH_W, 1, DSP_COL_LINE);
 
-  dsp_fillRect(3, 5, 4, 4, (datamode != STOPPED) ? GREEN : DSP_COL_HEADER_BG);
+  dsp_setTextSize(DSP_HEADER_TEXT_SIZE);
 
-  dsp_setTextColor(WHITE);
-  dsp_setTextSize(1);
-  dsp_setCursor(DSP_TEXT_X, 3);
+#if defined(ST7701_28B)
+  {
+    uint16_t iconX = 0U;
+    char dateClip[14];
+    const char *dateDraw = dateStr;
+
+    dspDashboardHeaderClockLayout(timeStr, &timeX, &iconX);
+    {
+      const uint16_t dateMaxPx = (iconX > DSP_TEXT_X + 8U) ? (uint16_t)(iconX - DSP_TEXT_X - 4U)
+                                                           : (uint16_t)(DSP_CONTENT_W / 2U);
+      dspDashboardTruncateToWidthPx(dateClip, sizeof(dateClip), dateStr, dateMaxPx, (uint8_t)DSP_HEADER_TEXT_SIZE);
+    }
+    dateDraw = dateClip;
+    dsp_setTextColorFgBg(WHITE, DSP_COL_HEADER_BG);
+    dsp_setCursor(DSP_TEXT_X, headerTextY);
+    dsp_print(dateDraw);
+    dsp_setCursor(timeX, headerTextY);
+    dsp_print(timeStr);
+    dspDashboardDrawHeaderStatusIcons(iconX);
+  }
+#else
+  dsp_setTextColorFgBg(WHITE, DSP_COL_HEADER_BG);
+  dsp_setCursor(DSP_TEXT_X, headerTextY);
   dsp_print(dateStr);
-
-  timeX = (uint16_t)(DSP_CONTENT_X + DSP_CONTENT_W - (strlen(timeStr) * DSP_FONT_W) - 1U);
-  dsp_setCursor(timeX, 3);
+  timeX = (uint16_t)(DSP_CONTENT_X + DSP_CONTENT_W -
+                     dspDashboardTextWidthPx(timeStr, DSP_HEADER_TEXT_SIZE) - 1U);
+  dsp_setCursor(timeX, headerTextY);
   dsp_print(timeStr);
+#endif
 }
 
 /**
@@ -427,16 +689,20 @@ inline void dspDashboardDrawVolume(uint8_t volume) {
   }
 
   snprintf(label, sizeof(label), "%u", (unsigned)volume);
-  // The gutter is only wide enough for two digits, so the value 100 spills one
-  // digit into the content column. Clear the full three-digit width (otherwise a
-  // leftover "0" stays behind when going from 100 to a two-digit value) and
-  // restore the vertical divider pixel column wiped by the wider clear.
-  dsp_fillRect(0, 116, DSP_FONT_W * 3U + 2U, 10, BLACK);
-  dsp_fillRect(DSP_GUTTER_W - 1U, 116, 1, 10, DSP_COL_LINE);
-  dsp_setTextColor(DSP_COL_VOL);
-  dsp_setTextSize(1);
-  dsp_setCursor(1, 118);
-  dsp_print(label);
+  {
+    const uint8_t volSz = (uint8_t)DSP_TEXT_SIZE;
+    const uint16_t labelW = dspDashboardTextWidthPx(label, volSz);
+    const uint16_t clearH = dspDashboardTextHeightPx(volSz) + 4U;
+    const uint16_t labelX =
+        (labelW < DSP_GUTTER_W) ? (uint16_t)((DSP_GUTTER_W - labelW) / 2U) : 0U;
+
+    dsp_fillRect(0, DSP_VOL_LABEL_Y, DSP_GUTTER_W, clearH, BLACK);
+    dsp_fillRect(DSP_GUTTER_W - 1U, DSP_VOL_LABEL_Y, 1, clearH, DSP_COL_LINE);
+    dsp_setTextColor(DSP_COL_VOL);
+    dsp_setTextSize(volSz);
+    dsp_setCursor(labelX, DSP_VOL_LABEL_Y + 2U);
+    dsp_print(label);
+  }
 }
 
 /**
@@ -514,9 +780,13 @@ inline void dspDashboardDrawWrappedText(uint16_t y, uint16_t height, uint16_t co
     return;
   }
 
+#if defined(ST7701_28B)
+  dspDashboardEnsureGfxTextDefaults();
+#endif
+
   dsp_fillRect(DSP_CONTENT_X, y, DSP_CONTENT_W, height, BLACK);
   dsp_setTextColorFgBg(color, BLACK);
-  dsp_setTextSize(1);
+  dsp_setTextSize(DSP_UI_TEXT_SIZE);
 
   len = strlen(text);
   while (text[pos] != '\0' && lineIndex < maxLines) {
@@ -557,7 +827,7 @@ inline void dspDashboardDrawWrappedText(uint16_t y, uint16_t height, uint16_t co
     }
 
     dspDashboardTruncate(line, sizeof(line), line, DSP_CHARS_PER_LINE);
-    dsp_setCursor(DSP_TEXT_X, y + (lineIndex * 8));
+    dsp_setCursor(DSP_TEXT_X, y + (lineIndex * DSP_UI_LINE_H));
     dsp_print(line);
 
     pos += chunk;
@@ -580,9 +850,9 @@ inline void dspDashboardDrawWifiStatus(void) {
   int rssi = 0;
   uint8_t quality = 0;
   uint16_t textColor = DSP_COL_WIFI_OFF;
-  const uint16_t y = 106;
+  const uint16_t y = DSP_ROW_WIFI_Y;
 
-  if (!tft) {
+  if (!tft || dspDashboardScreensaver) {
     return;
   }
 
@@ -609,8 +879,7 @@ inline void dspDashboardDrawWifiStatus(void) {
   strncpy(dspDashboardLastWifi, line, sizeof(dspDashboardLastWifi) - 1);
   dspDashboardLastWifi[sizeof(dspDashboardLastWifi) - 1] = '\0';
 
-  dsp_fillRect(DSP_CONTENT_X, y, DSP_CONTENT_W, 12, BLACK);
-  dspDashboardPrintContentLine(y + 2, textColor, line);
+  dspDashboardPrintContentLine(y, textColor, line);
 }
 
 /**
@@ -619,10 +888,10 @@ inline void dspDashboardDrawWifiStatus(void) {
 inline void dspDashboardUpdateSnooze(void) {
   char line[24];
   int32_t sec;
-  const uint16_t y = 97;
+  const uint16_t y = DSP_ROW_SHORT_Y;
   const uint16_t snoozeColor = 0xF81FU;
 
-  if (!tft) {
+  if (!tft || dspDashboardScreensaver) {
     return;
   }
 
@@ -636,7 +905,7 @@ inline void dspDashboardUpdateSnooze(void) {
 
   if (sleeptimer_ms <= 0) {
     if (dspDashboardLastSnoozeSec >= 0) {
-      dsp_fillRect(DSP_CONTENT_X, y, DSP_CONTENT_W, 8, BLACK);
+      dspDashboardClearContentBand(y, dspDashboardTextHeightPx(DSP_UI_TEXT_SIZE) + 4U);
       dspDashboardLastSnoozeSec = -1;
     }
     return;
@@ -661,7 +930,6 @@ inline void dspDashboardUpdateSnooze(void) {
     snprintf(line, sizeof(line), "Snooze %lus", (unsigned long)sec);
   }
 
-  dsp_fillRect(DSP_CONTENT_X, y, DSP_CONTENT_W, 8, BLACK);
   dspDashboardPrintContentLine(y, snoozeColor, line);
 }
 
@@ -677,9 +945,9 @@ inline void dspDashboardDrawStationName(const char *station, uint16_t color, int
   char stationClip[DSP_CHARS_PER_LINE + 1];
   char cacheKey[88];
   uint8_t stationMaxChars;
-  const uint16_t y = 17;
+  const uint16_t y = DSP_ROW_STATION_DRAW_Y;
 
-  if (!tft) {
+  if (!tft || dspDashboardScreensaver) {
     return;
   }
 
@@ -707,17 +975,21 @@ inline void dspDashboardDrawStationName(const char *station, uint16_t color, int
     }
   }
 
-  dsp_fillRect(DSP_CONTENT_X, y, DSP_CONTENT_W, 12, BLACK);
+  dspDashboardClearContentBand(y, dspDashboardTextHeightPx(DSP_UI_TEXT_SIZE) + 4U);
   dspDashboardTruncate(stationClip, sizeof(stationClip), station ? station : "", stationMaxChars);
 
-  dsp_setTextColor(color);
-  dsp_setTextSize(1);
+  dsp_setTextColorFgBg(color, BLACK);
+  dsp_setTextSize(DSP_UI_TEXT_SIZE);
   dsp_setCursor(DSP_TEXT_X, y + 2);
   dsp_print(stationClip);
 
   if (brLabel[0] != '\0') {
-    const uint16_t bx = (uint16_t)(DSP_CONTENT_X + DSP_CONTENT_W - (strlen(brLabel) * DSP_FONT_W) - 1U);
-    dsp_setTextColor(DSP_COL_LABEL);
+    const uint16_t brW = dspDashboardTextWidthPx(brLabel, DSP_UI_TEXT_SIZE);
+    uint16_t bx = (uint16_t)(DSP_CONTENT_X + DSP_CONTENT_W - brW - 1U);
+    if (bx < DSP_TEXT_X) {
+      bx = DSP_TEXT_X;
+    }
+    dsp_setTextColorFgBg(DSP_COL_LABEL, BLACK);
     dsp_setCursor(bx, y + 2);
     dsp_print(brLabel);
   }
@@ -739,7 +1011,7 @@ inline void dspDashboardRefreshStationBitrate(void) {
 
   if (dspDashStationText[0] == '\0') {
     if (dspDashboardLastStationKey[0] != '\0') {
-      dsp_fillRect(DSP_CONTENT_X, 17, DSP_CONTENT_W, 12, BLACK);
+      dsp_fillRect(DSP_CONTENT_X, DSP_STATION_Y, DSP_CONTENT_W, DSP_STATION_ROW_H, BLACK);
       dspDashboardLastStationKey[0] = '\0';
     }
     return;
@@ -760,8 +1032,8 @@ inline void dspDashboardRefreshStationBitrate(void) {
  */
 inline void dspDashboardDrawSongTitle(const char *title, uint16_t color) {
   const uint16_t start_y = DSP_TITLE_Y;
-  const size_t max_chars_per_line = 22; // Maximum characters allowed per line
-  const uint16_t y_offset = 12;         // Adjustable pixel offset for subsequent lines
+  const size_t max_chars_per_line = DSP_TITLE_MAX_CHARS;
+  const uint16_t y_offset = DSP_UI_LINE_H + 4U;
 
   if (!tft) {
     return;
@@ -791,7 +1063,7 @@ inline void dspDashboardDrawSongTitle(const char *title, uint16_t color) {
   }
 
   dsp_setTextColor(color);
-  dsp_setTextSize(1);
+  dsp_setTextSize(DSP_UI_TEXT_SIZE);
 
   size_t title_len = strlen(safe_title);
   size_t src_index = 0;
@@ -894,9 +1166,9 @@ inline void dspDashboardRefreshTitle(void) {
  */
 inline void dspDashboardDrawShortStatus(const char *status, uint16_t color) {
   char buf[150];
-  const uint16_t y = 97;
+  const uint16_t y = DSP_ROW_SHORT_Y;
 
-  if (!tft) {
+  if (!tft || dspDashboardScreensaver) {
     return;
   }
 
@@ -910,7 +1182,7 @@ inline void dspDashboardDrawShortStatus(const char *status, uint16_t color) {
 
   if (!status || status[0] == '\0') {
     if (dspDashboardLastShortStatus[0] != '\0') {
-      dsp_fillRect(DSP_CONTENT_X, y, DSP_CONTENT_W, 8, BLACK);
+      dspDashboardClearContentBand(y, dspDashboardTextHeightPx(DSP_UI_TEXT_SIZE) + 4U);
       dspDashboardLastShortStatus[0] = '\0';
     }
     return;
@@ -1011,6 +1283,233 @@ inline void dspDashboardRefreshLiveStatus(void) {
   dspDashboardRefreshStationBitrate();
 }
 
+#if defined(ST7701_28B)
+/**
+ * @brief Bottom bar: IP (and SoftAP hint) always visible in landscape UI.
+ */
+inline void dspDashboardDrawFooterIp(void) {
+  char line[56];
+  const char *ip = ipaddress.c_str();
+
+  if (!tft || dspDashboardScreensaver) {
+    return;
+  }
+
+  if (!dspDashboardChromeReady) {
+    dspDashboardDrawChrome();
+  }
+
+  if (WiFi.status() == WL_CONNECTED && ip && ip[0] != '\0' && strcmp(ip, "0.0.0.0") != 0) {
+    snprintf(line, sizeof(line), "IP %s", ip);
+  } else if (wifiConfigApActive) {
+    snprintf(line, sizeof(line), "AP %s", WiFi.softAPIP().toString().c_str());
+  } else {
+    snprintf(line, sizeof(line), "IP --");
+  }
+
+  if (strcmp(line, dspDashboardLastIpLine) == 0) {
+    return;
+  }
+
+  strncpy(dspDashboardLastIpLine, line, sizeof(dspDashboardLastIpLine) - 1);
+  dspDashboardLastIpLine[sizeof(dspDashboardLastIpLine) - 1] = '\0';
+
+  const uint16_t footerTextY = (uint16_t)(DSP_FOOTER_Y + (DSP_FOOTER_H - DSP_UI_LINE_H) / 2U + 2U);
+  char footerClip[56];
+  dspDashboardTruncateToWidthPx(footerClip, sizeof(footerClip), line,
+                              (uint16_t)(DSP_CONTENT_W - 2U * DSP_TEXT_PAD), (uint8_t)DSP_FOOTER_TEXT_SIZE);
+
+  dspDashboardClearBand(0, DSP_FOOTER_Y + 1, DSP_DASH_W, DSP_FOOTER_H - 1, DSP_COL_HEADER_BG);
+  dsp_setTextColorFgBg(WHITE, DSP_COL_HEADER_BG);
+  dsp_setTextSize(DSP_FOOTER_TEXT_SIZE);
+  dsp_setCursor(DSP_TEXT_X, footerTextY);
+  dsp_print(footerClip);
+}
+
+inline void dspDashboardDrawScreensaverClock(const char *timetxt) {
+  char timeLine[8];
+  char dateLine[14];
+
+  if (!tft) {
+    return;
+  }
+
+  dspDashboardSplitTimeText(timetxt, dateLine, sizeof(dateLine), timeLine, sizeof(timeLine));
+  const char *timeStr = timeLine[0] ? timeLine : "--:--";
+  const char *dateStr = dateLine[0] ? dateLine : "";
+
+  if (strcmp(timeStr, dspDashboardLastSaverTime) == 0 && dspDashboardScreensaver) {
+    return;
+  }
+
+  strncpy(dspDashboardLastSaverTime, timeStr, sizeof(dspDashboardLastSaverTime) - 1);
+  dspDashboardLastSaverTime[sizeof(dspDashboardLastSaverTime) - 1] = '\0';
+
+  dsp_erase();
+  dsp_setTextColor(WHITE);
+#if defined(ST7701_28B)
+  {
+    const uint16_t maxW = (DSP_DASH_W > 2U * DSP_SAVER_MARGIN_PX) ? (uint16_t)(DSP_DASH_W - 2U * DSP_SAVER_MARGIN_PX)
+                                                                    : DSP_DASH_W;
+    const uint16_t maxH = (DSP_DASH_H > 2U * DSP_SAVER_MARGIN_PX) ? (uint16_t)(DSP_DASH_H - 2U * DSP_SAVER_MARGIN_PX)
+                                                                    : DSP_DASH_H;
+    const uint16_t dateGap = 10U;
+    uint8_t dateSz = 0U;
+    uint16_t dateBlockH = 0U;
+
+    if (dateStr[0] != '\0') {
+      const uint16_t dateMaxH = (maxH > maxH / 5U) ? (uint16_t)(maxH / 5U) : maxH;
+      dateSz = dspDashboardFitTextSize(dateStr, maxW, dateMaxH);
+      dateBlockH = dspDashboardTextHeightPx(dateSz) + dateGap;
+    }
+
+    const uint16_t timeMaxH = (maxH > dateBlockH) ? (uint16_t)(maxH - dateBlockH) : maxH;
+    const uint8_t timeSz = dspDashboardFitTextSize(timeStr, maxW, timeMaxH);
+    const uint16_t timeH = dspDashboardTextHeightPx(timeSz);
+    const uint16_t blockH = timeH + dateBlockH;
+    const uint16_t topY = (DSP_DASH_H > blockH) ? (uint16_t)((DSP_DASH_H - blockH) / 2U) : 0U;
+    const uint16_t tw = dspDashboardTextWidthPx(timeStr, timeSz);
+    const uint16_t tx = (DSP_DASH_W > tw) ? (uint16_t)((DSP_DASH_W - tw) / 2U) : 0U;
+
+    dsp_setTextSize(timeSz);
+    dsp_setCursor(tx, topY);
+    dsp_print(timeStr);
+
+    if (dateStr[0] != '\0' && dateSz > 0U) {
+      const uint16_t dw = dspDashboardTextWidthPx(dateStr, dateSz);
+      const uint16_t dx = (DSP_DASH_W > dw) ? (uint16_t)((DSP_DASH_W - dw) / 2U) : 0U;
+      dsp_setTextSize(dateSz);
+      dsp_setCursor(dx, topY + timeH + dateGap);
+      dsp_print(dateStr);
+    }
+  }
+#else
+  dsp_setTextSize(4);
+  {
+    const uint16_t tw = dspDashboardTextWidthPx(timeStr, 4);
+    const uint16_t tx = (DSP_DASH_W > tw) ? (uint16_t)((DSP_DASH_W - tw) / 2U) : 0U;
+    dsp_setCursor(tx, DSP_DASH_H / 2U - 40U);
+    dsp_print(timeStr);
+  }
+
+  if (dateStr[0] != '\0') {
+    dsp_setTextSize(2);
+    const uint16_t dw = dspDashboardTextWidthPx(dateStr, 2);
+    const uint16_t dx = (DSP_DASH_W > dw) ? (uint16_t)((DSP_DASH_W - dw) / 2U) : 0U;
+    dsp_setCursor(dx, DSP_DASH_H / 2U + 16U);
+    dsp_print(dateStr);
+  }
+#endif
+}
+
+inline void dspDashboardEnterScreensaver(const char *timetxt) {
+  dspDashboardScreensaver = true;
+  dspDashboardLastSaverTime[0] = '\0';
+  dspDashboardDrawScreensaverClock(timetxt);
+}
+
+inline void dspDashboardExitScreensaver(void) {
+  if (!dspDashboardScreensaver) {
+    return;
+  }
+  dspDashboardScreensaver = false;
+  dspDashboardLastSaverTime[0] = '\0';
+  dspDashboardLastIpLine[0] = '\0';
+  dspDashboardInvalidateHeader();
+  dspDashboardInvalidateTitle();
+  dspDashboardInvalidateStation();
+  dspDashboardLastWifi[0] = '\0';
+  dspDashboardChromeReady = false;
+  dsp_erase();
+  dspDashboardDrawChrome();
+  dspDashboardDrawFooterIp();
+  dspDashboardDrawHeader(timetxt);
+  dspDashboardRefreshLiveStatus();
+  dspDashboardDrawVolume(getOutputVolume());
+}
+#endif
+
+#if defined(ST7701_28B)
+/**
+ * @brief Compose one full dashboard frame in fixed draw order (single flush in caller).
+ *
+ * Avoids partial band updates that interacted badly with RGB full-frame scan.
+ */
+inline void dspDashboardSt7701PresentFrame(bool refreshLiveFields, bool drawVuMeters) {
+  if (!tft) {
+    return;
+  }
+
+  dspDashboardEnsureGfxTextDefaults();
+
+  if (dspDashboardScreensaver) {
+    dspDashboardDrawScreensaverClock(timetxt);
+    return;
+  }
+
+  if (!dspDashboardChromeReady) {
+    dspDashboardDrawChrome();
+  }
+
+  dspDashboardDrawHeader(timetxt);
+  (void)dspDashboardProcessTextUpdates();
+  if (refreshLiveFields) {
+    dspDashboardRefreshLiveStatus();
+    dspDashboardDrawWifiStatus();
+    dspDashboardDrawFooterIp();
+  }
+  dspDashboardDrawVolume(getOutputVolume());
+
+  if (drawVuMeters) {
+    if (radioFeatures.vu_meter && datamode != STOPPED) {
+      dspDashboardDrawVu(getVuMeterTrebleLevel(), getVuMeterBassLevel(), true);
+    } else {
+      dspDashboardDrawVu(0, 0, false);
+    }
+  }
+
+  dspDashboardUpdateSnooze();
+}
+
+/**
+ * @brief Invalidate dashboard caches after leaving fullscreen screensaver clock.
+ * Drawing happens only from spftask (see dspDashboardSt7701RestoreFromScreensaver).
+ */
+inline void dspDashboardSt7701MarkRestoreFromScreensaver(void) {
+  dspDashboardScreensaver = false;
+  dspDashboardLastSaverTime[0] = '\0';
+  dspDashboardLastIpLine[0] = '\0';
+  dspDashboardInvalidateHeader();
+  dspDashboardInvalidateTitle();
+  dspDashboardInvalidateStation();
+  dspDashboardLastWifi[0] = '\0';
+  dspDashboardChromeReady = false;
+}
+
+/**
+ * @brief Full-screen erase and complete dashboard compose (single flush in caller).
+ */
+inline void dspDashboardSt7701RestoreFromScreensaver(void) {
+  if (!tft) {
+    return;
+  }
+  dsp_erase();
+  dspDashboardDrawChrome();
+  dspDashboardDrawHeader(timetxt);
+  (void)dspDashboardProcessTextUpdates();
+  dspDashboardRefreshLiveStatus();
+  dspDashboardDrawWifiStatus();
+  dspDashboardDrawFooterIp();
+  dspDashboardDrawVolume(getOutputVolume());
+  if (radioFeatures.vu_meter && datamode != STOPPED) {
+    dspDashboardDrawVu(getVuMeterTrebleLevel(), getVuMeterBassLevel(), true);
+  } else {
+    dspDashboardDrawVu(0, 0, false);
+  }
+  dspDashboardUpdateSnooze();
+}
+#endif
+
 /**
  * @brief Periodic dashboard refresh (header, WiFi, volume).
  */
@@ -1018,6 +1517,13 @@ inline void dspDashboardTick(void) {
   if (!tft) {
     return;
   }
+
+#if defined(ST7701_28B)
+  if (dspDashboardScreensaver) {
+    dspDashboardDrawScreensaverClock(timetxt);
+    return;
+  }
+#endif
 
   if (!dspDashboardChromeReady) {
     dspDashboardDrawChrome();
@@ -1027,6 +1533,9 @@ inline void dspDashboardTick(void) {
   dspDashboardRefreshStationBitrate();
   dspDashboardDrawVolume(getOutputVolume());
   dspDashboardDrawWifiStatus();
+#if defined(ST7701_28B)
+  dspDashboardDrawFooterIp();
+#endif
 
   dspDashboardUpdateSnooze();
 
@@ -1037,6 +1546,6 @@ inline void dspDashboardTick(void) {
   }
 }
 
-#endif /* BLUETFT */
+#endif /* BLUETFT || ST7701_28B */
 
 #endif /* DSP_DASHBOARD_H */

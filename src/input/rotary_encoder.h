@@ -1,4 +1,4 @@
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
 #include "display/dsp_dashboard.h"
 #endif
 
@@ -45,7 +45,7 @@ void checkRotaryEncoder() {
       enc_inactivity = 0;
       enc_menu_mode = VOLUME;
       dbgprint("Encoder mode back to VOLUME");
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
       dspDashboardInvalidateStation();
 #endif
       String stationName = metaGetStation();
@@ -72,7 +72,7 @@ void checkRotaryEncoder() {
     doubleclick = false;
     enc_menu_mode = PRESET;
     enc_preset = ini_block.newpreset;
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
     dspDashboardInvalidateStation();
 #endif
     encShowPresetNameOnTft(enc_preset);
@@ -108,7 +108,7 @@ void checkRotaryEncoder() {
     dbgprint("Long click detected - Enter preset selection mode");
     enc_menu_mode = PRESET;
     enc_preset = ini_block.newpreset;
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
     dspDashboardInvalidateStation();
 #endif
     encShowPresetNameOnTft(enc_preset);
@@ -143,7 +143,7 @@ void checkRotaryEncoder() {
       enc_menu_mode = VOLUME;
       encShowPresetNameOnTft(enc_preset);
       showTextOnTFT(3, "Sender gewählt");
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
       dspDashboardInvalidateStation();
 #endif
       if (datamode != STOPPED) {

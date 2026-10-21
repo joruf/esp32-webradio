@@ -9,7 +9,7 @@
 #include "config/firmware_config.h"
 #include "globals/globals.h"
 
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
 #include "display/dsp_dashboard.h"
 #endif
 
@@ -113,7 +113,7 @@ inline void dspOtaFormatEta(uint32_t seconds, char *out, size_t outSize) {
   }
 }
 
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
 
 #define OTA_UI_W 160U
 #define OTA_UI_H 128U
@@ -233,7 +233,7 @@ inline void dspOtaDisplayBegin(const char *targetVersion, const char *currentFir
 
   dspOtaExtractVersionLabel(currentFirmware, currentVer, sizeof(currentVer));
 
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
   dspOtaDrawChrome();
 
   if (dspOtaTargetVersion[0] != '\0') {
@@ -303,7 +303,7 @@ inline void dspOtaDisplaySetTotalBytes(size_t totalBytes) {
 
   dspOtaTotalBytes = totalBytes;
 
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
   char sizeVal[16];
   dspOtaFormatBytes(totalBytes, sizeVal, sizeof(sizeVal));
   snprintf(sizeLine, sizeof(sizeLine), "Size: %s", sizeVal);
@@ -324,7 +324,7 @@ inline void dspOtaDisplayPhase(const char *phaseLabel) {
     return;
   }
 
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
   dspOtaDrawLine(60, GREEN, phaseLabel);
 #else
   dsp_setTextColor(GREEN);
@@ -363,7 +363,7 @@ inline void dspOtaDisplayProgress(size_t done, size_t total, const char *phaseLa
   dspOtaLastPercent = percent;
   dspOtaLastDrawMs = now;
 
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
   if (phaseLabel) {
     dspOtaDrawLine(60, GREEN, phaseLabel);
   }
@@ -399,7 +399,7 @@ inline void dspOtaDisplayFailed(const char *reason) {
     return;
   }
 
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
   dspOtaDrawChrome();
   dspOtaDrawLine(40, RED, "Update failed");
   if (reason && reason[0] != '\0') {
@@ -428,7 +428,7 @@ inline void dspOtaDisplaySuccess(void) {
     return;
   }
 
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
   dspOtaDrawChrome();
   if (dspOtaTargetVersion[0] != '\0') {
     char line[32];
@@ -462,7 +462,7 @@ inline void dspOtaDisplayInfo(const char *title, const char *detail) {
     return;
   }
 
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
   dspOtaDrawChrome();
   if (title) {
     dspOtaDrawLine(44, WHITE, title);
@@ -485,7 +485,7 @@ inline void dspOtaDisplayInfo(const char *title, const char *detail) {
  * @brief Restore normal dashboard after aborted OTA (BLUETFT only).
  */
 inline void dspOtaDisplayRestoreDashboard(void) {
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
   if (tft) {
     dsp_erase();
     dspDashboardDrawChrome();

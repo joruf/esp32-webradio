@@ -6,6 +6,7 @@ Quelle:  src/config/hardware_profile.h
 Diagramme: fritzing/circuit_diagram_wroom_tft.*
            fritzing/circuit_diagram_cam_headless.*
            fritzing/build_circuit_diagram.py
+           kicad/wroom_tft/ESP32-Webradio-wroom_tft.kicad_pro  (KiCad 8 Verdrahtungsmodell)
 
 Diese Liste entspricht den Hardware-Profilen und den Fritzing-Schaltplänen.
 Signalnamen (CS, DCS, DREQ, SCK, MISO, MOSI, SDCS, …) wie in den Fritzing-Parts.
@@ -206,16 +207,174 @@ GPIO   Signal
 
 
 ================================================================================
-3) Kurzvergleich der Varianten
+3) Variante s3_touch_28b
+   Profil-ID: s3_touch_28b
+   Board:     Waveshare ESP32-S3-Touch-LCD-2.8B
+   Module:    VS1053 + optional KY-040 + MCP23017 (CS/DCS)
+   Display:   onboard ST7701 RGB + GT911 Touch (nicht umverdrahten)
+   Flag:      USE_MCP23017_VS1053 (env esp32s3_touch28b)
 ================================================================================
 
-Signal / Funktion          wroom_tft              cam_headless
--------------------------  ---------------------  ----------------------
-MCU                        ESP32-WROOM            ESP32-CAM
-VS1053 CS / DCS / DREQ     5 / 32 / 4             5 / 32 / 4
-SPI SCK / MISO / MOSI      18 / 19 / 23           18 / 19 / 23
-VS1053 RST                 → 3V3                  → 3V3
-TFT CS / DC / BL           15 / 2 / 33            – (kein TFT)
-SD                         SPI CS=21 → SDCS       SD_MMC 14/15/2 onboard
-Encoder CLK / DT / SW      25 / 26 / 27           25 / 26 / 27
-IR                         GPIO35                 –
+MCP23017 für VS1053 XCS/XDCS (Header hat zu wenige freie GPIOs):
+  I2C-Adresse MUSS 0x27 sein (A0=A1=A2=VCC). Adresse 0x20 ist bereits der
+  onboard TCA9554 (Display/Touch/Buzzer) - Kollision zerstört das Display.
+  Ohne MCP: Firmware überspringt den Audio-Decoder (Boot bleibt ok).
+
+WICHTIG USB vs. D-/D+ (GPIO19 / GPIO20):
+  VS1053 MISO → D- (19), DREQ → D+ (20). Während Verdrahtung: USB-CDC oft tot.
+  Flash: D-/D+ kurz trennen oder OTA nutzen.
+
+
+--------------------------------------------------------------------------------
+3.1  Versorgung / Masse
+--------------------------------------------------------------------------------
+ESP32-S3 3V3  <->  VS1053 3V3, MCP23017 VCC
+ESP32-S3 GND  <->  VS1053 GND, MCP23017 GND
+VS1053 XRESET (RST)  <->  ESP32-S3 3V3
+MCP23017 RESET  <->  3V3 (Pull-up / dauerhaft High)
+
+
+--------------------------------------------------------------------------------
+3.2  SPI / Steuerung (GPIO4 = Akku-Teiler, nicht nutzen)
+--------------------------------------------------------------------------------
+ESP32-S3 TXD (GPIO43)  <->  VS1053 SCK
+ESP32-S3 RXD (GPIO44)  <->  VS1053 MOSI
+
+Ohne MCP:
+  Header "0"   <->  VS1053 CS  (XCS)
+  Header "16"  <->  VS1053 DCS (XDCS)
+  Header "D+"  <->  VS1053 DREQ
+  D- / MISO    nicht verdrahten (write-only)
+  Header "4"   frei lassen
+
+Mit MCP23017:
+  MCP SDA/SCL  <->  I2C SDA/SCL, Adresse 0x27
+  MCP GPA0/1   <->  VS1053 CS / DCS
+  Header "0"   <->  VS1053 MISO
+  Header "16"  <->  VS1053 DREQ
+
+
+--------------------------------------------------------------------------------
+3.3  Versorgung
+--------------------------------------------------------------------------------
+VS1053 5V / VIN  <->  Board VCC oder 5V
+VS1053 GND       <->  GND
+VS1053 RST       <->  3V3
+VS1053 SDCS      <->  3V3
+
+
+--------------------------------------------------------------------------------
+3.4  Drehencoder
+--------------------------------------------------------------------------------
+Nicht verdrahten. Lautstärke per Touch.
+
+
+--------------------------------------------------------------------------------
+3.5  Übersicht Silkscreen
+--------------------------------------------------------------------------------
+Board-Aufdruck     Ohne MCP                Mit MCP
+-----------------  ----------------------  ----------------------
+TXD / RXD          SCK / MOSI              SCK / MOSI
+0                  CS                      MISO
+16                 DCS                     DREQ
+D+                 DREQ                    frei/USB
+4                  frei (Akku)             frei (Akku)
+D-                 frei                    frei
+SDA / SCL          I2C                     + MCP @0x27
+VCC / 5V           VS1053 5V               VS1053 + MCP
+
+
+================================================================================
+4) Kurzvergleich der Varianten
+================================================================================
+
+Signal / Funktion          wroom_tft              cam_headless           s3_touch_28b
+-------------------------  ---------------------  ---------------------  ----------------------
+MCU                        ESP32-WROOM            ESP32-CAM              ESP32-S3 Touch LCD 2.8B
+VS1053 CS / DCS / DREQ     5 / 32 / 4             5 / 32 / 4             MCP GPA0/GPA1 / 20
+SPI SCK / MISO / MOSI      18 / 19 / 23           18 / 19 / 23           43 / 19 / 44
+VS1053 RST                 → 3V3                  → 3V3                  → 3V3 (Draht)
+TFT                        SPI 15/2/33            – (kein TFT)           onboard RGB (intern)
+SD                         SPI CS=21 → SDCS       SD_MMC 14/15/2 onboard  – (Profil sd none)
+Encoder CLK / DT / SW      25 / 26 / 27           25 / 26 / 27           0 / 4 / – (SW aus)
+Lautstärke UI              Encoder + Web          Encoder + Web          Encoder + Touch + Web
+IR                         GPIO35                 –                      –
+
+
+================================================================================
+5) A2DP I2S-Brücke: ESP32-S3 (Webradio PCM) -> ESP32-WROOM (A2DP Source)
+   WROOM Firmware: env esp32_a2dp_source      (examples/a2dp_source/)
+   S3 Firmware:    env esp32s3_touch28b with -DRADIO_I2S_A2DP_TX=1
+                   (soft-decode stream -> I2S; keeps ST7701 + WiFi)
+   Optional wire test only: env esp32s3_i2s_a2dp_tx (880 Hz tone, no UI)
+   Boards:         S3 USB CDC typisch /dev/ttyACM0
+                   WROOM CP210x typisch /dev/ttyUSB0
+================================================================================
+
+Ziel: WROOM ist I2S Master RX (treibt BCLK/LRCK). S3 ist I2S Slave TX (DOUT)
+mit Soft-Decode-PCM. WROOM sendet per Classic Bluetooth A2DP Source an
+Kopfhörer/Lautsprecher (A2DP Sink). ESP32-S3 kann kein Classic A2DP Source.
+
+Warum Master auf dem WROOM: ESP32-Classic I2S Slave RX füllte trotz gemessener
+Pad-Edges kein DMA (i2sF=0). Format: 16-bit Philips Stereo @ 44100 Hz beiderseits.
+
+Ohne I2S-Daten: WROOM sendet Stille (Nullen). Optional Serial "tone" = 440 Hz.
+Mit aktivem S3-Slave-TX: WROOM i2sF steigt (status/beat). Linux Sink Alias z.B.
+Xiaomi-i7-LinuxMint (Build-Flag BT_SINK_NAME).
+
+Serial WROOM 115200: status | vol <0-127> | tone | i2s | probe | help
+Serial S3     115200 USB CDC (GPIO43/44 = I2S, UART0 belegt)
+
+Flash:
+  pio run -e esp32_a2dp_source -t upload       # WROOM, oft /dev/ttyUSB0
+  pio run -e esp32s3_touch28b -t upload        # S3 Webradio+I2S, oft /dev/ttyACM0
+
+
+--------------------------------------------------------------------------------
+5.1  Versorgung / Masse (wichtig)
+--------------------------------------------------------------------------------
+- GND beider Boards unbedingt verbinden (gemeinsame Masse für I2S).
+- Jedes Board idealerweise über eigenes USB mit Strom versorgen.
+- 5V (VCC/VBUS) der beiden Boards NICHT parallel verbinden, wenn beide per
+  USB am Host hängen (Rückspeisung / Host-Stromprobleme).
+- 3V3 der Boards nicht zusammenschalten.
+- Signalpegel I2S: 3.3 V.
+
+
+--------------------------------------------------------------------------------
+5.2  I2S Verdrahtung (Code = diese Pins)
+--------------------------------------------------------------------------------
+Signal   Richtung              WROOM (Master RX)    S3 Touch 2.8B (Slave TX)
+------   --------------------  -------------------  ------------------------------------
+BCLK     WROOM -> S3           GPIO26               TXD (GPIO43)
+LRCK/WS  WROOM -> S3           GPIO25               RXD (GPIO44)
+DATA     S3 -> WROOM           GPIO32 (DIN)         GPIO16 Header "16"
+GND      common                GND                  GND
+
+Hinweise S3:
+  GPIO43/44 stehlen UART0 (TXD/RXD). Logs nur über native USB CDC.
+  Mit RADIO_I2S_A2DP_TX: VS1053-SPI auf 43/44/16 ist abgeschaltet (Soft-Decode).
+  ESP32-audioI2S bleibt Master auf Dummy-Pins 26/27/42 (nur DMA-Takt);
+  audio_process_i2s tippt PCM auf den echten Slave-TX (I2S_NUM_1).
+  GPIO16 ist zugleich GT911-INT (Board); I2S beansprucht den Pad nach dem
+  GT911-Address-Reset; Touch läuft per I2C-Polling (SDA15/SCL7).
+  VS1053-Kabel von TXD/RXD/16 trennen, sonst Last auf den I2S-Leitungen.
+  GPIO4 = Akku-Teiler, nicht für I2S. PSRAM-Pins 33-37 nicht nutzen.
+
+Verdrahtung prüfen (wenn WROOM i2sF=0 trotz S3 running=1):
+  - Durchgang BCLK/LRCK/DATA und gemeinsames GND
+  - WROOM Serial "probe": BCLK/LRCK Edges vom Master, DIN Edges vom S3
+  - Kein paralleles 5V-USB zwischen den Boards
+
+
+--------------------------------------------------------------------------------
+5.3  Pairing / Betrieb
+--------------------------------------------------------------------------------
+1. Linux/PC: bluetoothctl discoverable on; Alias z.B. Xiaomi-i7-LinuxMint.
+2. WROOM zuerst flashen (I2S-Master liefert Clocks), Serial 115200 (ttyUSB*).
+3. Logs: A2DP discovered / CONNECTED; ohne I2S: Stille (kein Dauer-Piep).
+4. Optional Pairing-Check: Serial "tone" (440 Hz), dann wieder "i2s".
+5. S3: esp32s3_touch28b (RADIO_I2S_A2DP_TX) flashen; Display+WiFi bleiben.
+6. WROOM status: i2sF soll steigen; pactl sink-input = Radio, nicht 440 Hz.
+7. i2sF bleibt 0: Kabel/GND/probe prüfen (siehe Abschnitt 5.2).
+8. Fester Gerätename: BT_SINK_NAME Build-Flag, WROOM neu flashen.

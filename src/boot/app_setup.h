@@ -2,6 +2,18 @@
 #define APP_SETUP_H
 
 #include <esp_ota_ops.h>
+#include <esp_task_wdt.h>
+#include "config/gpio_valid.h"
+#include "boot/st7701_boot_wdt.h"
+#if defined(ST7701_28B)
+#include "display/st7701_board_early.h"
+#include "input/St7701Gt911Touch.h"
+#include "audio/mcp23017_vs1053.h"
+extern St7701Gt911Touch st7701Touch;
+#endif
+#if defined(RADIO_I2S_A2DP_TX)
+#include "audio/radio_i2s_a2dp.h"
+#endif
 
 void radioSetup() {
   int i;     // Loop control
@@ -15,8 +27,17 @@ void radioSetup() {
   const char *wvn = "Include file %s_html has the wrong version number! "
                     "Replace header file.";
 
-  Serial.begin(115200); // For debug
+  Serial.begin(115200); // For debug (USB CDC on S3 with ARDUINO_USB_MODE=1)
+#if defined(ARDUINO_USB_CDC_ON_BOOT) && (ARDUINO_USB_CDC_ON_BOOT)
+  delay(800); // Allow host to re-enumerate CDC after reset
+#endif
   Serial.println();
+  Serial.println("ESP32-Webradio boot");
+  Serial.println();
+#if defined(ST7701_28B)
+  st7701SilenceOnboardBuzzer();
+  dbgprint("BOOT: Onboard buzzer silenced (TCA9554 EXIO8)");
+#endif
   dbgprint("========================================");
   dbgprint("BOOT: ESP32 Webradio starting");
   dbgprint("BOOT: Firmware %s", FIRMWARE);
@@ -33,6 +54,19 @@ void radioSetup() {
   }
   dbgprint("========================================");
 
+#if defined(ST7701_28B)
+  {
+    esp_task_wdt_config_t wdtCfg = {
+        .timeout_ms = 30000,
+        .idle_core_mask = (1 << 0) | (1 << 1),
+        .trigger_panic = true,
+    };
+    esp_task_wdt_reconfigure(&wdtCfg);
+    esp_task_wdt_add(NULL);
+    dbgprint("BOOT: Task WDT timeout extended to %u ms (ST7701 RGB bring-up)", (unsigned)wdtCfg.timeout_ms);
+  }
+#endif
+
   // ATTENTION NVS config problems (joruf)
   // Uncomment saveDefaultConfig() on access problems to re-write configuration props to NVS
   // saveDefaultConfig();
@@ -48,6 +82,9 @@ void radioSetup() {
 #endif
 #if defined(DUMMYTFT)
   dbgprint(dtyp, "DUMMYTFT");
+#endif
+#if defined(ST7701_28B)
+  dbgprint(dtyp, "ST7701_28B");
 #endif
 #if defined(LCD1602I2C)
   dbgprint(dtyp, "LCD1602");
@@ -90,8 +127,18 @@ void radioSetup() {
 
   readIOprefs(); // Read pins used for SPI, TFT, VS1053, IR,
   // Rotary encoder
+  dbgprint("BOOT: GPIO scan (Enc %d/%d/%d, VS CS/DCS/DREQ %d/%d/%d, SPI %d/%d/%d)",
+           ini_block.enc_clk_pin, ini_block.enc_dt_pin, ini_block.enc_sw_pin, ini_block.vs_cs_pin,
+           ini_block.vs_dcs_pin, ini_block.vs_dreq_pin, ini_block.spi_sck_pin, ini_block.spi_miso_pin,
+           ini_block.spi_mosi_pin);
+#if !defined(CONFIG_IDF_TARGET_ESP32S3)
+  // Classic ESP32 only: sample free progpin pull-ups at boot. Skipped on S3 because
+  // the WROOM pin table includes GPIOs that do not exist or are board-fixed (RGB/PSRAM).
   for (i = 0; (pinnr = progpin[i].gpio) >= 0; i++) // Check programmable input pins
   {
+    if (!gpioIsValid(pinnr)) {
+      continue;
+    }
     if (progpin[i].reserved) {
       continue; // Skip SPI/VS/TFT/SD/PSRAM and other claimed pins
     }
@@ -110,11 +157,33 @@ void radioSetup() {
     }
     dbgprint("GPIO%d is %s", pinnr, p);
   }
+#else
+  dbgprint("BOOT: Progpin pull-up scan skipped on ESP32-S3");
+#endif
 
   readprogbuttons(); // Program the free input pins
+#if defined(ST7701_28B)
+  st7701FeedTaskWdt();
+  dbgprint("BOOT: GT911 reset deferred until after ST7701 display (shared TCA9554 I2C)");
+#endif
 
-  SPI.begin(ini_block.spi_sck_pin, ini_block.spi_miso_pin,
-            ini_block.spi_mosi_pin); // Init VSPI bus with default or modified pins
+  if (vs1053SpiBusConfigured(ini_block.vs_cs_pin, ini_block.vs_dcs_pin, ini_block.vs_dreq_pin, ini_block.spi_sck_pin,
+                             ini_block.spi_miso_pin, ini_block.spi_mosi_pin)) {
+#if defined(ST7701_28B)
+    dbgprint("BOOT: VS1053 SPI deferred until after network (USB D+/D- shared SPI)");
+#else
+    const int8_t spiMiso =
+        (ini_block.spi_miso_pin >= 0) ? ini_block.spi_miso_pin : (int8_t)(-1);
+    SPI.begin(ini_block.spi_sck_pin, spiMiso,
+              ini_block.spi_mosi_pin); // Init VSPI bus with default or modified pins
+#endif
+  } else {
+#if defined(ST7701_28B)
+    dbgprint("BOOT: VS1053 SPI skipped (incomplete or unsafe pins on S3 Touch 2.8B)");
+#else
+    dbgprint("SPI bus deferred (VS1053 CS/DCS/DREQ not assigned)");
+#endif
+  }
   vs1053player = new VS1053(ini_block.vs_cs_pin, ini_block.vs_dcs_pin, ini_block.vs_dreq_pin, ini_block.vs_shutdown_pin,
                             ini_block.vs_shutdownx_pin); // Make instance of player
   if (ini_block.ir_pin >= 0) {
@@ -123,14 +192,28 @@ void radioSetup() {
     attachInterrupt(ini_block.ir_pin, isr_IR, CHANGE); // Interrupts will be handle by isr_IR
   }
 
-  if ((ini_block.tft_cs_pin >= 0) || (ini_block.tft_scl_pin >= 0)) { // Display configured?
+#if defined(ST7701_28B)
+  const bool displayConfigured = true;
+#else
+  const bool displayConfigured = (ini_block.tft_cs_pin >= 0) || (ini_block.tft_scl_pin >= 0);
+#endif
+  if (displayConfigured) {
     dbgprint("Start display");
+    Serial.println("Start display (ST7701/TFT)");
+    Serial.flush();
     if (dsp_begin()) {         // Init display
       dsp_setRotation();       // Use landscape format
       dsp_erase();             // Clear screen
+#if defined(ST7701_28B)
+      dsp_setTextWrap(false);
+      dsp_setTextSize(2);      // Readable boot text on 640x480 landscape
+      dsp_setTextColor(WHITE);
+      dsp_setCursor(8, 24);
+#else
       dsp_setTextSize(1);      // Small character font
       dsp_setTextColor(WHITE); // Info in white
       dsp_setCursor(0, 0);     // Top of screen
+#endif
 
       dsp_println("Loresoft, www.loresoft.de");
 
@@ -147,8 +230,47 @@ void radioSetup() {
       dsp_println("");
       dsp_println("Booting Device...");
 
+#if defined(ST7701_28B)
+      st7701UiVolumeDirty = true; // Single RGB flush path: spftask only
+#else
       dsp_update(); // Show on physical screen
+#endif
     }
+#if defined(ST7701_28B)
+    if (!st7701Touch.begin()) {
+      Serial.println("GT911: begin FAILED (swipe volume disabled until next boot fix)");
+    }
+#if defined(USE_MCP23017_VS1053) && !defined(RADIO_I2S_A2DP_TX)
+    // Same I2C bus as TCA9554/GT911; address must be 0x27 (not 0x20).
+    ini_block.enc_clk_pin = -1;
+    ini_block.enc_dt_pin = -1;
+    ini_block.enc_sw_pin = -1;
+    ini_block.spi_sck_pin = 43;
+    ini_block.spi_mosi_pin = 44;
+    if (!mcp23017Vs1053Begin()) {
+      // GPIO4 is battery ADC - avoid. CS0 / DCS16 / DREQ20(D+), write-only (no MISO).
+      dbgprint("BOOT: MCP missing - VS1053 CS0/DCS16/DREQ20 write-only");
+      ini_block.vs_cs_pin = 0;
+      ini_block.vs_dcs_pin = 16;
+      ini_block.vs_dreq_pin = 20;
+      ini_block.spi_miso_pin = -1;
+      if (vs1053player) {
+        vs1053player->setPins(0, 16, 20);
+      }
+    } else {
+      mcp23017Vs1053DeselectAll();
+      // Full SPI: MISO=0 DREQ=16, CS/DCS via MCP (no GPIO4, no USB D-).
+      ini_block.vs_cs_pin = VS1053_MCP_CS_SENTINEL;
+      ini_block.vs_dcs_pin = VS1053_MCP_DCS_SENTINEL;
+      ini_block.vs_dreq_pin = 16;
+      ini_block.spi_miso_pin = 0;
+      if (vs1053player) {
+        vs1053player->setPins(VS1053_MCP_CS_SENTINEL, VS1053_MCP_DCS_SENTINEL, 16);
+      }
+      dbgprint("BOOT: MCP23017 ready - VS1053 MISO=0 DREQ=16 CS/DCS=MCP");
+    }
+#endif
+#endif
   }
   if (ini_block.tft_bl_pin >= 0) // Backlight for TFT control?
   {
@@ -198,6 +320,15 @@ void radioSetup() {
   otaChecker.check(false);
   loadAlarmConfigFromNvs(); // Load or migrate alarm JSON configuration
   syncAlarmsToRadioConfig(); // Heal a stale alarms copy in the radio_config blob
+#if defined(ST7701_28B)
+  if (ini_block.reqvol == 0) {
+    ini_block.reqvol = RADIO_DEFAULT_VOLUME;
+    nvsAddValue("volume", String(RADIO_DEFAULT_VOLUME));
+    if (nvsCommit() == ESP_OK) {
+      dbgprint("BOOT: Volume clamped 0 -> %d (ST7701 GT911 safety)", (int)RADIO_DEFAULT_VOLUME);
+    }
+  }
+#endif
   dbgprint("BOOT: Preferences loaded, active preset %d, volume %d", ini_block.newpreset, ini_block.reqvol);
   // tcpip_adapter_set_hostname(TCPIP_ADAPTER_IF_STA, NAME);
   WiFi.setHostname(NAME);
@@ -234,10 +365,20 @@ void radioSetup() {
     currentpreset = ini_block.newpreset; // No network: newpreset is -1, so means do not start radio
   }
 
+#if defined(ST7701_28B)
+  // VS1053 SPI on GPIO19/20 shares USB D-/D+; init from loop() after HTTP/WDT-safe boot.
+  vs1053Available = false;
+#if defined(RADIO_I2S_A2DP_TX)
+  dbgprint("BOOT: RADIO_I2S_A2DP_TX: soft-decode -> I2S (skip VS1053 SPI on 43/44/16)");
+  radioI2sA2dpBegin();
+#else
+  dbgprint("BOOT: VS1053 init deferred (ST7701: display + WiFi first)");
+#endif
+#else
   // Initialize VS1053 after network is up (optional hardware)
   vs1053player->begin();
   if (vs1053player->isReady()) {
-    uint16_t modeReg = vs1053player->read_register(0x00); // 0x00 ist SCI_MODE
+    uint16_t modeReg = vs1053player->read_register(0x00);
 
     if (modeReg == 0x0000 || modeReg == 0xFFFF) {
       dbgprint("VS1053 not properly installed! Register-Dump: 0x%04X", modeReg);
@@ -252,6 +393,7 @@ void radioSetup() {
     eventLogRecordError("VS1053 audio decoder not detected");
     vs1053Available = false;
   }
+#endif
 
   /*
   Legacy ESP32 Arduino 2.x timer setup (kept for reference):
@@ -275,11 +417,14 @@ void radioSetup() {
   //  saveDefaultConfig();
   //  dbgprint("All default prefs added, please restart the machine!");
   //}
-  if ((ini_block.enc_clk_pin + ini_block.enc_dt_pin + ini_block.enc_sw_pin) > 2) {
+  if (gpioIsValid(ini_block.enc_clk_pin) && gpioIsValid(ini_block.enc_dt_pin)) {
     attachInterrupt(ini_block.enc_clk_pin, isr_enc_turn, CHANGE);
     attachInterrupt(ini_block.enc_dt_pin, isr_enc_turn, CHANGE);
-    initEncoderSwitch(ini_block.enc_sw_pin);
-    dbgprint("Rotary encoder is enabled");
+    if (gpioIsValid(ini_block.enc_sw_pin)) {
+      initEncoderSwitch(ini_block.enc_sw_pin);
+    }
+    dbgprint("Rotary encoder is enabled (clk/dt/sw=%d/%d/%d)", ini_block.enc_clk_pin, ini_block.enc_dt_pin,
+             ini_block.enc_sw_pin);
   } else {
     dbgprint("Rotary encoder is disabled (%d/%d/%d)", ini_block.enc_clk_pin, ini_block.enc_dt_pin,
              ini_block.enc_sw_pin);
@@ -300,47 +445,47 @@ void radioSetup() {
 
   outchunk.datatyp = QDATA; // This chunk dedicated to QDATA
 
+#if !defined(CONFIG_IDF_TARGET_ESP32S3)
   /*
   adc1_config_width(ADC_WIDTH_12Bit);
   adc1_config_channel_atten(ADC1_CHANNEL_0, ADC_ATTEN_0db);
   */
   adc1_config_width(ADC_WIDTH_BIT_12);                       // Correct Enum for deprecated function
   adc1_config_channel_atten(ADC1_CHANNEL_0, ADC_ATTEN_DB_0); // New Enum Name
+#endif
 
   dataqueue = xQueueCreate(QSIZ, sizeof(qdata_struct)); // Create queue for communication
+#if !defined(ST7701_28B)
   if (vs1053Available) {
     dbgprint("▶️ VS1053 available. Start Audio-Task...");
-    // Consumer: feed queued audio to the VS1053 on Core 0 (dedicated audio core).
-    xTaskCreatePinnedToCore(playStreamFromQueue,   // Task to play data in dataqueue.
-                            "playStreamFromQueue", // name of task.
-                            2048,                  // Stack size of task
-                            NULL,                  // parameter of the task
-                            3,                     // priority of the task (high: audio output)
-                            &xplayStreamFromQueue, // Task handle to keep track of created task
-                            0);                    // Run on CPU 0
-
-    // Producer: read the network/SD stream into the queue on Core 1.
-    // Runs at the same priority as loop()/spftask so FreeRTOS round-robin time
-    // slicing keeps both the stream buffering AND the UI (rotary encoder, HTTP)
-    // responsive. Being a separate task already decouples buffering from any
-    // slow work in loop(), which is what prevents audio dropouts.
-    xTaskCreatePinnedToCore(mp3StreamTask,   // Task to fill the audio queue.
-                            "mp3StreamTask", // name of task.
-                            8192,            // Stack size (connect/playlist parsing use String)
-                            NULL,            // parameter of the task
-                            1,               // priority (equal to loopTask/spftask)
-                            &xmp3StreamTask, // Task handle
-                            1);              // Run on CPU 1
+    xTaskCreatePinnedToCore(playStreamFromQueue, "playStreamFromQueue", 4096, NULL, 3, &xplayStreamFromQueue, 0);
   } else {
-    dbgprint("⚠️ VS1053 missing oder invalid! Audio-Task is disable, to avoid SPI-Blocking.");
+    dbgprint("⚠️ VS1053 missing or invalid! Stream task runs without audio output.");
   }
+#else
+#if defined(RADIO_I2S_A2DP_TX)
+  dbgprint("RADIO_I2S_A2DP: stream task = preset/host only; PCM via soft-decode I2S");
+#else
+  if (!vs1053Available) {
+    dbgprint("⚠️ VS1053 pending deferred init; stream task runs without audio until ready");
+  }
+#endif
+#endif
 
-  xTaskCreate(spftask,    // Task to handle special functions.
-              "Spftask",  // name of task.
-              2048,       // Stack size of task
-              NULL,       // parameter of the task
-              1,          // priority of the task
-              &xspftask); // Task handle to keep track of created task
+  // Producer: network/SD pump and stream watchdog (always, so UI/metadata work without VS1053).
+  xTaskCreatePinnedToCore(mp3StreamTask,   // Task to fill the audio queue.
+                          "mp3StreamTask", // name of task.
+                          10240,           // Stack size (connect/playlist parsing use String)
+                          NULL,            // parameter of the task
+                          2,               // Above spftask so WiFi pump wins on core 1
+                          &xmp3StreamTask, // Task handle
+                          1);              // Run on CPU 1
+
+#if defined(ST7701_28B)
+  xTaskCreatePinnedToCore(spftask, "Spftask", 3072, NULL, 1, &xspftask, 0); // RGB dashboard on core 0
+#else
+  xTaskCreate(spftask, "Spftask", 2048, NULL, 1, &xspftask);
+#endif
 }
 
 

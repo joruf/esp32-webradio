@@ -119,6 +119,9 @@ bool hostreq = false;                  // Request for new host
 bool reqtone = false;                  // New tone setting requested
 bool muteflag = false;                 // Mute output
 volatile bool resetreq = false;        // Request to reset the ESP32
+#if defined(ST7701_28B)
+volatile bool decoderStallRecoverReq = false;
+#endif
 bool updatereq = false;                // Request to update software from remote host
 String pendingOtaBinUrl;               // Specific firmware bin URL to install (e.g. chosen older release)
 volatile bool otaActive = false;       // True while OTA/firmware update is running
@@ -192,10 +195,12 @@ progpin_struct progpin[] =
         {19, false, false, "", false}, // Default for SPI MISO
         //{ 20, true,  false,  "", false },                    // Not exposed on DEV board
         {21, false, false, "", false}, // Also Wire SDA
-        {22, false, false, "", false}, // Also Wire SCL
+#if !defined(CONFIG_IDF_TARGET_ESP32S3)
+        {22, false, false, "", false}, // Also Wire SCL (classic ESP32 only)
         {23, false, false, "", false}, // Default for SPI MOSI
         //{ 24, true,  false,  "", false },                    // Not exposed on DEV board
         {25, false, false, "", false},
+#endif
         {26, false, false, "", false},
         {27, false, false, "", false},
         //{ 28, true,  false,  "", false },                    // Not exposed on DEV board

@@ -1,3 +1,6 @@
+#include "config/gpio_valid.h"
+#include "globals/globals.h"
+
 /**
  * @brief 60-second timer interrupt (extra watchdog).
  *
@@ -54,9 +57,13 @@ void IRAM_ATTR timer10sec() {
     oldtotalcount = totalcount;               // Save for comparison in next cycle
     if (bytesplayed == 0)                     // Still playing?
     {
-      if (morethanonce >= 6) { // ~60 s decoder stall → restart
+      if (morethanonce >= 6) { // ~60 s decoder stall → recover without full reboot on ST7701
+#if defined(ST7701_28B)
+        decoderStallRecoverReq = true;
+#else
         eventLogSetShutdownReason("stream stall recovery");
         resetreq = true;
+#endif
       }
 
       morethanonce++; // Count the fails
@@ -274,7 +281,7 @@ void scandigital() {
   oldmillis = millis();                            // 100 msec over
   for (i = 0; (pinnr = progpin[i].gpio) >= 0; i++) // Scan all inputs
   {
-    if (!progpin[i].avail || progpin[i].reserved) // Skip unused and reserved pins
+    if (!gpioIsValid(pinnr) || !progpin[i].avail || progpin[i].reserved) // Skip unused and reserved pins
     {
       continue;
     }

@@ -11,6 +11,7 @@
 #include "features_config.h"
 #include "radio_config_merge.h"
 #include "hardware_profile.h"
+#include "firmware_config.h"
 
 void applyClockConfiguration(bool restartNtp);
 
@@ -369,8 +370,13 @@ static void ensureRadioConfigStructure(JsonDocument &doc) {
   }
 
   if (doc["volume"].isNull()) {
-    doc["volume"] = 72;
+    doc["volume"] = RADIO_DEFAULT_VOLUME;
   }
+#if defined(ST7701_28B)
+  else if (doc["volume"].as<int>() <= 0) {
+    doc["volume"] = RADIO_DEFAULT_VOLUME;
+  }
+#endif
   if (doc["preset"].isNull()) {
     doc["preset"] = 6;
   }
@@ -476,6 +482,11 @@ static bool radioConfigNeedsUpgrade(const String &stored) {
   if (!doc["gpio"].is<JsonArray>()) {
     return true;
   }
+#if defined(ST7701_28B)
+  if (!doc["volume"].isNull() && doc["volume"].as<int>() <= 0) {
+    return true;
+  }
+#endif
 
   return false;
 }
@@ -531,7 +542,7 @@ static String buildFreshDefaultRadioConfigJson() {
   clock["offset"] = 1;
   clock["dst"] = 1;
 
-  doc["volume"] = 72;
+  doc["volume"] = RADIO_DEFAULT_VOLUME;
   doc["preset"] = 6;
 
   JsonObject tone = doc["tone"].to<JsonObject>();
@@ -595,7 +606,7 @@ String buildRadioConfigJsonFromNvs(bool maskWifiPasswords) {
   clock["offset"] = nvsKeyExists("clk_offset") ? nvsGetValue("clk_offset").toInt() : 1;
   clock["dst"] = nvsKeyExists("clk_dst") ? nvsGetValue("clk_dst").toInt() : 1;
 
-  doc["volume"] = nvsKeyExists("volume") ? nvsGetValue("volume").toInt() : 72;
+  doc["volume"] = nvsKeyExists("volume") ? nvsGetValue("volume").toInt() : RADIO_DEFAULT_VOLUME;
   doc["preset"] = nvsKeyExists("preset") ? nvsGetValue("preset").toInt() : 6;
 
   JsonObject tone = doc["tone"].to<JsonObject>();
@@ -827,7 +838,12 @@ static bool applyRadioConfigDoc(JsonDocument &doc, bool maskWifiPasswords, bool 
   ini_block.clk_dst = clock["dst"] | 1;
   bool restartNtp = (ini_block.clk_server != previousClkServer);
 
-  uint8_t volume = doc["volume"] | 72;
+  uint8_t volume = doc["volume"] | RADIO_DEFAULT_VOLUME;
+#if defined(ST7701_28B)
+  if (volume == 0) {
+    volume = RADIO_DEFAULT_VOLUME;
+  }
+#endif
   if (volume > 100) {
     volume = 100;
   }

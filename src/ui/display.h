@@ -1,8 +1,8 @@
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
 #include "display/dsp_dashboard.h"
 #endif
 
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
 
 /**
  * @brief Requests display of the song title on the TFT dashboard.
@@ -91,7 +91,7 @@ void showLegacyOnTFT(String &str) {
  * @note The actual display update happens asynchronously in handle_tft_txt()
  */
 void showTextOnTFT(uint16_t inx, const char *str) {
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
   switch (inx) {
   case 0:
     showLegacyOnTFT(str);
@@ -128,7 +128,7 @@ void showTextOnTFT(uint16_t inx, const char *str) {
  * @note The actual display update happens asynchronously in handle_tft_txt()
  */
 void showTextOnTFT(uint16_t inx, String &str) {
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
   switch (inx) {
   case 0:
     showLegacyOnTFT(str);
@@ -164,16 +164,21 @@ void showTextOnTFT(uint16_t inx, String &str) {
  * @note When enabling, the bltimer (backlight timeout counter) is reset.
  */
 void IRAM_ATTR enableBacklight(bool enable) {
-  if (ini_block.tft_bl_pin >= 0) {              // Backlight for TFT control?
-    digitalWrite(ini_block.tft_bl_pin, enable); // Enable/disable backlight
+#if defined(ST7701_28B)
+#include "display/st7701_backlight.h"
+  st7701RequestBacklight(enable);
+#else
+  if (ini_block.tft_bl_pin >= 0) {
+    digitalWrite(ini_block.tft_bl_pin, enable);
   }
 
-  if (ini_block.tft_blx_pin >= 0) {               // Backlight for TFT (inversed logic) control?
-    digitalWrite(ini_block.tft_blx_pin, !enable); // Enable/disable backlight
+  if (ini_block.tft_blx_pin >= 0) {
+    digitalWrite(ini_block.tft_blx_pin, !enable);
   }
+#endif
 
   if (enable) {
-    bltimer = 0; // Reset counter backlight time-out
+    bltimer = 0;
   }
 }
 
@@ -186,7 +191,11 @@ void tftlog(const char *str) {
   if (tft) // TFT configured?
   {
     dsp_println(str); // show error on TFT
-    dsp_update();     // To physical screen
+#if defined(ST7701_28B)
+    // RGB flush only from spftask to avoid framebuffer races and WDT stalls.
+#else
+    dsp_update(); // To physical screen
+#endif
   }
 }
 
@@ -238,7 +247,7 @@ static void drawSegmentText(scrseg_struct *p) {
  * @note Assumes that 'tft' (display handle) is valid.
  */
 void renderInfo(uint16_t inx) {
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
   if (!tft || inx >= TFTSECS || inx == 0) {
     return;
   }
@@ -283,7 +292,7 @@ void renderInfo(uint16_t inx) {
  * @note This function should be called regularly in the main loop.
  */
 bool handle_tft_txt() {
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
   return dspDashboardProcessTextUpdates();
 #else
   bool updated = false;

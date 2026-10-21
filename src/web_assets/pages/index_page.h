@@ -38,14 +38,14 @@ const char index_html[] PROGMEM = R"=====(
 			<div class="sound-studio">
 			<div class="row panel panel-default sound-card">
 				<div class="panel-heading webradio-meta-heading">
-					<span class="webradio-meta-main">Metadata <small><span id="datelabel">DD.MM.YYYY</span></small></span>
+					<span class="webradio-meta-main">Webradio Control <small><span id="datelabel">DD.MM.YYYY</span></small></span>
 					<span class="webradio-live-meta">
 						<span class="webradio-live-pill" id="live-stream-kbps">Stream: 0 kbps</span>
 					</span>
 				</div>
 				<div class="panel-body">
 					<span id="statlabel" style="color: red;">Lade Sender...</span> |
-					<a id="youtubelink" href="#" target="_blank" style="color: blue; text-decoration: none;">
+					<a id="youtubelink" class="youtube-title-link" href="#" target="_blank" rel="noopener noreferrer">
 							<span id="songlabel">Lade Titel...</span>
 					</a>
 					<div id="title-history" class="title-history-table" aria-live="polite">
@@ -55,7 +55,7 @@ const char index_html[] PROGMEM = R"=====(
 			</div>
 
 			<div class="row panel panel-default sound-card">
-				<div class="panel-heading">Webradio Control</div>
+				<div class="panel-heading">Playback</div>
 
 				<div class="panel-body webradio-control-body">
 					<div class="webradio-control-toolbar">

@@ -66,6 +66,14 @@ static bool isFiniteMp3FileUrl(const String &streamHost) {
 }
 
 #include "audio_stream_parser.h"
+#if defined(ST7701_28B)
+#include <esp_task_wdt.h>
+#include "boot/st7701_boot_wdt.h"
+#include "system/event_log.h"
+#endif
+#if defined(RADIO_I2S_A2DP_TX)
+#include "audio/radio_i2s_a2dp.h"
+#endif
 
 /**
  * @desc	Called from the main loop() for the mp3 functions.
@@ -78,6 +86,9 @@ void mp3loop() {
   uint32_t timing;   // Startime and duration this function
   uint32_t qspace;   // Free space in data queue
 
+#if defined(RADIO_I2S_A2DP_TX)
+  /* Soft-decode path: skip mp3client -> VS1053 pump; handle preset/host below. */
+#else
   if (datamode & (INIT | HEADER | DATA | METADATA | PLAYLISTINIT | PLAYLISTHEADER | PLAYLISTDATA)) {
     timing = millis();
     maxchunk = sizeof(tmpbuff);
@@ -180,6 +191,7 @@ void mp3loop() {
       }
     }
   }
+#endif /* !RADIO_I2S_A2DP_TX */
 
   if (ini_block.newpreset != currentpreset) {
     if (datamode != STOPPED) {
@@ -218,9 +230,23 @@ void mp3loop() {
         host = xmlgethost(host);
       }
 
+#if defined(RADIO_I2S_A2DP_TX)
+      /* Soft-decode to I2S for WROOM A2DP; skip VS1053 HTTP pump. */
+      if (radioI2sA2dpConnect(host)) {
+        dbgprint("RADIO_I2S_A2DP: streaming via I2S slave TX (WROOM master)");
+      }
+#else
       connectToWebradioServer();
+#endif
     }
   }
+
+#if defined(RADIO_I2S_A2DP_TX)
+  if (datamode == STOPREQD) {
+    radioI2sA2dpStop();
+    datamode = STOPPED;
+  }
+#endif
 }
 
 /**
@@ -257,14 +283,34 @@ void stop_mp3client() {
  * @param parameter Unused FreeRTOS task parameter
  */
 void mp3StreamTask(void *parameter) {
+#if defined(ST7701_28B)
+  esp_task_wdt_add(NULL);
+#endif
   while (true) {
+#if defined(ST7701_28B)
+    esp_task_wdt_reset();
+#if !defined(RADIO_I2S_A2DP_TX)
+    if (decoderStallRecoverReq) {
+      decoderStallRecoverReq = false;
+      dbgprint("Decoder stall recovery (soft stop/reconnect, no reboot)");
+      eventLogRecordWarning("Decoder stall recovery");
+      if (datamode != STOPPED) {
+        datamode = STOPREQD;
+      }
+    }
+#else
+    decoderStallRecoverReq = false; /* I2S soft-decode path owns stall handling */
+#endif
+#endif
     if (otaActive) {
       vTaskDelay(50 / portTICK_PERIOD_MS);
       continue;
     }
 
-    mp3loop();            // Keep the audio queue filled (state machine + data pump)
+    mp3loop(); // Preset/host state machine (+ VS1053 pump when not I2S bridge)
+#if !defined(RADIO_I2S_A2DP_TX)
     streamWatchdogPoll(); // Handle stalled-stream detection in the same task
+#endif
     // Only touch SPI/VS1053 sine path while an offline wake tone is active.
     if (isAlarmFallbackPlaying()) {
       pollAlarmFallback();

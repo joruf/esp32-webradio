@@ -40,7 +40,7 @@ gpio_34 = station = icecast.omroep.nl:80/radio1-bb-mp3
 wifi_00 = SSID1/PASSWD1
 wifi_01 = SSID2/PASSWD2
 
-volume = 72
+volume = 80
 toneha = 0
 tonehf = 0
 tonela = 0

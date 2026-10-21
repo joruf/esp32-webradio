@@ -47,7 +47,7 @@ void saveDefaultConfig() {
   // AUDIO SETTINGS
   // ═══════════════════════════════════════════════════════════════
   dbgprint("BOOT: [4/7] Audio settings...");
-  nvsAddValue("volume", "72");
+  nvsAddValue("volume", "80");
   nvsAddValue("toneha", "0"); // Treble Amplitude
   nvsAddValue("tonehf", "0"); // Treble Frequency
   nvsAddValue("tonela", "0"); // Bass Amplitude

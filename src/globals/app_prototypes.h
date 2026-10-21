@@ -38,6 +38,10 @@ bool playStream(int16_t _preset); // true=sending play info succeeded; false= un
 void playSound(bool _enable);
 void cancelVolumeFade(void);
 uint8_t getChipVolume(void);
+#if defined(ST7701_28B)
+void st7701RequestVs1053Reinit(void);
+const char *st7701Vs1053FailReason(void);
+#endif
 void stop_mp3client();
 void stopAlarmFallback(void);
 void startAlarmFallback(void);
@@ -53,7 +57,7 @@ String nvsGetHostFromPref(int16_t preset);
 String nvsGetHostFromPref();
 void showTextOnTFT(uint16_t inx, const char *str);
 void showTextOnTFT(uint16_t inx, String &str);
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
 void showTitleOnTFT(const char *str);
 void showTitleOnTFT(String &str);
 void showStationNameOnTFT(const char *str);

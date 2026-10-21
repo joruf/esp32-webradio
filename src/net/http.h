@@ -12,6 +12,7 @@ void saveDefaultConfig();
 #include "http_queue.h"
 #include "captive_portal.h"
 #include "audio/media_probe.h"
+#include "net/web_ui_activity.h"
 
 static String http_host_header = "";
 static String http_if_none_match = "";
@@ -900,6 +901,7 @@ void handlehttp() {
   {
     return; // No client active
   }
+  webUiActivityMark();
   // dbgprint ( "handlehttp started" ) ;
   while (millis() < deadline) // Loop till command/file seen
   {
@@ -1029,6 +1031,14 @@ void handlehttp() {
     sendHttpJsonResponse(buildDiagnosticsJson());
     return;
   }
+
+#if defined(ST7701_28B)
+  if (http_getcmd.startsWith("audioreinit")) {
+    st7701RequestVs1053Reinit();
+    sendHttpJsonResponse("{\"ok\":true,\"message\":\"VS1053 reinit scheduled\"}");
+    return;
+  }
+#endif
 
   if (http_getcmd.startsWith("gethwprofiles")) {
     sendHttpJsonResponse(buildHardwareProfilesJson());

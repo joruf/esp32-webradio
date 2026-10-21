@@ -10,6 +10,7 @@
 #include "audio/title_history.h"
 #include "audio/vu_meter.h"
 #include "audio/stream_watchdog.h"
+#include "audio/mcp23017_vs1053.h"
 #include "ota_check.h"
 #include <esp_ota_ops.h>
 #include <esp_chip_info.h>
@@ -204,6 +205,30 @@ static String buildDiagnosticsJson(void) {
   json += "\"watchdog_enabled\":" + String(radioFeatures.stream_watchdog ? "true" : "false") + ",";
   json += "\"vu_meter\":" + String(radioFeatures.vu_meter ? "true" : "false") + ",";
   json += "\"vu_level\":" + String(getVuMeterLevel()) + ",";
+  json += "\"vs1053_available\":" + String(vs1053Available ? "true" : "false") + ",";
+  json += "\"vs1053_ready\":" + String((vs1053Available && vs1053player && vs1053player->isReady()) ? "true" : "false") + ",";
+#if defined(ST7701_28B)
+  json += "\"vs1053_fail\":\"" + jsonEscapeString(st7701Vs1053FailReason()) + "\",";
+#else
+  json += "\"vs1053_fail\":\"\",";
+#endif
+  json += "\"pin_vs_cs\":" + String((int)ini_block.vs_cs_pin) + ",";
+  json += "\"pin_vs_dcs\":" + String((int)ini_block.vs_dcs_pin) + ",";
+  json += "\"pin_vs_dreq\":" + String((int)ini_block.vs_dreq_pin) + ",";
+  json += "\"pin_vs_dreq_level\":" +
+          String((ini_block.vs_dreq_pin >= 0) ? (digitalRead(ini_block.vs_dreq_pin) ? 1 : 0) : -1) + ",";
+  json += "\"pin_spi_sck\":" + String((int)ini_block.spi_sck_pin) + ",";
+  json += "\"pin_spi_miso\":" + String((int)ini_block.spi_miso_pin) + ",";
+  json += "\"pin_spi_mosi\":" + String((int)ini_block.spi_mosi_pin) + ",";
+#if defined(USE_MCP23017_VS1053)
+  json += "\"mcp23017_ready\":" + String(mcp23017Vs1053Ready() ? "true" : "false") + ",";
+  json += "\"mcp23017_addr\":" + String((unsigned)mcp23017Vs1053Addr()) + ",";
+  json += "\"i2c_scan\":\"" + jsonEscapeString(mcp23017Vs1053ScanI2cHex().c_str()) + "\",";
+#else
+  json += "\"mcp23017_ready\":false,";
+  json += "\"mcp23017_addr\":0,";
+  json += "\"i2c_scan\":\"\",";
+#endif
   json += "\"epoch\":" + String((unsigned long)(timeinfo.tm_year ? (unsigned long)time(nullptr) : 0UL)) + ",";
   json += "\"snooze_sec\":" + String(sleeptimer_ms > 0 ? sleeptimer_ms / 1000 : 0) + ",";
   json += "\"snooze_mins\":" + String((int)snooze_duration_mins) + ",";

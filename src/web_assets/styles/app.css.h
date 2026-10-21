@@ -308,6 +308,14 @@ const char app_css[] PROGMEM = R"=====(
 	}
 	.title-history-when { font-size: 0.75em; color: #666; margin-bottom: 4px; line-height: 1.2; word-break: break-word; }
 	.title-history-text { font-size: 0.85em; line-height: 1.3; word-break: break-word; }
+	.youtube-title-link {
+		color: #2563eb;
+		text-decoration: none;
+	}
+	.youtube-title-link:hover,
+	.youtube-title-link:focus {
+		text-decoration: underline;
+	}
 	.title-history-empty {
 		grid-column: 1 / -1;
 		padding: 8px 0 0 0;
@@ -472,7 +480,8 @@ const char app_css[] PROGMEM = R"=====(
 	body.theme-dark .title-history-when { color: #9ecbff; }
 	body.theme-dark #statlabel { color: #ff8a80 !important; }
 	body.theme-dark #youtubelink,
-	body.theme-dark #songlabel { color: #9ecbff !important; }
+	body.theme-dark #songlabel,
+	body.theme-dark .youtube-title-link { color: #9ecbff !important; }
 	body.theme-dark .title-history-table { border-top-color: #444; }
 	body.theme-dark .panel-danger-zone .panel-heading,
 	body.theme-dark .config-danger-text { color: #f28b82; }

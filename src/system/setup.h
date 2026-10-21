@@ -1,3 +1,6 @@
+#include "config/gpio_valid.h"
+#include "boot/st7701_boot_wdt.h"
+
 /**
  * @brief Set I/O pin to "reserved". The pin is then not available for a
  * programmable function.
@@ -5,6 +8,9 @@
  * @param rpinnr GPIO pin number to reserve
  */
 void reservepin(int8_t rpinnr) {
+  if (!gpioIsValid(rpinnr)) {
+    return;
+  }
   uint8_t i = 0;
   int8_t pin;
 
@@ -115,7 +121,21 @@ void listNetworks() {
   dbgprint("Scan Networks");
   tftlog("Scan Networks");
 
-  numSsid = WiFi.scanNetworks();
+  yield();
+  st7701FeedTaskWdt();
+  WiFi.scanDelete();
+  (void)WiFi.scanNetworks(true);
+  numSsid = WiFi.scanComplete();
+  while (numSsid == WIFI_SCAN_RUNNING) {
+    delay(50);
+    yield();
+    st7701FeedTaskWdt();
+    numSsid = WiFi.scanComplete();
+  }
+  if (numSsid == WIFI_SCAN_FAILED) {
+    numSsid = 0;
+  }
+  st7701FeedTaskWdt();
   dbgprint("Scan completed");
   tftlog("Scan Complete");
 
@@ -138,6 +158,11 @@ void listNetworks() {
 
   // Output all networks to serial monitor, but only strongest to display
   for (i = 0; i < numSsid; i++) {
+#if defined(ST7701_28B)
+    if ((i & 3) == 0) {
+      st7701FeedTaskWdt();
+    }
+#endif
     acceptable = isAcceptableNetwork(WiFi.SSID(i));
     encryption = WiFi.encryptionType(i);
 
@@ -266,11 +291,19 @@ bool connectwifi() {
       wifiMulti.run();
     }
 
-    // Wait max 15 seconds for connection
-    if (WiFi.waitForConnectResult(15000) != WL_CONNECTED) {
-      dbgprint("BOOT: WiFi connection timed out after 15 seconds (status %d)", (int)WiFi.status());
-      eventLogRecordWarning("WiFi connect timed out, started config AP");
-      localAP = true;
+    // Wait max 15 seconds for connection (poll so task WDT stays fed on ST7701)
+    {
+      const uint32_t connectDeadline = millis() + 15000UL;
+      while (WiFi.status() != WL_CONNECTED && (int32_t)(millis() - connectDeadline) < 0) {
+        delay(100);
+        yield();
+        st7701FeedTaskWdt();
+      }
+      if (WiFi.status() != WL_CONNECTED) {
+        dbgprint("BOOT: WiFi connection timed out after 15 seconds (status %d)", (int)WiFi.status());
+        eventLogRecordWarning("WiFi connect timed out, started config AP");
+        localAP = true;
+      }
     }
   } else {
     dbgprint("BOOT: No WiFi credentials found in configuration");
@@ -306,6 +339,9 @@ bool connectwifi() {
 static void readProgrammablePin(int i, int8_t pinnr, char *mykey) {
   String val;
 
+  if (!gpioIsValid(pinnr)) {
+    return;
+  }
   if (nvsKeyExists(mykey)) {
     val = nvsGetValue(mykey);
     if (val.length()) {
@@ -328,6 +364,12 @@ static void readProgrammablePin(int i, int8_t pinnr, char *mykey) {
 static void readTouchPin(int i, int8_t pinnr, char *mykey) {
   String val;
 
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+  (void)i;
+  (void)pinnr;
+  (void)mykey;
+  return;
+#else
   if (nvsKeyExists(mykey)) {
     val = nvsGetValue(mykey);
     if (val.length()) {
@@ -341,6 +383,7 @@ static void readTouchPin(int i, int8_t pinnr, char *mykey) {
       }
     }
   }
+#endif
 }
 
 /**
@@ -397,14 +440,21 @@ static const struct iosetting klist[] = {
  */
 static bool processIoPrefEntry(int i) {
   int8_t *p = klist[i].gnr;
-  int8_t ival = hardwareProfileDefaultPin(klist[i].gname, klist[i].pdefault);
+  const int8_t profileDefault = hardwareProfileDefaultPin(klist[i].gname, klist[i].pdefault);
+  int8_t ival = profileDefault;
   String val;
 
   if (nvsKeyExists(klist[i].gname)) {
     val = nvsGetValue(klist[i].gname);
     if (val.length()) {
-      ival = val.toInt();
+      ival = (int8_t)val.toInt();
     }
+  }
+
+  if (ival >= 0 && !gpioIsValid(ival)) {
+    dbgprint("BOOT: %s GPIO%d invalid on this MCU, using profile default %d", klist[i].gname, ival,
+             profileDefault);
+    ival = profileDefault;
   }
 
   *p = ival;
@@ -419,15 +469,95 @@ static bool processIoPrefEntry(int i) {
 }
 
 /**
+ * @brief Force I/O pins to match the firmware build profile on dedicated board images.
+ *
+ * OTA or NVS from classic ESP32 (GPIO 22/23/25 encoder/SPI) must not leak into S3 builds.
+ */
+static void enforceBuildProfilePinMap(void) {
+  const HardwareProfile *buildProfile = findHardwareProfile(HW_PROFILE_DEFAULT);
+  if (buildProfile == NULL) {
+    return;
+  }
+
+  String storedProfileId;
+  if (nvsKeyExists("hw_profile")) {
+    storedProfileId = nvsGetValue("hw_profile");
+  }
+
+  const bool profileMismatch =
+      (storedProfileId.length() == 0) || (storedProfileId != String(HW_PROFILE_DEFAULT));
+  bool repaired = false;
+
+  for (size_t j = 0; j < buildProfile->pin_count; j++) {
+    const char *key = buildProfile->pins[j].key;
+    const int8_t expected = buildProfile->pins[j].value;
+
+    int8_t current = expected;
+    for (int k = 0; klist[k].gname != NULL; k++) {
+      if (strcmp(klist[k].gname, key) == 0) {
+        current = *klist[k].gnr;
+        break;
+      }
+    }
+
+    const bool invalidStored = (current >= 0 && !gpioIsValid(current));
+    const bool pinDrift = (current != expected);
+    if (!profileMismatch && !invalidStored && !pinDrift) {
+      continue;
+    }
+
+    for (int k = 0; klist[k].gname != NULL; k++) {
+      if (strcmp(klist[k].gname, key) == 0) {
+        *klist[k].gnr = expected;
+        if (expected >= 0) {
+          reservepin(expected);
+        }
+        nvsAddValue(key, String((int)expected));
+        repaired = true;
+        dbgprint("BOOT: %s reconciled to %d (profile %s)", key, expected, HW_PROFILE_DEFAULT);
+        break;
+      }
+    }
+  }
+
+  if (profileMismatch) {
+    nvsAddValue("hw_profile", String(HW_PROFILE_DEFAULT));
+    repaired = true;
+    dbgprint("BOOT: hw_profile set to build default %s", HW_PROFILE_DEFAULT);
+  }
+
+  if (repaired) {
+    nvsCommit();
+  }
+}
+
+/**
  * @brief Reserve board-fixed pins that are not listed as configurable I/O prefs.
  *
  * ESP32-CAM PSRAM uses GPIO16/17. SD_MMC 1-bit uses GPIO2/14/15. Touching those
  * with pinMode before WiFi starts corrupts heap and crashes SoftAP init.
  */
 static void reserveBoardFixedPins(void) {
-#if defined(BOARD_HAS_PSRAM)
+#if defined(BOARD_HAS_PSRAM) && !defined(CONFIG_IDF_TARGET_ESP32S3)
+  // Classic ESP32 external PSRAM on GPIO16/17.
   reservepin(16);
   reservepin(17);
+#endif
+#if defined(CONFIG_IDF_TARGET_ESP32S3) && defined(BOARD_HAS_PSRAM)
+  // ESP32-S3 OPI PSRAM occupies GPIO33..37.
+  for (int8_t p = 33; p <= 37; p++) {
+    reservepin(p);
+  }
+#endif
+#if defined(ST7701_28B)
+  // Waveshare ESP32-S3-Touch-LCD-2.8B internal buses (do not steal for progpin).
+  // s3_touch_28b: VS1053 on 0/4/43/44/19/20; GPIO19/20 are USB D-/D+ (OTA-only while wired).
+  // GPIO26-32 flash, 33-37 PSRAM: not GPIO. Onboard RGB/I2C/touch (not progpin/touchRead).
+  const int8_t kS3Fixed[] = {0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16,
+                             17, 18, 19, 20, 21, 38, 39, 40, 41, 43, 44, 45, 46, 47, 48};
+  for (size_t i = 0; i < sizeof(kS3Fixed) / sizeof(kS3Fixed[0]); i++) {
+    reservepin(kS3Fixed[i]);
+  }
 #endif
   if (strcmp(hardwareProfileSdBackend(), "mmc") == 0) {
     reservepin(2);  // SD_MMC D0
@@ -448,7 +578,9 @@ void readIOprefs() {
       count++;
     }
   }
+  enforceBuildProfilePinMap();
   reserveBoardFixedPins();
+  (void)count;
 }
 
 /**

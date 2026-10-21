@@ -1915,7 +1915,7 @@ const char app_js[] PROGMEM = R"=====(
                 days: ["mon", "tue", "wed", "thu", "fri"]
             }],
             clock: { server: "pool.ntp.org", offset: 1, dst: 1 },
-            volume: 72,
+            volume: 80,
             preset: 6,
             tone: { ha: 0, hf: 0, la: 0, lf: 0 },
             wifi: [],
@@ -4534,6 +4534,14 @@ const char app_js[] PROGMEM = R"=====(
 
 
     /** Continuous JSON data */
+    function youtubeSearchUrl(title) {
+        var q = String(title || "").trim();
+        if (!q) {
+            return "#";
+        }
+        return "https://www.youtube.com/results?search_query=" + encodeURIComponent(q + " lyrics");
+    }
+
     function renderTitleHistory(history) {
         var table = document.getElementById("title-history");
         if (!table) {
@@ -4560,7 +4568,16 @@ const char app_js[] PROGMEM = R"=====(
 
             var text = document.createElement("div");
             text.className = "title-history-text";
-            text.textContent = entry.title || "";
+            var title = entry.title || "";
+            if (title) {
+                var link = document.createElement("a");
+                link.className = "youtube-title-link";
+                link.href = youtubeSearchUrl(title);
+                link.target = "_blank";
+                link.rel = "noopener noreferrer";
+                link.textContent = title;
+                text.appendChild(link);
+            }
 
             cell.appendChild(when);
             cell.appendChild(text);
@@ -4635,9 +4652,9 @@ const char app_js[] PROGMEM = R"=====(
 
             applyThemeDarkMode(!!data.dark_mode);
 
-            let linkElement = document.getElementById("youtubelink");
-            if(linkElement && data.title) {
-                    linkElement.href = "https://www.youtube.com/results?search_query=" + encodeURIComponent(data.title) + " lyrics";
+            var linkElement = document.getElementById("youtubelink");
+            if (linkElement && data.title) {
+                linkElement.href = youtubeSearchUrl(data.title);
             }
 
             handleMp3StreamSessionLiveStatus(data);

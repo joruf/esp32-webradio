@@ -10,6 +10,8 @@
 
 #define HTTP_PENDING_MAX 8
 
+#include "net/web_ui_activity.h"
+
 bool sseStreamActive = false;
 uint32_t sseLastPushMs = 0;
 int8_t sseLastPlaybackState = -1;
@@ -136,6 +138,8 @@ static void httpServiceSse() {
   if (written < frame.length()) {
     sseClient.stop();
     sseStreamActive = false;
+  } else {
+    webUiActivityMark();
   }
 }
 

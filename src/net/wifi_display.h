@@ -6,7 +6,7 @@
 #ifndef WIFI_DISPLAY_H
 #define WIFI_DISPLAY_H
 
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
 #include "display/dsp_dashboard.h"
 #endif
 
@@ -21,8 +21,11 @@ void updateWifiStatusDisplay(void) {
   }
   wifiDisplayLastMs = millis();
 
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
   dspDashboardDrawWifiStatus();
+#if defined(ST7701_28B)
+  dspDashboardDrawFooterIp();
+#endif
 #else
   if (datamode != STOPPED) {
     return;

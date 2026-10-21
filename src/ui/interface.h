@@ -266,7 +266,7 @@ const char *analyzeCmd(const char *par, const char *val) {
   ivalue = value.toInt();                 // Also as an integer
   ivalue = abs(ivalue);                   // Make positive
   relative = argument.indexOf("up") == 0; // + relative setting?
-  dbgprint("API Request: ", argument);
+  dbgprint("API Request: %s", argument.c_str());
   if (argument.indexOf("down") == 0) // - relative setting?
   {
     relative = true;  // It's relative
@@ -324,7 +324,7 @@ const char *analyzeCmd(const char *par, const char *val) {
   {
     int mins = value.toInt();
     setSnoozeTimerMinutes(mins);
-#if defined(BLUETFT)
+#if defined(RADIO_DASHBOARD_TFT)
     dspDashboardInvalidateSnooze();
     dspDashboardUpdateSnooze();
 #endif

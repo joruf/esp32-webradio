@@ -90,6 +90,11 @@
 #ifdef DUMMYTFT
 #  include "display/DummyTFT.h" // For Dummy display
 #endif
+#ifdef ST7701_28B
+#  include "display/St7701_28B.h" // Waveshare ESP32-S3-Touch-LCD-2.8B
+#  include "input/St7701Gt911Touch.h"
+St7701Gt911Touch st7701Touch;
+#endif
 #ifdef NEXTION
 #  include "display/NEXTION.h" // For NEXTION display
 #endif
@@ -123,11 +128,28 @@
 #include "config/writeDefaultConfig.h"
 #include "boot/boot_validation.h"
 #include "boot/app_setup.h"
+#if defined(ST7701_28B)
+#include "boot/vs1053_deferred.h"
+#include "boot/st7701_boot_wdt.h"
+#endif
+#if defined(RADIO_I2S_A2DP_TX)
+#include "audio/radio_i2s_a2dp.h"
+#endif
 
 void setup() { radioSetup(); }
 
 void loop() {
   static bool wasConnected = NetworkFound; // Initialzustand merken, 10sec adaption
+
+#if defined(ST7701_28B)
+  st7701FeedTaskWdt();
+#if !defined(RADIO_I2S_A2DP_TX)
+  (void)st7701PollVs1053DeferredInit();
+#endif
+#endif
+#if defined(RADIO_I2S_A2DP_TX)
+  radioI2sA2dpLoop();
+#endif
 
   handleSleepTimer();
   // Note: the stream data pump (mp3loop) and stall watchdog now run in the
@@ -241,4 +263,8 @@ void loop() {
   eventLogProcess();      // Patch the boot timestamp once the NTP clock is ready
   updateEncoderSwitch();  // Poll encoder push button (debounced)
   checkRotaryEncoder();  // Check rotary encoder functions
+#if defined(ST7701_28B)
+  st7701ProcessBacklightPending();
+  st7701Touch.poll();
+#endif
 }

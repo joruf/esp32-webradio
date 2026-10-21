@@ -1,7 +1,7 @@
 #ifndef FIRMWARE_CONFIG_H
 #define FIRMWARE_CONFIG_H
 
-#define FIRMWARE "v2.71 2026-10-05"
+#define FIRMWARE "v2.75 2026-10-10"
 #define WEBUI_CACHE_MAX_AGE 60
 #define UPDATEHOST "www.loresoft.de"
 #define BINFILE "/downloads/Esp32_radio.ino.esp32.bin"
@@ -9,8 +9,13 @@
 
 /* Display driver: set by PlatformIO build flags when needed. Default = TFT radio. */
 #if !defined(BLUETFT) && !defined(ILI9341) && !defined(OLED) && !defined(DUMMYTFT) && \
-    !defined(LCD1602I2C) && !defined(NEXTION)
+    !defined(LCD1602I2C) && !defined(NEXTION) && !defined(ST7701_28B)
 #define BLUETFT
+#endif
+
+/* Shared modern dashboard path (BlueTFT 160x128 and ST7701 480x640). */
+#if defined(BLUETFT) || defined(ST7701_28B)
+#define RADIO_DASHBOARD_TFT 1
 #endif
 
 /* Default hardware profile id for this binary (overridable via -DHW_PROFILE_DEFAULT=...). */
@@ -34,5 +39,8 @@
 #define BACKLIGHT_TIME 600
 #define MAX_DISPLAY_NETWORKS 3
 #define WIFI_RECONNECT_INTERVAL 10000
+
+/** Factory / first-boot / missing-NVS default volume (0..100). */
+#define RADIO_DEFAULT_VOLUME 80
 
 #endif

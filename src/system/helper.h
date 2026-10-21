@@ -85,12 +85,27 @@ static uint32_t filterADCValue(uint32_t raw_value) { return (15 * adcval + raw_v
  * @note The task is never terminated (vTaskDelete is never reached)
  */
 void spftask(void *parameter) {
+#if defined(ST7701_28B)
+  esp_task_wdt_add(NULL);
+#endif
   while (true) {
-    handleRenderData();                  // Maybe some special funcs?
-    vTaskDelay(100 / portTICK_PERIOD_MS); // Pause for a short time
+#if defined(ST7701_28B)
+    esp_task_wdt_reset();
+#endif
+    handleRenderData(); // Maybe some special funcs?
+#if defined(ST7701_28B)
+    esp_task_wdt_reset();
+    // Full RGB frame compose + PSRAM writeback is heavier than SPI TFT updates.
+    vTaskDelay(180 / portTICK_PERIOD_MS);
+#else
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+#endif
 
+#if !defined(ST7701_28B)
+    // Waveshare 2.8B: GPIO1 is LCD SPI; GPIO4 is VS1053 XDCS. Skip ADC polling here.
     uint32_t raw_adc = adc1_get_raw(ADC1_CHANNEL_0); // Read ADC
     adcval = filterADCValue(raw_adc);                // Do some filtering
+#endif
   }
   // vTaskDelete(NULL);                                                       //
   // Will never arrive here
