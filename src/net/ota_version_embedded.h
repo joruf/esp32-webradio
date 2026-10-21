@@ -12,12 +12,32 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.71",
-  "released": "2026-10-05",
+  "version": "v2.80",
+  "released": "2026-10-21",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.71.bin",
-  "notes": "Fix alarm save: keep stable NVS namespace separate from hostname radio; gzip CSS/JS for OTA size; alarm UI version fixed.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.80.bin",
+  "notes": "mDNS http + webradio services for LAN discovery (Android app 1.1.0 multi-radio).",
   "history": [
+    {
+      "version": "v2.80",
+      "released": "2026-10-21",
+      "notes": "mDNS http + webradio services for LAN discovery (Android app 1.1.0 multi-radio)."
+    },
+    {
+      "version": "v2.79",
+      "released": "2026-10-21",
+      "notes": "About page: author Joachim Ruf / Loresoft first; remove duplicate footer (v2.78 credits reorder)."
+    },
+    {
+      "version": "v2.77",
+      "released": "2026-10-21",
+      "notes": "Display 180° rotation setting in Display Settings; Playback panel above Webradio Control."
+    },
+    {
+      "version": "v2.75",
+      "released": "2026-10-10",
+      "notes": "YouTube links for all titles; ST7701 Touch-LCD and I2S/A2DP audio paths; WROOM TFT wiring (covers v2.72–v2.76 session work)."
+    },
     {
       "version": "v2.71",
       "released": "2026-10-05",
@@ -37,26 +57,6 @@ const char ota_version_embedded_json[] PROGMEM = R"=====(
       "version": "v2.66",
       "released": "2026-09-22",
       "notes": "Fix Offline wake sound persistence: ArduinoJson |nullptr read, boot loads feat_* NVS keys."
-    },
-    {
-      "version": "v2.65",
-      "released": "2026-09-22",
-      "notes": "Fix Offline wake sound and OTA URL not persisting (ArduinoJson | nullptr string read)."
-    },
-    {
-      "version": "v2.64",
-      "released": "2026-09-22",
-      "notes": "Replace Mario/Tetris with original Arcade wake jingle; rename Play every label."
-    },
-    {
-      "version": "v2.63",
-      "released": "2026-09-22",
-      "notes": "Offline wake melodies: Mario and Tetris sine motifs (cascade and other sounds unchanged)."
-    },
-    {
-      "version": "v2.60",
-      "released": "2026-09-22",
-      "notes": "Offline wake sound: test button and selectable repeat interval."
     }
   ]
 }

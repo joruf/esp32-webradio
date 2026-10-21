@@ -2362,10 +2362,11 @@ const char app_js[] PROGMEM = R"=====(
             var head = $("<div class='ota-history-head'></div>");
             head.append($("<strong></strong>").text(entry.version || "-"));
             if (entry.released) {
-                head.append($("<span class='ota-history-date'></span>").text(entry.released));
+                // Leading space so version and date never concatenate if CSS margin fails.
+                head.append($("<span class='ota-history-date'></span>").text(" " + entry.released));
             }
             if (entry.version && entry.version === currentVersion) {
-                head.append($("<span class='ota-history-current'></span>").text("installed"));
+                head.append($("<span class='ota-history-current'></span>").text(" installed"));
             }
             item.append(head);
             if (entry.notes) {

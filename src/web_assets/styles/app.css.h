@@ -250,10 +250,11 @@ const char app_css[] PROGMEM = R"=====(
 	.ota-history-item:last-child { border-bottom: 0; }
 	.ota-history-head { margin-bottom: 4px; line-height: 1.3; }
 	.ota-history-date {
-		margin-left: 8px;
+		margin-left: 0.4em;
 		font-size: 0.85em;
 		color: #666;
 		font-weight: normal;
+		white-space: pre;
 	}
 	.ota-upload-warning {
 		margin: 8px 0 12px 0;
