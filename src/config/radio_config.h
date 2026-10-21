@@ -28,6 +28,9 @@ void applyFeatureNvsKeyOverrides(void) {
   if (nvsKeyExists("feat_vu_meter")) {
     radioFeatures.vu_meter = nvsGetValue("feat_vu_meter").toInt() != 0;
   }
+  if (nvsKeyExists("feat_rot180")) {
+    radioFeatures.display_rotate_180 = nvsGetValue("feat_rot180").toInt() != 0;
+  }
   if (nvsKeyExists("feat_watchdog")) {
     radioFeatures.stream_watchdog = nvsGetValue("feat_watchdog").toInt() != 0;
   }
@@ -398,6 +401,7 @@ static void ensureRadioConfigFeatures(JsonDocument &doc) {
   defaults.dark_start = 20;
   defaults.dark_end = 7;
   defaults.vu_meter = true;
+  defaults.display_rotate_180 = false;
   defaults.stream_watchdog = true;
   defaults.alarm_fade_sec = 15;
   defaults.alarm_fallback_sound = "beep";
@@ -415,6 +419,9 @@ static void ensureRadioConfigFeatures(JsonDocument &doc) {
   }
   if (feat["vu_meter"].isNull()) {
     feat["vu_meter"] = defaults.vu_meter;
+  }
+  if (feat["display_rotate_180"].isNull()) {
+    feat["display_rotate_180"] = defaults.display_rotate_180;
   }
   if (feat["stream_watchdog"].isNull()) {
     feat["stream_watchdog"] = defaults.stream_watchdog;
@@ -925,6 +932,7 @@ static bool applyRadioConfigDoc(JsonDocument &doc, bool maskWifiPasswords, bool 
   nvsAddValue("feat_dark_start", String((int)(feat["dark_start"] | 20)));
   nvsAddValue("feat_dark_end", String((int)(feat["dark_end"] | 7)));
   nvsAddValue("feat_vu_meter", String((int)(feat["vu_meter"] | true)));
+  nvsAddValue("feat_rot180", String((int)(feat["display_rotate_180"] | false)));
   nvsAddValue("feat_watchdog", String((int)(feat["stream_watchdog"] | true)));
   nvsAddValue("feat_alarm_fade", String((int)(feat["alarm_fade_sec"] | 15)));
   {

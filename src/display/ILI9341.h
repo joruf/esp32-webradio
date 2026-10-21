@@ -36,7 +36,13 @@ ILI9341Display ili9341Display;
 Adafruit_ILI9341 *tft = NULL;
 
 // Various macro's to mimic the ILI9341 version of display functions
-#define dsp_setRotation() tft->setRotation(3)                     // Use landscape format (3 for upside down)
+/* Landscape: 3 default for this panel, 1 = 180° flip. */
+#define dsp_setRotation()                                          \
+  do {                                                             \
+    if (tft) {                                                     \
+      tft->setRotation(radioFeatures.display_rotate_180 ? 1 : 3); \
+    }                                                              \
+  } while (0)
 #define dsp_print(a) tft->print(a)                                // Print a string
 #define dsp_println(b) tft->println(b)                            // Print a string followed by newline
 #define dsp_fillRect(a, b, c, d, e) tft->fillRect(a, b, c, d, e); // Fill a rectange

@@ -317,6 +317,8 @@ void radioSetup() {
   }
   // Dedicated feat_* keys are authoritative when the radio_config blob lags.
   applyFeatureNvsKeyOverrides();
+  // Features may enable 180° landscape after the first dsp_setRotation() at boot.
+  applyDisplayOrientation(false);
   otaChecker.check(false);
   loadAlarmConfigFromNvs(); // Load or migrate alarm JSON configuration
   syncAlarmsToRadioConfig(); // Heal a stale alarms copy in the radio_config blob

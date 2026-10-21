@@ -42,6 +42,10 @@ const char display_html[] PROGMEM = R"=====(
 					<div class="checkbox display-toggle">
 						<label><input type="checkbox" id="feat-vu-meter" checked> Enable VU meter on TFT</label>
 					</div>
+					<div class="checkbox display-toggle">
+						<label><input type="checkbox" id="feat-display-rotate-180"> Rotate display 180&deg;</label>
+					</div>
+					<p class="config-help">Use 180&deg; rotation when the panel is mounted upside down. Takes effect immediately after saving.</p>
 				</div>
 			</div>
 			</div>

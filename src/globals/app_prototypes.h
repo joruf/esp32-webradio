@@ -52,6 +52,7 @@ bool isAlarmFallbackPlaying(void);
 bool isAlarmSessionActive(void);
 void streamWatchdogReset(void);
 void IRAM_ATTR enableBacklight(bool enable);
+void applyDisplayOrientation(bool redrawDashboard);
 void handleRenderData();
 String nvsGetHostFromPref(int16_t preset);
 String nvsGetHostFromPref();

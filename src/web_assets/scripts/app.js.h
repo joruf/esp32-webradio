@@ -884,7 +884,7 @@ const char app_js[] PROGMEM = R"=====(
 
         if ($("#feat-dark-start").length || $("#feat-dark-end").length || $("#feat-alarm-fade").length ||
             $("#feat-alarm-fallback").length || $("#feat-alarm-fallback-interval").length ||
-            $("#feat-vu-meter").length || $("#feat-watchdog").length) {
+            $("#feat-vu-meter").length || $("#feat-display-rotate-180").length || $("#feat-watchdog").length) {
             patch.features = collectDisplayFeatures();
         } else if ($("#feat-ota-url").length) {
             patch.features = $.extend({}, defaults.features,
@@ -1618,7 +1618,7 @@ const char app_js[] PROGMEM = R"=====(
         }
         if ($("#feat-dark-start").length || $("#feat-dark-end").length || $("#feat-alarm-fade").length ||
             $("#feat-alarm-fallback").length || $("#feat-alarm-fallback-interval").length ||
-            $("#feat-vu-meter").length || $("#feat-watchdog").length) {
+            $("#feat-vu-meter").length || $("#feat-display-rotate-180").length || $("#feat-watchdog").length) {
             var feat = loadedRadioConfig.features || getDefaultRadioConfig().features;
             if ($("#feat-dark-start").length) {
                 $("#feat-dark-start").val(feat.dark_start !== undefined ? feat.dark_start : 20);
@@ -1649,6 +1649,9 @@ const char app_js[] PROGMEM = R"=====(
             }
             if ($("#feat-vu-meter").length) {
                 $("#feat-vu-meter").prop("checked", feat.vu_meter !== false);
+            }
+            if ($("#feat-display-rotate-180").length) {
+                $("#feat-display-rotate-180").prop("checked", !!feat.display_rotate_180);
             }
             if ($("#feat-watchdog").length) {
                 $("#feat-watchdog").prop("checked", feat.stream_watchdog !== false);
@@ -1708,6 +1711,7 @@ const char app_js[] PROGMEM = R"=====(
                 dark_end: parseInt($("#feat-dark-end").val(), 10) || 0,
                 alarm_fade_sec: parseInt($("#feat-alarm-fade").val(), 10) || 15,
                 vu_meter: $("#feat-vu-meter").is(":checked"),
+                display_rotate_180: $("#feat-display-rotate-180").is(":checked"),
                 stream_watchdog: $("#feat-watchdog").is(":checked"),
                 ota_check_url: $("#feat-ota-url").length ? ($("#feat-ota-url").val() || "") : (existingFeatures.ota_check_url || "")
             });
@@ -1949,6 +1953,7 @@ const char app_js[] PROGMEM = R"=====(
                 alarm_fallback_sound: "beep",
                 alarm_fallback_interval_sec: 5,
                 vu_meter: true,
+                display_rotate_180: false,
                 stream_watchdog: true,
                 ota_check_url: "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/version.json"
             }
@@ -2143,8 +2148,8 @@ const char app_js[] PROGMEM = R"=====(
         }
 
         $(document)
-            .off("change.displaySettings", "#feat-dark-start, #feat-dark-end, #feat-vu-meter")
-            .on("change.displaySettings", "#feat-dark-start, #feat-dark-end, #feat-vu-meter", function() {
+            .off("change.displaySettings", "#feat-dark-start, #feat-dark-end, #feat-vu-meter, #feat-display-rotate-180")
+            .on("change.displaySettings", "#feat-dark-start, #feat-dark-end, #feat-vu-meter, #feat-display-rotate-180", function() {
                 persistDisplaySettings(true);
             });
 
@@ -2185,6 +2190,9 @@ const char app_js[] PROGMEM = R"=====(
         }
         if ($("#feat-vu-meter").length) {
             merged.vu_meter = $("#feat-vu-meter").is(":checked");
+        }
+        if ($("#feat-display-rotate-180").length) {
+            merged.display_rotate_180 = $("#feat-display-rotate-180").is(":checked");
         }
         if ($("#feat-watchdog").length) {
             merged.stream_watchdog = $("#feat-watchdog").is(":checked");

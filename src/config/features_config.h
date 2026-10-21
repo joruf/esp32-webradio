@@ -1,6 +1,6 @@
 /**
  * @file features_config.h
- * @brief Runtime feature flags (dark mode hours, VU meter, stream watchdog, OTA check URL).
+ * @brief Runtime feature flags (dark mode, VU meter, display rotation, stream watchdog, OTA URL).
  */
 
 #ifndef FEATURES_CONFIG_H
@@ -14,6 +14,8 @@ struct FeatureSettings {
   uint8_t dark_start;
   uint8_t dark_end;
   bool vu_meter;
+  /** Rotate TFT landscape output by 180 degrees (cable/mount orientation). */
+  bool display_rotate_180;
   bool stream_watchdog;
   uint16_t alarm_fade_sec;
   /**
@@ -61,6 +63,7 @@ public:
     data.dark_start = 20;
     data.dark_end = 7;
     data.vu_meter = true;
+    data.display_rotate_180 = false;
     data.stream_watchdog = true;
     data.alarm_fade_sec = 15;
     data.alarm_fallback_sound = "beep";
@@ -82,6 +85,7 @@ public:
     data.dark_start = constrain((int)(feat["dark_start"] | data.dark_start), 0, 23);
     data.dark_end = constrain((int)(feat["dark_end"] | data.dark_end), 0, 23);
     data.vu_meter = feat["vu_meter"] | data.vu_meter;
+    data.display_rotate_180 = feat["display_rotate_180"] | data.display_rotate_180;
     data.stream_watchdog = feat["stream_watchdog"] | data.stream_watchdog;
     int fadeSec = (int)(feat["alarm_fade_sec"] | data.alarm_fade_sec);
     data.alarm_fade_sec = (uint16_t)snapValueToStep(fadeSec, 5, 5, 600);
@@ -122,6 +126,7 @@ public:
     feat["dark_start"] = data.dark_start;
     feat["dark_end"] = data.dark_end;
     feat["vu_meter"] = data.vu_meter;
+    feat["display_rotate_180"] = data.display_rotate_180;
     feat["stream_watchdog"] = data.stream_watchdog;
     feat["alarm_fade_sec"] = data.alarm_fade_sec;
     feat["alarm_fallback_sound"] = data.alarm_fallback_sound;

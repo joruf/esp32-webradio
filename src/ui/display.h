@@ -155,6 +155,45 @@ void showTextOnTFT(uint16_t inx, String &str) {
 }
 
 /**
+ * @brief Apply landscape orientation from radioFeatures.display_rotate_180.
+ *
+ * @param redrawDashboard If true, clear and redraw the live dashboard chrome.
+ */
+void applyDisplayOrientation(bool redrawDashboard) {
+  dsp_setRotation();
+  if (!redrawDashboard || !tft) {
+    return;
+  }
+
+#if defined(RADIO_DASHBOARD_TFT)
+#if defined(ST7701_28B)
+  dspDashboardScreensaver = false;
+  dspDashboardLastSaverTime[0] = '\0';
+  dspDashboardLastIpLine[0] = '\0';
+#endif
+  dspDashboardInvalidateHeader();
+  dspDashboardInvalidateTitle();
+  dspDashboardInvalidateStation();
+  dspDashboardLastWifi[0] = '\0';
+  dspDashboardChromeReady = false;
+  dsp_erase();
+  dspDashboardDrawChrome();
+#if defined(ST7701_28B)
+  dspDashboardDrawFooterIp();
+#endif
+  dspDashboardDrawHeader(timetxt);
+  dspDashboardRefreshLiveStatus();
+  dspDashboardDrawVolume(getOutputVolume());
+#if defined(ST7701_28B)
+  dsp_update();
+#endif
+#else
+  dsp_erase();
+  dsp_update();
+#endif
+}
+
+/**
  * @brief Turns the TFT backlight on or off.
  *
  * Supports both normal (tft_bl_pin) and inverted (tft_blx_pin) logic.

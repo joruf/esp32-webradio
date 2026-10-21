@@ -12,6 +12,7 @@
 #include <Wire.h>
 #include <Arduino_GFX_Library.h>
 
+#include "config/features_config.h"
 #include "display/St7701Display.h"
 #include "globals/app_prototypes.h"
 #include "globals/globals.h"
@@ -273,6 +274,11 @@ private:
   void mapToLandscape_(int16_t rawX, int16_t rawY, int16_t &outX, int16_t &outY) {
     outX = rawY;
     outY = (int16_t)(St7701Display::kWidth - 1 - rawX);
+    // Match GFX setRotation(3) when display_rotate_180 is enabled.
+    if (radioFeatures.display_rotate_180) {
+      outX = (int16_t)(St7701Display::kLogicalW - 1 - outX);
+      outY = (int16_t)(St7701Display::kLogicalH - 1 - outY);
+    }
     if (outX < 0) {
       outX = 0;
     }

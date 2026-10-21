@@ -36,7 +36,13 @@ volatile bool st7701DashboardRestorePending = false;
 #define ST7701_DRAW_X_INSET 1
 #endif
 
-#define dsp_setRotation()
+/* Landscape: 1 normal (panel ctor), 3 = 180° flip. */
+#define dsp_setRotation()                                          \
+  do {                                                             \
+    if (tft) {                                                     \
+      tft->setRotation(radioFeatures.display_rotate_180 ? 3 : 1); \
+    }                                                              \
+  } while (0)
 #define dsp_fillRect(a, b, c, d, e) \
   tft->fillRect((int16_t)((a) + ST7701_DRAW_X_INSET), (b), (c), (d), (e))
 #define dsp_setTextSize(a) tft->setTextSize(a)

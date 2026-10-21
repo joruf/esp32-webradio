@@ -644,6 +644,7 @@ bool writeRadioConfig() {
   if (body.length() > 0) {
     if (applyRadioConfigMerge(body, true)) {
       readprogbuttons();
+      applyDisplayOrientation(true);
       dbgprint("Radio configuration saved (%d bytes)", body.length());
       fillkeylist();
       return true;
@@ -664,6 +665,7 @@ bool writeFeaturesConfig() {
 
   if (body.length() > 0) {
     if (applyFeaturesConfig(body)) {
+      applyDisplayOrientation(true);
       dbgprint("Feature configuration saved (%d bytes)", body.length());
       fillkeylist();
       return true;

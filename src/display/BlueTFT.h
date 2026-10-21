@@ -25,7 +25,13 @@
 St7735Display st7735Display;
 Adafruit_ST7735 *tft = NULL;
 
-#define dsp_setRotation() tft->setRotation(1)
+/* Landscape: 1 normal, 3 = 180° (cable/mount flip). */
+#define dsp_setRotation()                                          \
+  do {                                                             \
+    if (tft) {                                                     \
+      tft->setRotation(radioFeatures.display_rotate_180 ? 3 : 1); \
+    }                                                              \
+  } while (0)
 #define dsp_print(a) tft->print(a)
 #define dsp_println(b) tft->println(b)
 #define dsp_fillRect(a, b, c, d, e) tft->fillRect(a, b, c, d, e)

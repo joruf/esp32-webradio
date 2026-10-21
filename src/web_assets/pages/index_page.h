@@ -37,6 +37,22 @@ const char index_html[] PROGMEM = R"=====(
 			</header>
 			<div class="sound-studio">
 			<div class="row panel panel-default sound-card">
+				<div class="panel-heading">Playback</div>
+
+				<div class="panel-body webradio-control-body">
+					<div class="webradio-control-toolbar">
+						<label for="index-volume" class="webradio-control-label">Volume</label>
+						<span class="webradio-volume-value"><span id="index-volume-value">0</span>%</span>
+						<input type="range" class="form-control webradio-control-slider" id="index-volume" min="0" max="100" step="5" value="0" autocomplete="off" data-volume-control="1">
+						<div class="webradio-playback-actions">
+							<button id="play" type="button" class="btn btn-success"><span class="btn-icon" aria-hidden="true">&#9654;</span> Play</button>
+							<button id="stop" type="button" class="btn btn-danger"><span class="btn-icon" aria-hidden="true">&#9209;</span> Stop</button>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="row panel panel-default sound-card">
 				<div class="panel-heading webradio-meta-heading">
 					<span class="webradio-meta-main">Webradio Control <small><span id="datelabel">DD.MM.YYYY</span></small></span>
 					<span class="webradio-live-meta">
@@ -50,22 +66,6 @@ const char index_html[] PROGMEM = R"=====(
 					</a>
 					<div id="title-history" class="title-history-table" aria-live="polite">
 						<div class="title-history-empty">No songs recognized yet.</div>
-					</div>
-				</div>
-			</div>
-
-			<div class="row panel panel-default sound-card">
-				<div class="panel-heading">Playback</div>
-
-				<div class="panel-body webradio-control-body">
-					<div class="webradio-control-toolbar">
-						<label for="index-volume" class="webradio-control-label">Volume</label>
-						<span class="webradio-volume-value"><span id="index-volume-value">0</span>%</span>
-						<input type="range" class="form-control webradio-control-slider" id="index-volume" min="0" max="100" step="5" value="0" autocomplete="off" data-volume-control="1">
-						<div class="webradio-playback-actions">
-							<button id="play" type="button" class="btn btn-success"><span class="btn-icon" aria-hidden="true">&#9654;</span> Play</button>
-							<button id="stop" type="button" class="btn btn-danger"><span class="btn-icon" aria-hidden="true">&#9209;</span> Stop</button>
-						</div>
 					</div>
 				</div>
 			</div>
