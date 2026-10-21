@@ -20,70 +20,100 @@ import java.util.concurrent.atomic.AtomicBoolean
  *
  * Probes each IPv4 host with GET /?getJSON and accepts responses that look like
  * this firmware (firmware / hardware_profile / station fields).
+ *
+ * Discovery is incremental: [onFound] is invoked as soon as each unique IPv4
+ * responds. The full /24 scan always runs to completion unless [cancelled].
  */
 object RadioDiscovery {
     private const val TAG = "RadioDiscovery"
-    private const val CONNECT_TIMEOUT_MS = 350
-    private const val READ_TIMEOUT_MS = 500
+    private const val CONNECT_TIMEOUT_MS = 500
+    private const val READ_TIMEOUT_MS = 700
     private const val MAX_PARALLEL = 32
-    private const val SCAN_TIMEOUT_SEC = 25L
+    private const val SCAN_TIMEOUT_SEC = 45L
+
+    private val IPV4_REGEX = Regex("""^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$""")
 
     /**
-     * Scan the local /24 (or known hostnames) and return unique radios.
+     * Scan known hostnames and the local /24. Invokes [onFound] for each new
+     * radio (deduped by IPv4) while the scan continues in parallel.
      *
      * @param context App context for Wi-Fi info
-     * @param cancelled Optional flag to abort early
+     * @param cancelled Optional flag to abort early (e.g. after user selection)
+     * @param onFound Called from a worker thread for each newly discovered radio
+     * @return All unique radios found (may be empty if cancelled early)
      */
-    fun scan(context: Context, cancelled: AtomicBoolean = AtomicBoolean(false)): List<DiscoveredRadio> {
+    fun scan(
+        context: Context,
+        cancelled: AtomicBoolean = AtomicBoolean(false),
+        onFound: ((DiscoveredRadio) -> Unit)? = null
+    ): List<DiscoveredRadio> {
         val found = ConcurrentHashMap<String, DiscoveredRadio>()
 
-        fun add(radio: DiscoveredRadio?) {
-            if (radio == null) {
+        fun tryAdd(radio: DiscoveredRadio?) {
+            if (radio == null || cancelled.get()) {
                 return
             }
-            val key = radio.host.lowercase()
-            found.merge(key, radio) { existing, incoming ->
-                if (existing.firmware.isBlank() && incoming.firmware.isNotBlank()) {
-                    incoming
-                } else {
-                    existing
+            val key = radio.ip
+            if (key.isBlank() || !isIpv4(key)) {
+                Log.d(TAG, "Skipping radio without IPv4: host=${radio.host}")
+                return
+            }
+            val previous = found.putIfAbsent(key, radio)
+            if (previous == null) {
+                Log.i(TAG, "Found Webradio at $key (${radio.station})")
+                try {
+                    onFound?.invoke(radio)
+                } catch (e: Exception) {
+                    Log.w(TAG, "onFound callback failed for $key", e)
                 }
+            } else if (previous.firmware.isBlank() && radio.firmware.isNotBlank()) {
+                found[key] = radio
             }
         }
 
+        // Known hostnames may resolve to only one device (e.g. radio.local).
+        // Still probe them for a quick first hit, then always scan the full /24.
         for (host in knownHostCandidates()) {
             if (cancelled.get()) {
                 break
             }
-            add(probeHost(host))
+            tryAdd(probeHost(host))
         }
 
         val prefix = ipv4SubnetPrefix(context)
         if (prefix != null && !cancelled.get()) {
+            Log.i(TAG, "Scanning subnet $prefix.0/24")
             val pool = Executors.newFixedThreadPool(MAX_PARALLEL)
             for (last in 1..254) {
+                if (cancelled.get()) {
+                    break
+                }
                 val host = "$prefix.$last"
                 pool.execute {
                     if (!cancelled.get()) {
-                        add(probeHost(host))
+                        tryAdd(probeHost(host))
                     }
                 }
             }
             pool.shutdown()
             try {
-                pool.awaitTermination(SCAN_TIMEOUT_SEC, TimeUnit.SECONDS)
+                // Wait for the full scan; do not stop after the first hit.
+                val finished = pool.awaitTermination(SCAN_TIMEOUT_SEC, TimeUnit.SECONDS)
+                if (!finished) {
+                    Log.w(TAG, "Subnet scan timed out after ${SCAN_TIMEOUT_SEC}s; shutting down pool")
+                }
             } catch (_: InterruptedException) {
                 Thread.currentThread().interrupt()
             }
             if (!pool.isTerminated) {
                 pool.shutdownNow()
             }
-        } else {
+        } else if (prefix == null) {
             Log.w(TAG, "No Wi-Fi IPv4 address; hostname probes only")
         }
 
         return found.values.sortedWith(
-            compareBy({ it.station.ifBlank { it.host }.lowercase() }, { it.host })
+            compareBy({ it.station.ifBlank { it.ip }.lowercase() }, { ipv4SortKey(it.ip) })
         )
     }
 
@@ -180,13 +210,17 @@ object RadioDiscovery {
             return null
         }
 
-        val host = when {
-            reportedIp.matches(Regex("""\d{1,3}(\.\d{1,3}){3}""")) -> reportedIp
-            else -> requestedHost
-        }
-        val baseUrl = RadioPrefs.normalizeBaseUrl(host)
+        // Prefer getJSON "ip", then numeric probe host, then DNS resolve of hostname.
+        val ip = when {
+            isIpv4(reportedIp) -> reportedIp
+            isIpv4(requestedHost) -> requestedHost
+            else -> resolveIpv4(requestedHost)
+        } ?: return null
+
+        val baseUrl = RadioPrefs.normalizeBaseUrl(ip)
         return DiscoveredRadio(
-            host = RadioPrefs.displayHost(baseUrl),
+            host = ip,
+            ip = ip,
             baseUrl = baseUrl,
             firmware = firmware,
             station = station,
@@ -194,10 +228,33 @@ object RadioDiscovery {
         )
     }
 
+    fun isIpv4(value: String): Boolean {
+        val match = IPV4_REGEX.matchEntire(value.trim()) ?: return false
+        return match.groupValues.drop(1).all { part ->
+            val n = part.toIntOrNull() ?: return false
+            n in 0..255
+        }
+    }
+
+    private fun ipv4SortKey(ip: String): Long {
+        val parts = ip.split('.')
+        if (parts.size != 4) {
+            return Long.MAX_VALUE
+        }
+        var key = 0L
+        for (part in parts) {
+            key = (key shl 8) + (part.toIntOrNull() ?: 0)
+        }
+        return key
+    }
+
     /**
      * Resolve a hostname to an IPv4 string when possible (best-effort).
      */
     fun resolveIpv4(host: String): String? {
+        if (isIpv4(host)) {
+            return host
+        }
         return try {
             InetAddress.getAllByName(host)
                 .filterIsInstance<Inet4Address>()
