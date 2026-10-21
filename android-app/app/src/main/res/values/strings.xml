@@ -1,12 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ESP32 Webradio</string>
-    <string name="settings_title">Radio address</string>
+    <string name="settings_title">Choose radio</string>
     <string name="settings_host_hint">192.168.1.42 or radio.local</string>
     <string name="settings_host_label">Host (IP or hostname)</string>
     <string name="settings_save">Save and open</string>
-    <string name="settings_help">Phone and ESP32 must be on the same Wi‑Fi. Use the IP shown on the radio display or in your router.</string>
-    <string name="menu_settings">Change address</string>
+    <string name="settings_discover">Scan Wi‑Fi for radios</string>
+    <string name="settings_discover_scanning">Scanning local network…</string>
+    <string name="settings_discover_none">No Webradio found. Enter the IP manually or try again on the same Wi‑Fi.</string>
+    <string name="settings_discover_selected">Selected %1$s</string>
+    <plurals name="settings_discover_found">
+        <item quantity="one">Found %d Webradio – tap to open</item>
+        <item quantity="other">Found %d Webradios – tap to choose one</item>
+    </plurals>
+    <string name="settings_help">Phone and radios must be on the same Wi‑Fi. The app scans the LAN for ESP32 Webradio devices. You can also enter an IP manually.</string>
+    <string name="menu_settings">Change radio</string>
     <string name="menu_reload">Reload</string>
     <string name="error_no_host">Please enter the radio address first.</string>
     <string name="error_load_failed">Could not load the web interface.</string>

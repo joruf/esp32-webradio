@@ -50,16 +50,17 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 ### First launch
 
 1. Open the app.
-2. Enter the ESP32 **IP address** (e.g. `192.168.178.33`). You can omit `http://` — it is added automatically.
-3. Tap **Save and open**.
+2. The app **scans Wi‑Fi** for ESP32 Webradio devices and lists every radio it finds (station, firmware, IP).
+3. Tap the radio you want, or enter an IP manually and tap **Save and open**.
 
-The web interface of the radio appears inside the app. Use the menu (⋮) for **Change address** or **Reload**.
+The web interface appears inside the app. Use the menu (⋮) for **Change radio** or **Reload**.
 
 **Tips**
 
-- Prefer the **fixed IP** from your router or radio display. `radio.local` (mDNS) does not work reliably on all phones; on the Fritzbox LAN use `http://radio.fritz.box`.
+- Phone and radios must be on the **same Wi‑Fi**. Multiple radios are listed so you can pick one.
+- Manual fallback: IP from the radio display / router, or `http://radio.fritz.box` on a Fritzbox LAN.
 - Close the **browser on your PC** while using the app — the ESP32 handles only one HTTP client well at a time.
-- If the page stays empty after saving the address: menu → **Reload**, or force‑close the app and open it again.
+- If the page stays empty: menu → **Reload**, or force‑close the app and open it again.
 
 ## Build
 
@@ -111,13 +112,14 @@ Same as **First launch** under [Install on your Android device](#install-on-your
 ## Features
 
 - Full web UI (Webradio, Scheduler, Configuration, Sound, Maintenance, About)
+- **LAN discovery:** scan Wi‑Fi for all ESP32 Webradios and pick one from the list
 - Pull down to refresh
 - Back button navigates within the WebView
 - HTTP cleartext allowed for local network (required by ESP32)
 
 ## Notes
 
-- `radio.local` (mDNS) may not work on all Android devices; prefer `http://radio.fritz.box` or the **fixed IP** from your router.
+- Discovery probes the local subnet with `/?getJSON`. Manual IP entry remains available.
 - Only one HTTP client is served well by the ESP32 at a time — close the browser on PC while using the app if commands fail.
 
 ## License

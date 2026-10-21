@@ -358,7 +358,10 @@ void radioSetup() {
     ArduinoOTA.begin(); // Allow update over the air
 
     if (MDNS.begin(NAME)) { // Start MDNS transponder
-      dbgprint("BOOT: mDNS responder started as %s.local", NAME);
+      MDNS.addService("http", "tcp", 80);
+      MDNS.addServiceTxt("http", "tcp", "app", "esp32-webradio");
+      MDNS.addService("webradio", "tcp", 80);
+      dbgprint("BOOT: mDNS responder started as %s.local (http + webradio)", NAME);
     } else {
       dbgprint("BOOT: ERROR - mDNS responder setup failed");
     }
