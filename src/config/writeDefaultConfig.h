@@ -17,8 +17,9 @@ void saveDefaultConfig() {
   // WIFI KONFIGURATION
   // ═══════════════════════════════════════════════════════════════
   dbgprint("BOOT: [1/7] WiFi settings...");
-  nvsAddValue("wifi_00", "LS/8541-7444-5177-6109-2070");
-  // Optional: Weitere WiFi-Netzwerke (falls gewünscht)
+  // Placeholder only; real credentials belong in NVS / encrypted credentials.env.age.
+  nvsAddValue("wifi_00", "SSID1/PASSWD1");
+  // Optional: further WiFi networks
   // nvsAddValue("wifi_01", "SSID2/PASSWD2");
   dbgprint("BOOT:   WiFi entry wifi_00 saved");
 
