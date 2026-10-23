@@ -48,19 +48,40 @@ public:
         checkError_ = "Invalid OTA URL";
         dbgprint("OTA check: invalid URL");
       } else {
-        int code = http.GET();
-        if (code == HTTP_CODE_OK) {
-          String body = http.getString();
+        // While audio streams, HTTPS GET can return HTTP 200 with an empty body.
+        // Retry a few times before falling back to the embedded manifest.
+        int code = 0;
+        String body;
+        for (int attempt = 0; attempt < 3; attempt++) {
+          if (attempt > 0) {
+            delay(150);
+            http.end();
+            if (!http.begin(radioFeatures.ota_check_url)) {
+              checkError_ = "Invalid OTA URL";
+              break;
+            }
+          }
+          code = http.GET();
+          if (code != HTTP_CODE_OK) {
+            checkError_ = "HTTP " + String(code);
+            dbgprint("OTA check failed: HTTP %d (try %d)", code, attempt + 1);
+            continue;
+          }
+          body = http.getString();
+          if (body.length() == 0) {
+            checkError_ = "Empty response from remote URL";
+            dbgprint("OTA check: empty body (try %d)", attempt + 1);
+            continue;
+          }
           if (applyManifestJson(body)) {
             remoteOk = true;
             manifestFromRemote_ = true;
-          } else {
-            checkError_ = "Invalid JSON from remote URL";
-            dbgprint("OTA check: invalid JSON");
+            checkError_ = "";
+            break;
           }
-        } else {
-          checkError_ = "HTTP " + String(code);
-          dbgprint("OTA check failed: HTTP %d", code);
+          checkError_ = "Invalid JSON from remote URL";
+          dbgprint("OTA check: invalid JSON (%u bytes)", (unsigned)body.length());
+          break;
         }
         http.end();
       }
@@ -215,9 +236,9 @@ private:
     if (remotePos >= 0) {
       remoteVal = remote.substring(remotePos + 1).toFloat();
     }
-    int localPos = String(FIRMWARE).indexOf('v');
+    int localPos = local.indexOf('v');
     if (localPos >= 0) {
-      localVal = String(FIRMWARE).substring(localPos + 1).toFloat();
+      localVal = local.substring(localPos + 1).toFloat();
     }
 
     if (remoteVal > localVal) {
@@ -229,21 +250,76 @@ private:
     return 0;
   }
 
+  /**
+   * @brief Extract a JSON string field without a full document parse.
+   *
+   * Used when the remote version.json is too large for the heap (full history).
+   */
+  static bool extractJsonStringField(const String &body, const char *key, String &out) {
+    out = "";
+    if (!key || !key[0]) {
+      return false;
+    }
+    String needle = String("\"") + key + "\"";
+    int keyPos = body.indexOf(needle);
+    if (keyPos < 0) {
+      return false;
+    }
+    int colon = body.indexOf(':', keyPos + needle.length());
+    if (colon < 0) {
+      return false;
+    }
+    int q1 = body.indexOf('"', colon + 1);
+    if (q1 < 0) {
+      return false;
+    }
+    int q2 = body.indexOf('"', q1 + 1);
+    if (q2 < 0) {
+      return false;
+    }
+    out = body.substring(q1 + 1, q2);
+    return out.length() > 0;
+  }
+
   bool applyManifestJson(const String &body) {
-    JsonDocument doc;
-    if (deserializeJson(doc, body)) {
+    if (body.length() < 16) {
+      dbgprint("OTA manifest too short (%u bytes)", (unsigned)body.length());
       return false;
     }
 
-    latestVersion_ = String((const char *)(doc["version"] | ""));
-    latestReleased_ = String((const char *)(doc["released"] | ""));
-    latestBinUrl_ = String((const char *)(doc["bin_url"] | ""));
-    versionHistoryJson_ = "[]";
-    if (doc["history"].is<JsonArray>()) {
-      serializeJson(doc["history"], versionHistoryJson_);
+    // Prefer a lightweight scan for top-level fields. Full version.json history
+    // is >20 KB and often fails to allocate while audio is playing.
+    String version;
+    String released;
+    String binUrl;
+    if (extractJsonStringField(body, "version", version)) {
+      extractJsonStringField(body, "released", released);
+      extractJsonStringField(body, "bin_url", binUrl);
+      latestVersion_ = version;
+      latestReleased_ = released;
+      latestBinUrl_ = binUrl;
+      versionHistoryJson_ = "[]";
+
+      // Optional short history when heap allows (filtered parse).
+      JsonDocument filter;
+      filter["history"][0]["version"] = true;
+      filter["history"][0]["released"] = true;
+      filter["history"][0]["notes"] = true;
+      JsonDocument doc;
+      if (!deserializeJson(doc, body, DeserializationOption::Filter(filter)) &&
+          doc["history"].is<JsonArray>()) {
+        JsonArray hist = doc["history"].as<JsonArray>();
+        while (hist.size() > 12) {
+          hist.remove(hist.size() - 1);
+        }
+        serializeJson(hist, versionHistoryJson_);
+      }
+      return true;
     }
 
-    return latestVersion_.length() > 0;
+    dbgprint("OTA manifest parse failed, body %u bytes, head=%.40s",
+             (unsigned)body.length(), body.c_str());
+    return false;
   }
 
   bool loadEmbeddedManifest(void) {

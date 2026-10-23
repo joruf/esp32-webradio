@@ -1,10 +1,15 @@
 {
-  "version": "v2.89",
+  "version": "v2.90",
   "released": "2026-10-23",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.89.bin",
-  "notes": "Per-device rotary encoder invert; TFT colstart/rowstart offsets; WebUI display settings.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.90.bin",
+  "notes": "Fix OTA status vs online releases list; parse large remote version.json; soft stream-stall recovery without reboot.",
   "history": [
+    {
+      "version": "v2.90",
+      "released": "2026-10-23",
+      "notes": "Fix OTA status vs online releases list; parse large remote version.json; soft stream-stall recovery without reboot."
+    },
     {
       "version": "v2.89",
       "released": "2026-10-23",
@@ -28,12 +33,12 @@
     {
       "version": "v2.77",
       "released": "2026-10-21",
-      "notes": "Display 180° rotation setting in Display Settings; Playback panel above Webradio Control."
+      "notes": "Display 180\u00b0 rotation setting in Display Settings; Playback panel above Webradio Control."
     },
     {
       "version": "v2.75",
       "released": "2026-10-10",
-      "notes": "YouTube links for all titles; ST7701 Touch-LCD and I2S/A2DP audio paths; WROOM TFT wiring (covers v2.72–v2.76 session work)."
+      "notes": "YouTube links for all titles; ST7701 Touch-LCD and I2S/A2DP audio paths; WROOM TFT wiring (covers v2.72\u2013v2.76 session work)."
     },
     {
       "version": "v2.71",
@@ -108,12 +113,12 @@
     {
       "version": "v2.53",
       "released": "2026-07-06",
-      "notes": "Snooze slider keeps a fixed 0–60 min scale while counting down; dragging always sets a new duration."
+      "notes": "Snooze slider keeps a fixed 0\u201360 min scale while counting down; dragging always sets a new duration."
     },
     {
       "version": "v2.52",
       "released": "2026-07-06",
-      "notes": "Scheduler snooze layout: 50/50 split between timer info and slider; steps 0, 1, 5, 10 … 60 min."
+      "notes": "Scheduler snooze layout: 50/50 split between timer info and slider; steps 0, 1, 5, 10 \u2026 60 min."
     },
     {
       "version": "v2.51",
@@ -243,7 +248,7 @@
     {
       "version": "v2.24",
       "released": "2026-06-25",
-      "notes": "BLUETFT dashboard: song title wraps across multiple lines (22 characters per line, up to 8 lines below station name). Web UI: faster page load — WiFi signal API uses scan cache (optional scan=1), OTA check returns embedded manifest without blocking HTTP, theme and preset list load after static assets, improved yield during large CSS/JS transfers."
+      "notes": "BLUETFT dashboard: song title wraps across multiple lines (22 characters per line, up to 8 lines below station name). Web UI: faster page load \u2014 WiFi signal API uses scan cache (optional scan=1), OTA check returns embedded manifest without blocking HTTP, theme and preset list load after static assets, improved yield during large CSS/JS transfers."
     },
     {
       "version": "v2.23",

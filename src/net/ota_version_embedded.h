@@ -12,12 +12,17 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.89",
+  "version": "v2.90",
   "released": "2026-10-23",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.89.bin",
-  "notes": "Per-device rotary encoder invert; TFT colstart/rowstart offsets; WebUI display settings.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.90.bin",
+  "notes": "Fix OTA status vs online releases list; parse large remote version.json; soft stream-stall recovery without reboot.",
   "history": [
+    {
+      "version": "v2.90",
+      "released": "2026-10-23",
+      "notes": "Fix OTA status vs online releases list; parse large remote version.json; soft stream-stall recovery without reboot."
+    },
     {
       "version": "v2.89",
       "released": "2026-10-23",
@@ -41,22 +46,17 @@ const char ota_version_embedded_json[] PROGMEM = R"=====(
     {
       "version": "v2.77",
       "released": "2026-10-21",
-      "notes": "Display 180° rotation setting in Display Settings; Playback panel above Webradio Control."
+      "notes": "Display 180\u00b0 rotation setting in Display Settings; Playback panel above Webradio Control."
     },
     {
       "version": "v2.75",
       "released": "2026-10-10",
-      "notes": "YouTube links for all titles; ST7701 Touch-LCD and I2S/A2DP audio paths; WROOM TFT wiring (covers v2.72–v2.76 session work)."
+      "notes": "YouTube links for all titles; ST7701 Touch-LCD and I2S/A2DP audio paths; WROOM TFT wiring (covers v2.72\u2013v2.76 session work)."
     },
     {
       "version": "v2.71",
       "released": "2026-10-05",
       "notes": "Fix alarm save: keep stable NVS namespace separate from hostname radio; gzip CSS/JS for OTA size; alarm UI version fixed."
-    },
-    {
-      "version": "v2.68",
-      "released": "2026-09-22",
-      "notes": "Reduce stream stutter: SPI-safe VU render, skip idle volume SPI claims, soft-reconnect keeps audio queue."
     }
   ]
 }

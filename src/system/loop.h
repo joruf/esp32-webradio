@@ -57,13 +57,10 @@ void IRAM_ATTR timer10sec() {
     oldtotalcount = totalcount;               // Save for comparison in next cycle
     if (bytesplayed == 0)                     // Still playing?
     {
-      if (morethanonce >= 6) { // ~60 s decoder stall → recover without full reboot on ST7701
-#if defined(ST7701_28B)
+      if (morethanonce >= 6) { // ~60 s decoder stall → soft reconnect (no reboot)
+        // Full reboot used to leave VS1053 undetected on some WROOM boards and
+        // looked like a crash loop. Soft STOPREQD matches the ST7701 path.
         decoderStallRecoverReq = true;
-#else
-        eventLogSetShutdownReason("stream stall recovery");
-        resetreq = true;
-#endif
       }
 
       morethanonce++; // Count the fails

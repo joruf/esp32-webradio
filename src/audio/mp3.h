@@ -289,6 +289,7 @@ void mp3StreamTask(void *parameter) {
   while (true) {
 #if defined(ST7701_28B)
     esp_task_wdt_reset();
+#endif
 #if !defined(RADIO_I2S_A2DP_TX)
     if (decoderStallRecoverReq) {
       decoderStallRecoverReq = false;
@@ -300,7 +301,6 @@ void mp3StreamTask(void *parameter) {
     }
 #else
     decoderStallRecoverReq = false; /* I2S soft-decode path owns stall handling */
-#endif
 #endif
     if (otaActive) {
       vTaskDelay(50 / portTICK_PERIOD_MS);

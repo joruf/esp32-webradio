@@ -100,10 +100,8 @@ extern bool hostreq;
 extern bool reqtone;
 extern bool muteflag;
 extern volatile bool resetreq;        // Request to reset the ESP32
-#if defined(ST7701_28B)
-/** Set from timer ISR when decoder stalls; handled in mp3StreamTask (no reboot). */
+/** Set from timer when decoder stalls; handled in mp3StreamTask (no reboot). */
 extern volatile bool decoderStallRecoverReq;
-#endif
 extern bool updatereq;
 extern String pendingOtaBinUrl;
 extern volatile bool otaActive;       // True while OTA/firmware update is running

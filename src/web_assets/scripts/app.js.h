@@ -2346,11 +2346,98 @@ const char app_js[] PROGMEM = R"=====(
         };
     }
 
+    var otaReleaseVersions = [];
+    var otaReleaseRepoSig = "";
+    var otaMaxSize = 0; // Size of the target OTA partition in bytes (from the device)
+    var otaLastCheckData = null;
+    var otaOnlineNewest = null; // { version, binUrl } from GitHub releases listing
+
+    function compareOtaVersionLabels(a, b) {
+        var av = parseFloat(String(a || "").replace(/^v/i, ""), 10);
+        var bv = parseFloat(String(b || "").replace(/^v/i, ""), 10);
+        if (isNaN(av)) {
+            av = 0;
+        }
+        if (isNaN(bv)) {
+            bv = 0;
+        }
+        if (av > bv) {
+            return 1;
+        }
+        if (av < bv) {
+            return -1;
+        }
+        return 0;
+    }
+
+    function binUrlForOtaVersion(templateUrl, fromVersion, toVersion) {
+        if (!templateUrl || !toVersion) {
+            return "";
+        }
+        if (fromVersion && templateUrl.indexOf(fromVersion) >= 0) {
+            return String(templateUrl).split(fromVersion).join(toVersion);
+        }
+        return String(templateUrl).replace(/esp32_webradio_v[0-9]+\.[0-9]+\.bin/,
+            "esp32_webradio_" + toVersion + ".bin");
+    }
+
+    /**
+     * Prefer the newest firmware found in ota/releases/ (browser GitHub API)
+     * over a stale/failed device-side manifest so the status table matches the select box.
+     */
+    function syncOtaStatusWithOnlineReleases(currentVersion) {
+        if (!otaLastCheckData || !otaOnlineNewest || !otaOnlineNewest.version) {
+            return;
+        }
+        var newest = otaOnlineNewest.version;
+        var manifestVer = otaLastCheckData.latest_version || "";
+        if (compareOtaVersionLabels(newest, manifestVer) > 0) {
+            $("#ota-latest-version").text(newest);
+            $("#ota-latest-date").text("(from online releases)");
+            var url = otaOnlineNewest.binUrl ||
+                binUrlForOtaVersion(otaLastCheckData.bin_url, manifestVer, newest);
+            if (url) {
+                $("#ota-bin-url").text(url);
+            }
+        }
+
+        var updateAvailable = compareOtaVersionLabels(newest, currentVersion) > 0;
+        if (!updateAvailable && otaLastCheckData.update_available) {
+            updateAvailable = true;
+        }
+        // If online list is newer than installed, treat as update even when device
+        // fell back to an older built-in manifest.
+        if (compareOtaVersionLabels(newest, currentVersion) > 0) {
+            updateAvailable = true;
+        } else {
+            updateAvailable = false;
+        }
+
+        var statusText;
+        $("#ota-status-text").removeClass("text-success text-warning text-danger");
+        if (updateAvailable) {
+            statusText = "Update available: " + newest;
+            $("#ota-status-text").addClass("text-warning");
+        } else if (otaLastCheckData.remote_ok === false && otaLastCheckData.check_error) {
+            statusText = "Firmware is up to date (newest online: " + newest +
+                "; device manifest: " + (manifestVer || "-") +
+                "; remote: " + otaLastCheckData.check_error + ")";
+            $("#ota-status-text").addClass("text-success");
+        } else {
+            statusText = "Firmware is up to date";
+            $("#ota-status-text").addClass("text-success");
+        }
+        $("#ota-status-text").text(statusText);
+        $("#ota-install-btn").data("ota-install-enabled", updateAvailable);
+        $("#ota-install-btn").prop("disabled", !updateAvailable);
+    }
+
     function applyOtaCheckData(data) {
         if (!data || !$("#ota-settings").length) {
             return;
         }
 
+        otaLastCheckData = data;
         otaMaxSize = parseInt(data.ota_max_size, 10) || 0;
         var current = parseFirmwareString(data.current_firmware);
         $("#ota-current-version").text(current.version);
@@ -2368,8 +2455,9 @@ const char app_js[] PROGMEM = R"=====(
             statusText = "Update available";
             $("#ota-status-text").addClass("text-warning");
         } else if (data.remote_ok === false && data.check_error) {
-            statusText = "Firmware is up to date (built-in manifest; remote: " + data.check_error + ")";
-            $("#ota-status-text").addClass("text-success");
+            statusText = "Checking online releases… (device manifest: " + data.latest_version +
+                "; remote: " + data.check_error + ")";
+            $("#ota-status-text").addClass("text-warning");
         } else {
             statusText = "Firmware is up to date";
             $("#ota-status-text").addClass("text-success");
@@ -2380,10 +2468,6 @@ const char app_js[] PROGMEM = R"=====(
         renderOtaVersionHistory(data.history, current.version);
         loadAvailableReleases(data.bin_url, current.version);
     }
-
-    var otaReleaseVersions = [];
-    var otaReleaseRepoSig = "";
-    var otaMaxSize = 0; // Size of the target OTA partition in bytes (from the device)
 
     function parseRepoFromBinUrl(binUrl) {
         // Expected: https://raw.githubusercontent.com/<owner>/<repo>/<branch>/<dir...>/<file>.bin
@@ -2438,8 +2522,14 @@ const char app_js[] PROGMEM = R"=====(
         var sig = repo.owner + "/" + repo.repo + "@" + repo.branch + ":" + repo.dir;
         if (sig === otaReleaseRepoSig && otaReleaseVersions.length) {
             // Already fetched this repo; just refresh the "installed" marker.
+            otaOnlineNewest = {
+                version: otaReleaseVersions[0],
+                binUrl: binUrlForOtaVersion(binUrl, null, otaReleaseVersions[0])
+            };
             renderReleaseOptions(currentVersion);
-            status.text(otaReleaseVersions.length + " firmware image(s) available online.");
+            status.text(otaReleaseVersions.length + " firmware image(s) available online. Newest: " +
+                otaReleaseVersions[0] + ".");
+            syncOtaStatusWithOnlineReleases(currentVersion);
             return;
         }
 
@@ -2470,8 +2560,13 @@ const char app_js[] PROGMEM = R"=====(
                 }
                 otaReleaseVersions = versions;
                 otaReleaseRepoSig = sig;
+                otaOnlineNewest = {
+                    version: versions[0],
+                    binUrl: binUrlForOtaVersion(binUrl, null, versions[0])
+                };
                 renderReleaseOptions(currentVersion);
-                status.text(versions.length + " firmware image(s) available online.");
+                status.text(versions.length + " firmware image(s) available online. Newest: " + versions[0] + ".");
+                syncOtaStatusWithOnlineReleases(currentVersion);
             })
             .catch(function(err) {
                 fail("Could not search the repository (" + err + ") - use local upload below.");
@@ -2673,23 +2768,37 @@ const char app_js[] PROGMEM = R"=====(
         }
 
         $("#ota-install-btn").off("click.otaInstall").on("click.otaInstall", function() {
-            if (!window.confirm("Install firmware update now? Do not disconnect power during the update.")) {
+            // Prefer the newest version from the online releases list so a stale
+            // device-side manifest cannot install an older "available" build.
+            var target = (otaOnlineNewest && otaOnlineNewest.version) ? otaOnlineNewest.version : "";
+            var confirmMsg = target
+                ? ("Install firmware " + target + " now? Do not disconnect power during the update.")
+                : "Install firmware update now? Do not disconnect power during the update.";
+            if (!window.confirm(confirmMsg)) {
                 return;
             }
             showOtaUploadResult("", "");
-            $("#ota-status-text").removeClass("text-success text-warning text-danger").text("Starting online update...");
-            fetch("/?update&_t=" + Date.now())
+            var startUrl = target
+                ? ("/?installversion=" + encodeURIComponent(target) + "&_t=" + Date.now())
+                : ("/?update&_t=" + Date.now());
+            $("#ota-status-text").removeClass("text-success text-warning text-danger")
+                .text(target ? ("Starting install of " + target + "...") : "Starting online update...");
+            fetch(startUrl)
                 .then(function() {
                     startOtaRecoveryWaitFlow(
-                        "Online update started. Waiting for device restart...",
-                        "Online update started. Waiting for restart...",
+                        target ? ("Installing " + target + ". Waiting for device restart...")
+                            : "Online update started. Waiting for device restart...",
+                        target ? ("Install of " + target + " started. Waiting for restart...")
+                            : "Online update started. Waiting for restart...",
                         "Online update was triggered, but service recovery timed out. Please verify firmware version manually."
                     );
                 })
                 .catch(function() {
                     startOtaRecoveryWaitFlow(
-                        "Online update triggered. Waiting for device restart...",
-                        "Online update request sent. Waiting for restart...",
+                        target ? ("Installing " + target + ". Waiting for device restart...")
+                            : "Online update triggered. Waiting for device restart...",
+                        target ? ("Install of " + target + " started. Waiting for restart...")
+                            : "Online update request sent. Waiting for restart...",
                         "Online update request was sent, but service recovery timed out. Please verify firmware version manually."
                     );
                 });

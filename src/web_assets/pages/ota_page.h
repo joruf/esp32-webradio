@@ -28,13 +28,13 @@ const char ota_html[] PROGMEM = R"=====(
 			<div id="ota-settings" class="row panel panel-default sound-card">
 				<div class="panel-heading">Firmware status</div>
 				<div class="panel-body">
-					<p class="config-help">Check online for a newer firmware build, then install it over the air. Do not unplug power during the update.</p>
+					<p class="config-help">Newest available firmware is taken from the online <code>ota/releases/</code> list (same as the select box below). The device also checks a version manifest; if that fails, the built-in fallback is used only until the online list loads. Do not unplug power during the update.</p>
 					<table class="table table-condensed ota-status-table">
 						<tbody>
 							<tr><th scope="row">Installed version</th><td id="ota-current-version">...</td></tr>
 							<tr><th scope="row">Installed release</th><td id="ota-current-date">...</td></tr>
-							<tr><th scope="row">Available version</th><td id="ota-latest-version">-</td></tr>
-							<tr><th scope="row">Available release</th><td id="ota-latest-date">-</td></tr>
+							<tr><th scope="row">Newest available</th><td id="ota-latest-version">-</td></tr>
+							<tr><th scope="row">Newest release date</th><td id="ota-latest-date">-</td></tr>
 							<tr><th scope="row">Status</th><td id="ota-status-text">Not checked yet</td></tr>
 							<tr><th scope="row">Firmware URL</th><td id="ota-bin-url" class="config-row-meta">-</td></tr>
 						</tbody>
