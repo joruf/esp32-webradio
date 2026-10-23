@@ -12,6 +12,38 @@
  */
 
 /**
+ * @brief Replace a document array with a deep copy of a patch array.
+ *
+ * Removes the old array first so ArduinoJson can reclaim memory before
+ * allocating the copy. A plain JsonArray::set() on a large base document often
+ * fails under ESP32 heap pressure and silently leaves the old array in place
+ * (WiFi / presets / GPIO saves appeared to succeed but never persisted).
+ *
+ * @param doc   Target document
+ * @param key   Top-level array key
+ * @param patch Source array (must remain valid for the duration of the copy)
+ * @return true if the array was replaced
+ */
+inline bool replaceRadioConfigArray(JsonDocument &doc, const char *key, JsonArrayConst patch) {
+  // Remove first so destination memory can be reused. Copy object entries
+  // field-by-field (avoids JsonVariant deep-copy failures on large docs).
+  doc.remove(key);
+  JsonArray target = doc[key].to<JsonArray>();
+  for (JsonVariantConst item : patch) {
+    if (item.is<JsonObjectConst>()) {
+      JsonObjectConst obj = item.as<JsonObjectConst>();
+      JsonObject out = target.add<JsonObject>();
+      for (JsonPairConst kv : obj) {
+        out[kv.key().c_str()] = kv.value();
+      }
+    } else if (!target.add(item) && !item.isNull()) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
  * @brief Merge only the keys present in @p patch into @p doc.
  *
  * Scalar keys (version, volume, preset) and object keys (clock, tone, features)
@@ -59,20 +91,20 @@ inline void mergeRadioConfigPatch(JsonDocument &doc, JsonDocument &patch) {
   }
 
   if (patch["alarms"].is<JsonArray>()) {
-    JsonArray patchAlarms = patch["alarms"].as<JsonArray>();
+    JsonArrayConst patchAlarms = patch["alarms"].as<JsonArrayConst>();
     // An empty array means "no alarm changes" (partial save), not "delete all alarms".
     if (patchAlarms.size() > 0) {
-      doc["alarms"].set(patchAlarms);
+      replaceRadioConfigArray(doc, "alarms", patchAlarms);
     }
   }
   if (patch["wifi"].is<JsonArray>()) {
-    doc["wifi"].set(patch["wifi"]);
+    replaceRadioConfigArray(doc, "wifi", patch["wifi"].as<JsonArrayConst>());
   }
   if (patch["presets"].is<JsonArray>()) {
-    doc["presets"].set(patch["presets"]);
+    replaceRadioConfigArray(doc, "presets", patch["presets"].as<JsonArrayConst>());
   }
   if (patch["gpio"].is<JsonArray>()) {
-    doc["gpio"].set(patch["gpio"]);
+    replaceRadioConfigArray(doc, "gpio", patch["gpio"].as<JsonArrayConst>());
   }
 }
 

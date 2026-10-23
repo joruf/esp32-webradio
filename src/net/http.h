@@ -155,7 +155,9 @@ void mk_lsan() {
       {
         lpw = buf.substring(inx + 1);  // Isolate password
         lssid = buf.substring(0, inx); // Holds SSID now
-        if (lpw.length() == 0 || lpw == "********") {
+        // Masked placeholders must never be used for association. Empty
+        // passwords are valid (open / OWE networks) and stay in the list.
+        if (lpw == "********") {
           dbgprint("Skip WiFi SSID %s with invalid/masked password (wifi_%02d)", lssid.c_str(), i);
           continue;
         }
@@ -638,10 +640,17 @@ bool writeAlarmConfig() {
 /**
  * @brief Read unified radio configuration JSON from the HTTP POST body and save it.
  */
+String gLastConfigSaveDetail = "";
+
 bool writeRadioConfig() {
   String body = readHttpPostBody(RADIO_CONFIG_MAX_LEN);
+  gLastConfigSaveDetail = "";
 
   if (body.length() > 0) {
+    const bool hasWifiKey = body.indexOf("\"wifi\"") >= 0;
+    gLastConfigSaveDetail = String("blen=") + String(body.length()) + String(" wkey=") +
+                            String(hasWifiKey ? 1 : 0);
+    dbgprint("writeRadioConfig: body %d bytes, wifi_key=%d", body.length(), hasWifiKey ? 1 : 0);
     if (applyRadioConfigMerge(body, true)) {
       readprogbuttons();
       applyDisplayOrientation(true);
@@ -654,6 +663,7 @@ bool writeRadioConfig() {
   }
 
   dbgprint("Radio configuration save ignored (empty body)");
+  gLastConfigSaveDetail = "empty_body";
   return false;
 }
 
@@ -780,7 +790,20 @@ void handlehttpreply() {
           } else if (http_getcmd.startsWith("saveconfig")) // Save unified JSON config
           {
             if (writeRadioConfig()) {
+              uint8_t wifiCount = 0;
+              char wkey[10];
+              for (uint8_t wi = 0; wi < 100; wi++) {
+                sprintf(wkey, "wifi_%02d", wi);
+                if (!nvsKeyExists(wkey)) {
+                  break;
+                }
+                wifiCount++;
+              }
               sndstr += String("Configuration saved");
+              if (gLastConfigSaveDetail.indexOf("pWifi=1") >= 0) {
+                sndstr += String(" (") + String(wifiCount) + String(" WiFi network") +
+                          String(wifiCount == 1 ? "" : "s") + String(")");
+              }
             } else {
               eventLogRecordError("Web UI: configuration save failed");
               sndstr += String("Configuration save failed");

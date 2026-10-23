@@ -50,6 +50,10 @@ const char app_css[] PROGMEM = R"=====(
 	.wifi-signal-strong { color: #3c763d; }
 	.wifi-signal-weak { color: #a94442; }
 	.wifi-signal-none { color: #999; font-style: italic; }
+	.wifi-password-field { display: flex; gap: 8px; align-items: stretch; }
+	.wifi-password-field .form-control { flex: 1; min-width: 0; }
+	.wifi-password-toggle { width: auto; flex-shrink: 0; white-space: nowrap; }
+	.wifi-password-hint { margin: 8px 0 0 0; }
 	.config-row-body-inline strong { flex: 0 0 auto; }
 	.config-row-actions { display: flex; gap: 8px; margin-left: 15px; flex-shrink: 0; }
 	.config-row-draggable { cursor: default; }

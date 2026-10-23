@@ -1,10 +1,15 @@
 {
-  "version": "v2.80",
-  "released": "2026-10-21",
+  "version": "v2.88",
+  "released": "2026-10-23",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.80.bin",
-  "notes": "mDNS http + webradio services for LAN discovery (Android app 1.1.0 multi-radio).",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.88.bin",
+  "notes": "Display colstart/rowstart offsets; WiFi credentials always-save; password visibility toggle; WebUI app.js fix.",
   "history": [
+    {
+      "version": "v2.88",
+      "released": "2026-10-23",
+      "notes": "Display colstart/rowstart offsets; WiFi credentials always-save; password visibility toggle; WebUI app.js fix."
+    },
     {
       "version": "v2.80",
       "released": "2026-10-21",

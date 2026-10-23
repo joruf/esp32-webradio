@@ -102,17 +102,19 @@ esp_err_t nvsAddValue(const char *key, String val) {
     return ESP_ERR_NVS_NOT_ENOUGH_SPACE;
   }
 
-  if (nvsKeyExists(key)) {      // Already in nvs?
+  if (nvsKeyExists(key)) { // Already in nvs?
     currentValue = nvsGetValue(key);
     needsWrite = (currentValue != val);
   }
 
-  if (needsWrite) { // Update or new?
-    dbgprint("nvsAddValue update value");
-    nvserr = nvs_set_str(nvshandle, key, val.c_str()); // Store key and value
-    if (nvserr) {
-      dbgprint("nvsAddValue failed!");
-    }
+  if (!needsWrite) {
+    return ESP_OK;
+  }
+
+  dbgprint("nvsAddValue update value");
+  nvserr = nvs_set_str(nvshandle, key, val.c_str());
+  if (nvserr) {
+    dbgprint("nvsAddValue failed!");
   }
   return nvserr;
 }

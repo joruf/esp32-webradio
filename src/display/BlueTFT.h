@@ -23,14 +23,17 @@
 #define TFTSECS 4
 
 St7735Display st7735Display;
-Adafruit_ST7735 *tft = NULL;
+RadioSt7735 *tft = NULL;
 
-/* Landscape: 1 normal, 3 = 180° (cable/mount flip). */
-#define dsp_setRotation()                                          \
-  do {                                                             \
-    if (tft) {                                                     \
-      tft->setRotation(radioFeatures.display_rotate_180 ? 3 : 1); \
-    }                                                              \
+/* Landscape: 1 normal, 3 = 180° (cable/mount flip).
+ * After setRotation, apply NVS panel offsets: landscape X uses rowstart. */
+#define dsp_setRotation()                                                          \
+  do {                                                                             \
+    if (tft) {                                                                     \
+      tft->setRotation(radioFeatures.display_rotate_180 ? 3 : 1);                 \
+      st7735Display.applyPanelOffset(radioFeatures.display_colstart,               \
+                                     radioFeatures.display_rowstart);              \
+    }                                                                              \
   } while (0)
 #define dsp_print(a) tft->print(a)
 #define dsp_println(b) tft->println(b)

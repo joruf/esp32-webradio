@@ -138,6 +138,32 @@ void test_alarms_patch_replaces_array(void) {
   TEST_ASSERT_EQUAL_INT(5, base["alarms"][0]["id"].as<int>());
 }
 
+/** WiFi array patches must replace the whole list, including unseen SSIDs. */
+void test_wifi_patch_replaces_array(void) {
+  JsonDocument base;
+  buildBase(base);
+  JsonArray wifi = base["wifi"].to<JsonArray>();
+  JsonObject oldNet = wifi.add<JsonObject>();
+  oldNet["ssid"] = "OLD";
+  oldNet["password"] = "secret";
+
+  JsonDocument patch;
+  JsonArray patchWifi = patch["wifi"].to<JsonArray>();
+  JsonObject keep = patchWifi.add<JsonObject>();
+  keep["ssid"] = "OLD";
+  keep["password"] = "********";
+  JsonObject added = patchWifi.add<JsonObject>();
+  added["ssid"] = "HiddenOrOffline";
+  added["password"] = "newsecret";
+
+  mergeRadioConfigPatch(base, patch);
+
+  TEST_ASSERT_EQUAL_INT(2, base["wifi"].as<JsonArray>().size());
+  TEST_ASSERT_EQUAL_STRING("OLD", base["wifi"][0]["ssid"].as<const char *>());
+  TEST_ASSERT_EQUAL_STRING("HiddenOrOffline", base["wifi"][1]["ssid"].as<const char *>());
+  TEST_ASSERT_EQUAL_STRING("newsecret", base["wifi"][1]["password"].as<const char *>());
+}
+
 /** An empty alarms array in a patch must not wipe existing schedules. */
 void test_empty_alarms_patch_is_noop(void) {
   JsonDocument base;
@@ -208,6 +234,7 @@ int main(int, char **) {
   RUN_TEST(test_tone_patch_merges_per_field);
   RUN_TEST(test_clock_patch_merges_per_field);
   RUN_TEST(test_alarms_patch_replaces_array);
+  RUN_TEST(test_wifi_patch_replaces_array);
   RUN_TEST(test_empty_alarms_patch_is_noop);
   RUN_TEST(test_empty_patch_is_noop);
   RUN_TEST(test_features_string_fields_readable_after_merge);

@@ -31,6 +31,14 @@ void applyFeatureNvsKeyOverrides(void) {
   if (nvsKeyExists("feat_rot180")) {
     radioFeatures.display_rotate_180 = nvsGetValue("feat_rot180").toInt() != 0;
   }
+  if (nvsKeyExists("feat_colstart")) {
+    radioFeatures.display_colstart =
+        (uint8_t)constrain(nvsGetValue("feat_colstart").toInt(), 0, 7);
+  }
+  if (nvsKeyExists("feat_rowstart")) {
+    radioFeatures.display_rowstart =
+        (uint8_t)constrain(nvsGetValue("feat_rowstart").toInt(), 0, 7);
+  }
   if (nvsKeyExists("feat_watchdog")) {
     radioFeatures.stream_watchdog = nvsGetValue("feat_watchdog").toInt() != 0;
   }
@@ -402,6 +410,8 @@ static void ensureRadioConfigFeatures(JsonDocument &doc) {
   defaults.dark_end = 7;
   defaults.vu_meter = true;
   defaults.display_rotate_180 = false;
+  defaults.display_colstart = 0;
+  defaults.display_rowstart = 0;
   defaults.stream_watchdog = true;
   defaults.alarm_fade_sec = 15;
   defaults.alarm_fallback_sound = "beep";
@@ -422,6 +432,12 @@ static void ensureRadioConfigFeatures(JsonDocument &doc) {
   }
   if (feat["display_rotate_180"].isNull()) {
     feat["display_rotate_180"] = defaults.display_rotate_180;
+  }
+  if (feat["display_colstart"].isNull()) {
+    feat["display_colstart"] = defaults.display_colstart;
+  }
+  if (feat["display_rowstart"].isNull()) {
+    feat["display_rowstart"] = defaults.display_rowstart;
   }
   if (feat["stream_watchdog"].isNull()) {
     feat["stream_watchdog"] = defaults.stream_watchdog;
@@ -766,7 +782,8 @@ static void syncDocWithPersistedRuntime(JsonDocument &doc) {
  *                     keeps the authoritative schedule untouched (partial saves)
  * @return true if configuration was accepted
  */
-static bool applyRadioConfigDoc(JsonDocument &doc, bool maskWifiPasswords, bool updateAlarms) {
+static bool applyRadioConfigDoc(JsonDocument &doc, bool maskWifiPasswords, bool updateAlarms,
+                                bool skipWifiPersist = false) {
   ensureRadioConfigStructure(doc);
   doc.remove("wifi_signals");
 
@@ -777,12 +794,22 @@ static bool applyRadioConfigDoc(JsonDocument &doc, bool maskWifiPasswords, bool 
 
   static String savedWifi[100];
 
+  JsonArray wifi = doc["wifi"].as<JsonArray>();
+  i = 0;
+  if (skipWifiPersist) {
+    // wifi_XX already written by persistWifiJsonToNvs(); keep keys intact.
+    for (i = 0; i < 100; i++) {
+      sprintf(key, "wifi_%02d", i);
+      if (!nvsKeyExists(key)) {
+        break;
+      }
+    }
+  } else {
   for (i = 0; i < 100; i++) {
     sprintf(key, "wifi_%02d", i);
     savedWifi[i] = nvsKeyExists(key) ? nvsGetValue(key) : "";
   }
 
-  JsonArray wifi = doc["wifi"].as<JsonArray>();
   for (i = 0; i < 100; i++) {
     sprintf(key, "wifi_%02d", i);
     if (nvsKeyExists(key)) {
@@ -791,12 +818,13 @@ static bool applyRadioConfigDoc(JsonDocument &doc, bool maskWifiPasswords, bool 
   }
   i = 0;
   for (JsonObject obj : wifi) {
-    const char *ssid = obj["ssid"] | "";
-    const char *password = obj["password"] | "";
-    if (strlen(ssid) == 0) {
+    // Copy out of the JsonDocument immediately; later String/NVS work can move heap.
+    String ssid = String(obj["ssid"] | "");
+    String pass = String(obj["password"] | "");
+    ssid.trim();
+    if (ssid.length() == 0) {
       continue;
     }
-    String pass = String(password);
     if (maskWifiPasswords &&
         (pass.length() == 0 || pass == RADIO_CONFIG_MASKED_PASSWORD)) {
       uint16_t w;
@@ -805,24 +833,28 @@ static bool applyRadioConfigDoc(JsonDocument &doc, bool maskWifiPasswords, bool 
           continue;
         }
         int sep = savedWifi[w].indexOf('/');
-        if (sep > 0 && savedWifi[w].substring(0, sep) == String(ssid)) {
+        if (sep > 0 && savedWifi[w].substring(0, sep) == ssid) {
           pass = savedWifi[w].substring(sep + 1);
           break;
         }
       }
     }
-    // Never persist a masked placeholder as the real password.
-    if (pass.length() == 0 || pass == RADIO_CONFIG_MASKED_PASSWORD) {
+    // Never persist a masked placeholder as the real password. Empty passwords
+    // are allowed (open networks) and must still be saved so offline/hidden
+    // SSIDs entered in the UI are always kept regardless of scan results.
+    if (pass == RADIO_CONFIG_MASKED_PASSWORD) {
+      dbgprint("applyRadioConfig: skip WiFi SSID '%s' (masked password, no NVS match)",
+               ssid.c_str());
       continue;
     }
-    // Deduplicate SSIDs (keep first entry with a real password).
+    // Deduplicate SSIDs (keep first entry).
     bool dupSsid = false;
     for (uint16_t prev = 0; prev < i; prev++) {
       char prevKey[16];
       sprintf(prevKey, "wifi_%02d", prev);
       String prevVal = nvsKeyExists(prevKey) ? nvsGetValue(prevKey) : "";
       int sep = prevVal.indexOf('/');
-      if (sep > 0 && prevVal.substring(0, sep) == String(ssid)) {
+      if (sep > 0 && prevVal.substring(0, sep) == ssid) {
         dupSsid = true;
         break;
       }
@@ -831,8 +863,37 @@ static bool applyRadioConfigDoc(JsonDocument &doc, bool maskWifiPasswords, bool 
       continue;
     }
     sprintf(key, "wifi_%02d", i);
-    nvsAddValue(key, String(ssid) + String("/") + pass);
+    nvsAddValue(key, ssid + String("/") + pass);
+    // Keep the in-memory document in sync so the radio_config blob stores the
+    // real password (web clients still receive a masked copy via getconfig).
+    obj["ssid"] = ssid;
+    obj["password"] = pass;
     i++;
+  }
+  } // !skipWifiPersist
+
+  // Rebuild wifi[] from the wifi_XX keys so the blob matches NVS (drops dups /
+  // masked-only entries that were not persisted).
+  doc.remove("wifi");
+  {
+    JsonArray cleaned = doc["wifi"].to<JsonArray>();
+    for (uint16_t w = 0; w < 100; w++) {
+      sprintf(key, "wifi_%02d", w);
+      if (!nvsKeyExists(key)) {
+        break;
+      }
+      String entry = nvsGetValue(key);
+      int sep = entry.indexOf('/');
+      if (sep <= 0) {
+        continue;
+      }
+      JsonObject obj = cleaned.add<JsonObject>();
+      if (obj.isNull()) {
+        break;
+      }
+      obj["ssid"] = entry.substring(0, sep);
+      obj["password"] = entry.substring(sep + 1);
+    }
   }
 
   JsonObject clock = doc["clock"];
@@ -933,6 +994,10 @@ static bool applyRadioConfigDoc(JsonDocument &doc, bool maskWifiPasswords, bool 
   nvsAddValue("feat_dark_end", String((int)(feat["dark_end"] | 7)));
   nvsAddValue("feat_vu_meter", String((int)(feat["vu_meter"] | true)));
   nvsAddValue("feat_rot180", String((int)(feat["display_rotate_180"] | false)));
+  nvsAddValue("feat_colstart",
+              String((int)constrain((int)(feat["display_colstart"] | 0), 0, 7)));
+  nvsAddValue("feat_rowstart",
+              String((int)constrain((int)(feat["display_rowstart"] | 0), 0, 7)));
   nvsAddValue("feat_watchdog", String((int)(feat["stream_watchdog"] | true)));
   nvsAddValue("feat_alarm_fade", String((int)(feat["alarm_fade_sec"] | 15)));
   {
@@ -974,6 +1039,198 @@ static bool applyRadioConfigDoc(JsonDocument &doc, bool maskWifiPasswords, bool 
  * @param maskWifiPasswords If true, masked WiFi passwords are restored from NVS
  * @return true if configuration was accepted
  */
+/**
+ * @brief Persist a wifi JSON array to wifi_XX NVS keys (small document only).
+ *
+ * Writes in place (overwrite wifi_00..N, then erase trailing keys). Erase-all-
+ * then-rewrite was dropping new SSIDs when NVS pages were full: erased slots
+ * are not reclaimed until later, so wifi_01 failed while the stale radio_config
+ * blob kept duplicate entries for getconfig.
+ *
+ * Masked passwords are restored from the previous wifi_XX values. Empty
+ * passwords (open networks) and SSIDs that are not currently in range are kept.
+ *
+ * @param wifiJson Serialized JSON array of {ssid,password} objects
+ * @param maskWifiPasswords Restore masked passwords from existing NVS entries
+ * @return Number of wifi_XX keys written, or -1 on parse failure
+ */
+static int persistWifiJsonToNvs(const String &wifiJson, bool maskWifiPasswords) {
+  // Wrap bare "[...]" in an object. On-device JsonDocument::is<JsonArray>() for an
+  // array root rejected valid patches (save failed while wj>0).
+  String wrapped = String("{\"wifi\":") + wifiJson + String("}");
+  JsonDocument wifiDoc;
+  if (deserializeJson(wifiDoc, wrapped) || wifiDoc.overflowed() || !wifiDoc["wifi"].is<JsonArray>()) {
+    dbgprint("persistWifiJsonToNvs: parse failed (len=%d)", wifiJson.length());
+    return -1;
+  }
+
+  nvsOpen();
+
+  static String savedWifi[100];
+  static String toWrite[100];
+  char key[16];
+  uint16_t i;
+  uint16_t nWrite = 0;
+
+  for (i = 0; i < 100; i++) {
+    sprintf(key, "wifi_%02d", i);
+    savedWifi[i] = nvsKeyExists(key) ? nvsGetValue(key) : "";
+    toWrite[i] = "";
+  }
+
+  for (JsonObjectConst obj : wifiDoc["wifi"].as<JsonArrayConst>()) {
+    String ssid = String(obj["ssid"] | "");
+    String pass = String(obj["password"] | "");
+    ssid.trim();
+    if (ssid.length() == 0) {
+      continue;
+    }
+    if (maskWifiPasswords &&
+        (pass.length() == 0 || pass == RADIO_CONFIG_MASKED_PASSWORD)) {
+      for (uint16_t w = 0; w < 100; w++) {
+        if (savedWifi[w].length() == 0) {
+          continue;
+        }
+        int sep = savedWifi[w].indexOf('/');
+        if (sep > 0 && savedWifi[w].substring(0, sep) == ssid) {
+          pass = savedWifi[w].substring(sep + 1);
+          break;
+        }
+      }
+    }
+    if (pass == RADIO_CONFIG_MASKED_PASSWORD) {
+      dbgprint("persistWifiJsonToNvs: skip '%s' (masked, no NVS match)", ssid.c_str());
+      continue;
+    }
+    bool dupSsid = false;
+    for (uint16_t prev = 0; prev < nWrite; prev++) {
+      int sep = toWrite[prev].indexOf('/');
+      if (sep > 0 && toWrite[prev].substring(0, sep) == ssid) {
+        dupSsid = true;
+        break;
+      }
+    }
+    if (dupSsid) {
+      continue;
+    }
+    String entry = ssid + String("/") + pass;
+    if (entry.length() >= NVSBUFSIZE) {
+      dbgprint("persistWifiJsonToNvs: skip '%s' (entry too long)", ssid.c_str());
+      continue;
+    }
+    if (nWrite >= 100) {
+      break;
+    }
+    toWrite[nWrite++] = entry;
+  }
+
+  // Count existing wifi_XX keys. Growing the list needs a free NVS page; the
+  // large radio_config blob often occupies the last space, so free it first
+  // when we need additional keys (caller rebuilds the blob afterwards).
+  uint16_t existingCount = 0;
+  for (i = 0; i < 100; i++) {
+    sprintf(key, "wifi_%02d", i);
+    if (!nvsKeyExists(key)) {
+      break;
+    }
+    existingCount++;
+  }
+  if (nWrite > existingCount && nvsKeyExists(RADIO_CONFIG_NVS_KEY)) {
+    dbgprint("persistWifiJsonToNvs: growing %u→%u, freeing radio_config for space",
+             existingCount, nWrite);
+    nvs_erase_key(nvshandle, RADIO_CONFIG_NVS_KEY);
+    nvs_commit(nvshandle);
+  }
+
+  uint16_t written = 0;
+  for (i = 0; i < nWrite; i++) {
+    sprintf(key, "wifi_%02d", i);
+    esp_err_t err = nvsAddValue(key, toWrite[i]);
+    if (err != ESP_OK) {
+      dbgprint("persistWifiJsonToNvs: %s write failed (%d), freeing radio_config", key, (int)err);
+      if (nvsKeyExists(RADIO_CONFIG_NVS_KEY)) {
+        nvs_erase_key(nvshandle, RADIO_CONFIG_NVS_KEY);
+        nvs_commit(nvshandle);
+      }
+      err = nvsAddValue(key, toWrite[i]);
+    }
+    if (err != ESP_OK) {
+      dbgprint("persistWifiJsonToNvs: %s write failed (%d)", key, (int)err);
+      break;
+    }
+    written++;
+  }
+
+  for (i = written; i < 100; i++) {
+    sprintf(key, "wifi_%02d", i);
+    if (!nvsKeyExists(key)) {
+      break;
+    }
+    nvs_erase_key(nvshandle, key);
+  }
+
+  dbgprint("persistWifiJsonToNvs: wrote %u of %u entries", written, nWrite);
+  return (int)written;
+}
+
+/**
+ * @brief Overlay a top-level object-array onto @p doc via JSON text round-trip.
+ *
+ * @param doc Destination configuration document
+ * @param key Top-level key ("presets", "gpio", "alarms")
+ * @param arrayJson Serialized JSON array text
+ * @return true if the array was applied (including empty arrays)
+ */
+static bool applySerializedArrayPatch(JsonDocument &doc, const char *key, const String &arrayJson) {
+  String wrapped = String("{\"a\":") + arrayJson + String("}");
+  JsonDocument isolated;
+  if (deserializeJson(isolated, wrapped) || isolated.overflowed() || !isolated["a"].is<JsonArray>()) {
+    dbgprint("applyRadioConfigMerge: %s array parse failed (len=%d)", key, arrayJson.length());
+    return false;
+  }
+
+  doc.remove(key);
+  JsonArray dst = doc[key].to<JsonArray>();
+  JsonArrayConst srcArr = isolated["a"].as<JsonArrayConst>();
+  const size_t expected = srcArr.size();
+  for (JsonObjectConst src : srcArr) {
+    JsonObject out = dst.add<JsonObject>();
+    if (out.isNull()) {
+      dbgprint("applyRadioConfigMerge: %s add failed at %u/%u", key, dst.size(), expected);
+      return false;
+    }
+    for (JsonPairConst kv : src) {
+      if (kv.value().is<const char *>()) {
+        out[kv.key().c_str()] = String(kv.value().as<const char *>());
+      } else if (kv.value().is<bool>()) {
+        out[kv.key().c_str()] = kv.value().as<bool>();
+      } else if (kv.value().is<long>() || kv.value().is<int>() || kv.value().is<double>()) {
+        out[kv.key().c_str()] = kv.value();
+      } else if (kv.value().is<JsonArrayConst>()) {
+        JsonArray nested = out[kv.key().c_str()].to<JsonArray>();
+        for (JsonVariantConst v : kv.value().as<JsonArrayConst>()) {
+          if (v.is<const char *>()) {
+            nested.add(String(v.as<const char *>()));
+          } else {
+            nested.add(v);
+          }
+        }
+      } else {
+        out[kv.key().c_str()] = kv.value();
+      }
+    }
+  }
+
+  if (dst.size() != expected) {
+    dbgprint("applyRadioConfigMerge: %s size mismatch %u!=%u", key, dst.size(), expected);
+    return false;
+  }
+
+  dbgprint("applyRadioConfigMerge: applied %s (%u entries, json %d bytes)", key, dst.size(),
+           arrayJson.length());
+  return true;
+}
+
 bool applyRadioConfigMerge(const String &patchJson, bool maskWifiPasswords) {
   if (patchJson.length() == 0 || patchJson.length() >= RADIO_CONFIG_MAX_LEN) {
     dbgprint("applyRadioConfigMerge: invalid length");
@@ -984,6 +1241,95 @@ bool applyRadioConfigMerge(const String &patchJson, bool maskWifiPasswords) {
   if (deserializeJson(patch, patchJson) || patch.overflowed()) {
     dbgprint("applyRadioConfigMerge: parse failed");
     return false;
+  }
+
+  // Pull large array patches out as JSON text before merging scalars/objects.
+  // This keeps mergeRadioConfigPatch lean and applies arrays via a dedicated path.
+  String wifiJson;
+  String presetsJson;
+  String gpioJson;
+  String alarmsJson;
+  const bool patchHasWifi = patch["wifi"].is<JsonArray>();
+  const bool patchHasPresets = patch["presets"].is<JsonArray>();
+  const bool patchHasGpio = patch["gpio"].is<JsonArray>();
+  const bool patchHasAlarms =
+      patch["alarms"].is<JsonArray>() && patch["alarms"].as<JsonArray>().size() > 0;
+  if (patchHasWifi) {
+    serializeJson(patch["wifi"], wifiJson);
+    dbgprint("applyRadioConfigMerge: wifi patch %u entries / %d bytes",
+             patch["wifi"].as<JsonArray>().size(), wifiJson.length());
+    patch.remove("wifi");
+  } else if (!patch["wifi"].isNull()) {
+    dbgprint("applyRadioConfigMerge: wifi key present but not JsonArray");
+  }
+  // Expose merge diagnostics to the HTTP save reply (declared in http.h).
+  extern String gLastConfigSaveDetail;
+  gLastConfigSaveDetail += String(" pWifi=") + String(patchHasWifi ? 1 : 0) + String(" wj=") +
+                           String(wifiJson.length());
+  if (patchHasPresets) {
+    serializeJson(patch["presets"], presetsJson);
+    patch.remove("presets");
+  }
+  if (patchHasGpio) {
+    serializeJson(patch["gpio"], gpioJson);
+    patch.remove("gpio");
+  }
+  if (patchHasAlarms) {
+    serializeJson(patch["alarms"], alarmsJson);
+    patch.remove("alarms");
+  }
+
+  // WiFi-only patches: never load the large radio_config document. Copying wifi
+  // into that doc dropped entries under ESP32 heap pressure (Add Network no-op).
+  // Do not use patch.size()==0: ArduinoJson may still report members after remove.
+  const bool patchHasOtherScalars =
+      patch["version"].is<int>() || patch["version"].is<long>() || patch["version"].is<double>() ||
+      patch["volume"].is<int>() || patch["volume"].is<long>() || patch["volume"].is<double>() ||
+      patch["preset"].is<int>() || patch["preset"].is<long>() || patch["preset"].is<double>() ||
+      patch["clock"].is<JsonObject>() || patch["tone"].is<JsonObject>() ||
+      patch["features"].is<JsonObject>();
+  if (patchHasWifi && !patchHasPresets && !patchHasGpio && !patchHasAlarms && !patchHasOtherScalars) {
+    int written = persistWifiJsonToNvs(wifiJson, maskWifiPasswords);
+    if (written < 0) {
+      eventLogRecordError("Config save failed (wifi parse)");
+      return false;
+    }
+    gLastConfigSaveDetail += String(" wifiOnly=1 written=") + String(written);
+    String rebuilt = buildRadioConfigJsonFromNvs(false);
+    if (rebuilt.length() == 0 || rebuilt.length() >= RADIO_CONFIG_MAX_LEN) {
+      eventLogRecordError("Config save failed (wifi blob rebuild)");
+      return false;
+    }
+    esp_err_t blobErr = nvsSetRadioConfig(rebuilt);
+    if (blobErr != ESP_OK) {
+      // Blob was erased to free space for new wifi_XX; retry once after commit.
+      dbgprint("applyRadioConfigMerge: wifi blob save failed (%d), retry", (int)blobErr);
+      nvs_commit(nvshandle);
+      blobErr = nvsSetRadioConfig(rebuilt);
+    }
+    if (blobErr != ESP_OK || nvsCommit() != ESP_OK) {
+      // wifi_XX already holds the new networks; getconfig overlays from those
+      // keys, so treat this as success even if the unified blob is temporarily
+      // missing. A later config save rebuilds the blob.
+      dbgprint("applyRadioConfigMerge: wifi keys saved (%d), blob deferred", written);
+      gLastConfigSaveDetail += String(" blobDefer=1");
+      nvsCommit();
+      return true;
+    }
+    dbgprint("applyRadioConfigMerge: wifi-only save wrote %d networks", written);
+    return true;
+  }
+
+  // Combined patches that include wifi: write wifi_XX first from the tiny JSON
+  // document so a later doc→NVS pass cannot lose unseen SSIDs.
+  int wifiWritten = -1;
+  if (patchHasWifi) {
+    wifiWritten = persistWifiJsonToNvs(wifiJson, maskWifiPasswords);
+    if (wifiWritten < 0) {
+      eventLogRecordError("Config save failed (wifi parse)");
+      return false;
+    }
+    gLastConfigSaveDetail += String(" written=") + String(wifiWritten);
   }
 
   JsonDocument doc;
@@ -1016,14 +1362,67 @@ bool applyRadioConfigMerge(const String &patchJson, bool maskWifiPasswords) {
 
   // Partial patches never carry alarms. Seed from the authoritative alrm_config
   // key so a stale radio_config blob cannot overwrite the live schedule.
-  const bool patchUpdatesAlarms =
-      patch["alarms"].is<JsonArray>() && patch["alarms"].as<JsonArray>().size() > 0;
-  if (!patchUpdatesAlarms) {
+  if (!patchHasAlarms) {
     seedAlarmsFromAuthoritativeStore(doc);
   }
 
   mergeRadioConfigPatch(doc, patch);
-  return applyRadioConfigDoc(doc, maskWifiPasswords, patchUpdatesAlarms);
+
+  if (patchHasWifi) {
+    // Mirror authoritative wifi_XX into doc for blob serialize; never trust a
+    // heap-fragile deep-copy of the patch array into the large document.
+    doc.remove("wifi");
+    JsonArray dst = doc["wifi"].to<JsonArray>();
+    char key[16];
+    for (int w = 0; w < wifiWritten; w++) {
+      sprintf(key, "wifi_%02d", w);
+      if (!nvsKeyExists(key)) {
+        break;
+      }
+      String entry = nvsGetValue(key);
+      int sep = entry.indexOf('/');
+      if (sep <= 0) {
+        continue;
+      }
+      JsonObject obj = dst.add<JsonObject>();
+      if (obj.isNull()) {
+        break;
+      }
+      obj["ssid"] = entry.substring(0, sep);
+      obj["password"] = entry.substring(sep + 1);
+    }
+    gLastConfigSaveDetail += String(" mirrored=") + String(dst.size());
+  }
+  if (patchHasPresets && !applySerializedArrayPatch(doc, "presets", presetsJson)) {
+    eventLogRecordError("Config save failed (presets array)");
+    return false;
+  }
+  if (patchHasGpio && !applySerializedArrayPatch(doc, "gpio", gpioJson)) {
+    eventLogRecordError("Config save failed (gpio array)");
+    return false;
+  }
+  if (patchHasAlarms && !applySerializedArrayPatch(doc, "alarms", alarmsJson)) {
+    eventLogRecordError("Config save failed (alarms array)");
+    return false;
+  }
+
+  // Never rewrite wifi_XX from the large doc here: either persistWifiJsonToNvs
+  // already wrote them, or this patch must leave existing wifi_XX untouched.
+  // skipWifiPersist also rebuilds doc wifi from NVS so a stale blob cannot
+  // reintroduce duplicate LS rows on features-only saves.
+  bool ok = applyRadioConfigDoc(doc, maskWifiPasswords, patchHasAlarms, true);
+  if (!ok) {
+    return false;
+  }
+  if (patchHasWifi) {
+    // Ensure blob wifi matches wifi_XX even if doc mirror was truncated.
+    String rebuilt = buildRadioConfigJsonFromNvs(false);
+    if (rebuilt.length() > 0 && rebuilt.length() < RADIO_CONFIG_MAX_LEN) {
+      nvsSetRadioConfig(rebuilt);
+      nvsCommit();
+    }
+  }
+  return true;
 }
 
 /**
@@ -1109,18 +1508,37 @@ bool syncAlarmsToRadioConfig() {
 }
 
 /**
- * @brief Mask WiFi passwords before sending config JSON to web clients.
+ * @brief Replace doc["wifi"] with the authoritative wifi_XX NVS keys.
+ *
+ * The radio_config blob can carry duplicate/stale SSIDs after a failed blob
+ * write. getconfig must follow wifi_XX like alarms follow alrm_config.
  *
  * @param doc Parsed radio configuration document
+ * @param maskPasswords If true, replace passwords with the masked placeholder
  */
-static void maskWifiPasswordsForWeb(JsonDocument &doc) {
-  if (!doc["wifi"].is<JsonArray>()) {
-    return;
-  }
-
-  for (JsonObject net : doc["wifi"].as<JsonArray>()) {
-    if (!net["password"].isNull()) {
-      net["password"] = RADIO_CONFIG_MASKED_PASSWORD;
+static void overlayWifiFromNvsKeys(JsonDocument &doc, bool maskPasswords) {
+  doc.remove("wifi");
+  JsonArray wifi = doc["wifi"].to<JsonArray>();
+  char key[16];
+  for (uint16_t i = 0; i < 100; i++) {
+    sprintf(key, "wifi_%02d", i);
+    if (!nvsKeyExists(key)) {
+      break;
+    }
+    String entry = nvsGetValue(key);
+    int sep = entry.indexOf('/');
+    if (sep <= 0) {
+      continue;
+    }
+    JsonObject obj = wifi.add<JsonObject>();
+    if (obj.isNull()) {
+      break;
+    }
+    obj["ssid"] = entry.substring(0, sep);
+    if (maskPasswords) {
+      obj["password"] = RADIO_CONFIG_MASKED_PASSWORD;
+    } else {
+      obj["password"] = entry.substring(sep + 1);
     }
   }
 }
@@ -1130,6 +1548,7 @@ static void maskWifiPasswordsForWeb(JsonDocument &doc) {
  *
  * Prefers the persisted `radio_config` blob to reduce NVS key scans. Falls back
  * to rebuilding from individual NVS keys only when the blob is missing/invalid.
+ * WiFi always comes from wifi_XX keys so a stale blob cannot show duplicates.
  *
  * @return String JSON document safe for web clients
  */
@@ -1142,7 +1561,7 @@ String getRadioConfigJsonForWeb() {
       if (!doc["features"].is<JsonObject>()) {
         doc["features"].to<JsonObject>();
       }
-      maskWifiPasswordsForWeb(doc);
+      overlayWifiFromNvsKeys(doc, true);
 
       // Alarms are owned by the authoritative alrm_config key (that is what the
       // firmware actually schedules). The copy embedded in the radio_config blob

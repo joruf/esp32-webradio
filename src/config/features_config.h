@@ -16,6 +16,13 @@ struct FeatureSettings {
   bool vu_meter;
   /** Rotate TFT landscape output by 180 degrees (cable/mount orientation). */
   bool display_rotate_180;
+  /**
+   * ST7735 GRAM origin (Adafruit _colstart / _rowstart).
+   * In landscape, rowstart shifts X (fix missing left column / junk on right).
+   * Default 0 matches true BLACKTAB panels; set rowstart=1 on shifted clones.
+   */
+  uint8_t display_colstart;
+  uint8_t display_rowstart;
   bool stream_watchdog;
   uint16_t alarm_fade_sec;
   /**
@@ -64,6 +71,8 @@ public:
     data.dark_end = 7;
     data.vu_meter = true;
     data.display_rotate_180 = false;
+    data.display_colstart = 0;
+    data.display_rowstart = 0;
     data.stream_watchdog = true;
     data.alarm_fade_sec = 15;
     data.alarm_fallback_sound = "beep";
@@ -86,6 +95,10 @@ public:
     data.dark_end = constrain((int)(feat["dark_end"] | data.dark_end), 0, 23);
     data.vu_meter = feat["vu_meter"] | data.vu_meter;
     data.display_rotate_180 = feat["display_rotate_180"] | data.display_rotate_180;
+    data.display_colstart =
+        (uint8_t)constrain((int)(feat["display_colstart"] | data.display_colstart), 0, 7);
+    data.display_rowstart =
+        (uint8_t)constrain((int)(feat["display_rowstart"] | data.display_rowstart), 0, 7);
     data.stream_watchdog = feat["stream_watchdog"] | data.stream_watchdog;
     int fadeSec = (int)(feat["alarm_fade_sec"] | data.alarm_fade_sec);
     data.alarm_fade_sec = (uint16_t)snapValueToStep(fadeSec, 5, 5, 600);
@@ -127,6 +140,8 @@ public:
     feat["dark_end"] = data.dark_end;
     feat["vu_meter"] = data.vu_meter;
     feat["display_rotate_180"] = data.display_rotate_180;
+    feat["display_colstart"] = data.display_colstart;
+    feat["display_rowstart"] = data.display_rowstart;
     feat["stream_watchdog"] = data.stream_watchdog;
     feat["alarm_fade_sec"] = data.alarm_fade_sec;
     feat["alarm_fallback_sound"] = data.alarm_fallback_sound;

@@ -46,6 +46,17 @@ const char display_html[] PROGMEM = R"=====(
 						<label><input type="checkbox" id="feat-display-rotate-180"> Rotate display 180&deg;</label>
 					</div>
 					<p class="config-help">Use 180&deg; rotation when the panel is mounted upside down. Takes effect immediately after saving.</p>
+					<div class="display-settings-grid">
+					<div class="form-group display-setting-card">
+						<label for="feat-display-colstart" title="ST7735 GRAM column start. In landscape this shifts the vertical origin. Leave 0 for aligned BLACKTAB panels.">TFT colstart</label>
+						<select class="form-control sound-select" id="feat-display-colstart" title="ST7735 GRAM column start. In landscape this shifts the vertical origin. Leave 0 for aligned BLACKTAB panels."></select>
+					</div>
+					<div class="form-group display-setting-card">
+						<label for="feat-display-rowstart" title="ST7735 GRAM row start. In landscape this is the horizontal X offset. Try 1 if the left column is missing and junk appears on the right.">TFT rowstart (landscape X)</label>
+						<select class="form-control sound-select" id="feat-display-rowstart" title="ST7735 GRAM row start. In landscape this is the horizontal X offset. Try 1 if the left column is missing and junk appears on the right."></select>
+					</div>
+					</div>
+					<p class="config-help">Per-panel GRAM offset for ST7735 clones. Default 0 keeps correctly aligned panels. If one radio shows a 1-column horizontal shift, set rowstart to 1 on that device only.</p>
 				</div>
 			</div>
 			</div>

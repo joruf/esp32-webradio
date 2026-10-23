@@ -947,6 +947,24 @@ const char app_js[] PROGMEM = R"=====(
                 if (patch.alarms) {
                     alarmState.alarms = patch.alarms.slice(0);
                 }
+                if (patch.wifi && Array.isArray(patch.wifi)) {
+                    radioConfigState.wifi = patch.wifi.slice(0);
+                    if ($("#wifi-list").length) {
+                        renderWifiList();
+                    }
+                }
+                if (patch.presets && Array.isArray(patch.presets)) {
+                    radioConfigState.presets = patch.presets.slice(0);
+                    if ($("#preset-list").length) {
+                        renderPresetList();
+                    }
+                }
+                if (patch.gpio && Array.isArray(patch.gpio)) {
+                    radioConfigState.gpio = patch.gpio.slice(0);
+                    if ($("#gpio-list").length) {
+                        renderGpioList();
+                    }
+                }
 
                 if (!options.silentLog) {
                     showCommandLog(message, { type: "success" });
@@ -1583,11 +1601,34 @@ const char app_js[] PROGMEM = R"=====(
         return true;
     }
 
+    function dedupeWifiEntries(list) {
+        var out = [];
+        var seen = {};
+        var i;
+        for (i = 0; i < (list || []).length; i++) {
+            var entry = list[i];
+            if (!entry || !entry.ssid) {
+                continue;
+            }
+            var ssid = String(entry.ssid);
+            if (seen[ssid]) {
+                continue;
+            }
+            seen[ssid] = true;
+            out.push({
+                ssid: ssid,
+                password: entry.password != null ? entry.password : ""
+            });
+        }
+        return out;
+    }
+
     function applyRadioConfigToForms(cfg) {
         configFormLoading = true;
         loadedRadioConfig = mergeWithDefaultConfig(cfg);
         radioConfigState.version = loadedRadioConfig.version || 3;
-        radioConfigState.wifi = loadedRadioConfig.wifi || [];
+        radioConfigState.wifi = dedupeWifiEntries(loadedRadioConfig.wifi || []);
+        loadedRadioConfig.wifi = radioConfigState.wifi.slice(0);
         radioConfigState.presets = loadedRadioConfig.presets || [];
         radioConfigState.gpio = loadedRadioConfig.gpio || [];
 
@@ -1653,6 +1694,26 @@ const char app_js[] PROGMEM = R"=====(
             if ($("#feat-display-rotate-180").length) {
                 $("#feat-display-rotate-180").prop("checked", !!feat.display_rotate_180);
             }
+            if ($("#feat-display-colstart").length) {
+                var cs = parseInt(feat.display_colstart, 10);
+                if (isNaN(cs) || cs < 0) {
+                    cs = 0;
+                }
+                if (cs > 7) {
+                    cs = 7;
+                }
+                $("#feat-display-colstart").val(String(cs));
+            }
+            if ($("#feat-display-rowstart").length) {
+                var rs = parseInt(feat.display_rowstart, 10);
+                if (isNaN(rs) || rs < 0) {
+                    rs = 0;
+                }
+                if (rs > 7) {
+                    rs = 7;
+                }
+                $("#feat-display-rowstart").val(String(rs));
+            }
             if ($("#feat-watchdog").length) {
                 $("#feat-watchdog").prop("checked", feat.stream_watchdog !== false);
             }
@@ -1706,7 +1767,7 @@ const char app_js[] PROGMEM = R"=====(
         }
         if ($("#feat-dark-start").length) {
             var existingFeatures = (loadedRadioConfig && loadedRadioConfig.features) ? loadedRadioConfig.features : {};
-            config.features = $.extend({}, getDefaultRadioConfig().features, existingFeatures, {
+            var featPatch = {
                 dark_start: parseInt($("#feat-dark-start").val(), 10) || 0,
                 dark_end: parseInt($("#feat-dark-end").val(), 10) || 0,
                 alarm_fade_sec: parseInt($("#feat-alarm-fade").val(), 10) || 15,
@@ -1714,7 +1775,14 @@ const char app_js[] PROGMEM = R"=====(
                 display_rotate_180: $("#feat-display-rotate-180").is(":checked"),
                 stream_watchdog: $("#feat-watchdog").is(":checked"),
                 ota_check_url: $("#feat-ota-url").length ? ($("#feat-ota-url").val() || "") : (existingFeatures.ota_check_url || "")
-            });
+            };
+            if ($("#feat-display-colstart").length) {
+                featPatch.display_colstart = Math.max(0, Math.min(7, parseInt($("#feat-display-colstart").val(), 10) || 0));
+            }
+            if ($("#feat-display-rowstart").length) {
+                featPatch.display_rowstart = Math.max(0, Math.min(7, parseInt($("#feat-display-rowstart").val(), 10) || 0));
+            }
+            config.features = $.extend({}, getDefaultRadioConfig().features, existingFeatures, featPatch);
         } else if ($("#feat-ota-url").length) {
             var otaFeatures = (loadedRadioConfig && loadedRadioConfig.features) ? $.extend({}, loadedRadioConfig.features) : {};
             otaFeatures.ota_check_url = $("#feat-ota-url").val() || "";
@@ -1762,11 +1830,24 @@ const char app_js[] PROGMEM = R"=====(
         if (type === "wifi") {
             entry = configDialogState.index >= 0 ? radioConfigState.wifi[configDialogState.index] : { ssid: "", password: "" };
             title = configDialogState.index >= 0 ? "Edit WiFi Network" : "Add WiFi Network";
+            var wifiPwPlaceholder = configDialogState.index >= 0
+                ? "Leave blank to keep the current password"
+                : "Password (leave blank for an open network)";
+            var wifiPwValue = "";
+            if (configDialogState.index >= 0 && entry.password && entry.password !== "********") {
+                wifiPwValue = entry.password;
+            }
             bodyHtml = '' +
                 '<div class="form-group"><label for="dialog-wifi-ssid">SSID</label>' +
-                '<input type="text" class="form-control" id="dialog-wifi-ssid" value="' + escapeHtml(entry.ssid) + '"></div>' +
+                '<input type="text" class="form-control" id="dialog-wifi-ssid" value="' + escapeHtml(entry.ssid) + '" autocomplete="off"></div>' +
                 '<div class="form-group"><label for="dialog-wifi-password">Password</label>' +
-                '<input type="password" class="form-control" id="dialog-wifi-password" value="' + escapeHtml(entry.password) + '" placeholder="Leave unchanged to keep current password"></div>';
+                '<div class="wifi-password-field">' +
+                    '<input type="password" class="form-control" id="dialog-wifi-password" value="' + escapeHtml(wifiPwValue) + '" placeholder="' + wifiPwPlaceholder + '" autocomplete="new-password">' +
+                    '<button type="button" class="btn btn-default wifi-password-toggle" id="dialog-wifi-password-toggle" aria-pressed="false" title="Show password" aria-label="Show password">' +
+                        '<span class="btn-icon" aria-hidden="true">&#128065;</span> Show' +
+                    '</button>' +
+                '</div>' +
+                '<p class="config-help wifi-password-hint">Networks are always saved, even if they are hidden or not currently in range.</p></div>';
         } else if (type === "preset") {
             entry = configDialogState.index >= 0 ? radioConfigState.presets[configDialogState.index] : { slot: 0, url: "", name: "" };
             title = configDialogState.index >= 0 ? "Edit Preset" : "Add Preset";
@@ -1853,17 +1934,37 @@ const char app_js[] PROGMEM = R"=====(
                 password: $("#dialog-wifi-password").val()
             };
             if (!entry.ssid) {
+                showCommandLog("SSID is required.", { type: "error" });
                 return;
             }
             if (configDialogState.index >= 0) {
                 if (!entry.password) {
-                    entry.password = radioConfigState.wifi[configDialogState.index].password;
+                    entry.password = radioConfigState.wifi[configDialogState.index].password || "********";
                 }
                 radioConfigState.wifi[configDialogState.index] = entry;
             } else {
-                radioConfigState.wifi.push(entry);
+                var existingIdx = -1;
+                var wi;
+                for (wi = 0; wi < radioConfigState.wifi.length; wi++) {
+                    if (radioConfigState.wifi[wi] && radioConfigState.wifi[wi].ssid === entry.ssid) {
+                        existingIdx = wi;
+                        break;
+                    }
+                }
+                if (existingIdx >= 0) {
+                    if (!entry.password) {
+                        entry.password = radioConfigState.wifi[existingIdx].password || "********";
+                    }
+                    radioConfigState.wifi[existingIdx] = entry;
+                } else {
+                    radioConfigState.wifi.push(entry);
+                }
             }
+            radioConfigState.wifi = dedupeWifiEntries(radioConfigState.wifi);
             renderWifiList();
+            closeConfigDialog();
+            saveConfigPatch({ wifi: radioConfigState.wifi.slice(0) }, { applyAudio: false });
+            return;
         } else if (configDialogState.type === "preset") {
             entry = {
                 slot: parseInt($("#dialog-preset-slot").val(), 10) || 0,
@@ -1882,6 +1983,9 @@ const char app_js[] PROGMEM = R"=====(
                 return a.slot - b.slot;
             });
             renderPresetList();
+            closeConfigDialog();
+            saveConfigPatch({ presets: radioConfigState.presets.slice(0) }, { applyAudio: false });
+            return;
         } else if (configDialogState.type === "gpio") {
             entry = {
                 pin: parseInt($("#dialog-gpio-pin").val(), 10),
@@ -1899,13 +2003,12 @@ const char app_js[] PROGMEM = R"=====(
                 return a.pin - b.pin;
             });
             renderGpioList();
+            closeConfigDialog();
+            saveConfigPatch({ gpio: radioConfigState.gpio.slice(0) }, { applyAudio: false });
+            return;
         }
 
         closeConfigDialog();
-
-        if ($("#preset-list").length) {
-            saveRadioConfig({ applyAudio: false });
-        }
     }
 
     function getDefaultRadioConfig() {
@@ -1954,6 +2057,8 @@ const char app_js[] PROGMEM = R"=====(
                 alarm_fallback_interval_sec: 5,
                 vu_meter: true,
                 display_rotate_180: false,
+                display_colstart: 0,
+                display_rowstart: 0,
                 stream_watchdog: true,
                 ota_check_url: "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/version.json"
             }
@@ -2147,9 +2252,23 @@ const char app_js[] PROGMEM = R"=====(
             saveDisplayFeatures({ silentLog: !showLog });
         }
 
+        function fillTftOffsetSelects() {
+            ["#feat-display-colstart", "#feat-display-rowstart"].forEach(function(sel) {
+                var $el = $(sel);
+                if (!$el.length || $el.children().length) {
+                    return;
+                }
+                for (var i = 0; i <= 7; i++) {
+                    $el.append($("<option></option>").attr("value", String(i)).text(String(i)));
+                }
+            });
+        }
+
+        fillTftOffsetSelects();
+
         $(document)
-            .off("change.displaySettings", "#feat-dark-start, #feat-dark-end, #feat-vu-meter, #feat-display-rotate-180")
-            .on("change.displaySettings", "#feat-dark-start, #feat-dark-end, #feat-vu-meter, #feat-display-rotate-180", function() {
+            .off("change.displaySettings", "#feat-dark-start, #feat-dark-end, #feat-vu-meter, #feat-display-rotate-180, #feat-display-colstart, #feat-display-rowstart")
+            .on("change.displaySettings", "#feat-dark-start, #feat-dark-end, #feat-vu-meter, #feat-display-rotate-180, #feat-display-colstart, #feat-display-rowstart", function() {
                 persistDisplaySettings(true);
             });
 
@@ -2193,6 +2312,12 @@ const char app_js[] PROGMEM = R"=====(
         }
         if ($("#feat-display-rotate-180").length) {
             merged.display_rotate_180 = $("#feat-display-rotate-180").is(":checked");
+        }
+        if ($("#feat-display-colstart").length) {
+            merged.display_colstart = Math.max(0, Math.min(7, parseInt($("#feat-display-colstart").val(), 10) || 0));
+        }
+        if ($("#feat-display-rowstart").length) {
+            merged.display_rowstart = Math.max(0, Math.min(7, parseInt($("#feat-display-rowstart").val(), 10) || 0));
         }
         if ($("#feat-watchdog").length) {
             merged.stream_watchdog = $("#feat-watchdog").is(":checked");
@@ -3561,17 +3686,30 @@ const char app_js[] PROGMEM = R"=====(
         if (type === "wifi") {
             radioConfigState.wifi.splice(index, 1);
             renderWifiList();
+            saveConfigPatch({ wifi: radioConfigState.wifi.slice(0) }, { applyAudio: false });
         } else if (type === "preset") {
             radioConfigState.presets.splice(index, 1);
             renderPresetList();
+            saveConfigPatch({ presets: radioConfigState.presets.slice(0) }, { applyAudio: false });
         } else if (type === "gpio") {
             radioConfigState.gpio.splice(index, 1);
             renderGpioList();
+            saveConfigPatch({ gpio: radioConfigState.gpio.slice(0) }, { applyAudio: false });
         }
+    });
 
-        if ($("#preset-list").length) {
-            saveRadioConfig({ applyAudio: false });
+    $(document).on("click", "#dialog-wifi-password-toggle", function() {
+        var $input = $("#dialog-wifi-password");
+        var $btn = $(this);
+        if (!$input.length) {
+            return;
         }
+        var show = $input.attr("type") === "password";
+        $input.attr("type", show ? "text" : "password");
+        $btn.attr("aria-pressed", show ? "true" : "false");
+        $btn.attr("title", show ? "Hide password" : "Show password");
+        $btn.attr("aria-label", show ? "Hide password" : "Show password");
+        $btn.html('<span class="btn-icon" aria-hidden="true">&#128065;</span> ' + (show ? "Hide" : "Show"));
     });
 
     $(document).on("click", "#config-dialog-cancel, .config-dialog-backdrop", function() {
