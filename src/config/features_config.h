@@ -23,6 +23,8 @@ struct FeatureSettings {
    */
   uint8_t display_colstart;
   uint8_t display_rowstart;
+  /** Invert rotary encoder direction (volume / preset / track). */
+  bool encoder_invert;
   bool stream_watchdog;
   uint16_t alarm_fade_sec;
   /**
@@ -73,6 +75,7 @@ public:
     data.display_rotate_180 = false;
     data.display_colstart = 0;
     data.display_rowstart = 0;
+    data.encoder_invert = false;
     data.stream_watchdog = true;
     data.alarm_fade_sec = 15;
     data.alarm_fallback_sound = "beep";
@@ -99,6 +102,7 @@ public:
         (uint8_t)constrain((int)(feat["display_colstart"] | data.display_colstart), 0, 7);
     data.display_rowstart =
         (uint8_t)constrain((int)(feat["display_rowstart"] | data.display_rowstart), 0, 7);
+    data.encoder_invert = feat["encoder_invert"] | data.encoder_invert;
     data.stream_watchdog = feat["stream_watchdog"] | data.stream_watchdog;
     int fadeSec = (int)(feat["alarm_fade_sec"] | data.alarm_fade_sec);
     data.alarm_fade_sec = (uint16_t)snapValueToStep(fadeSec, 5, 5, 600);
@@ -142,6 +146,7 @@ public:
     feat["display_rotate_180"] = data.display_rotate_180;
     feat["display_colstart"] = data.display_colstart;
     feat["display_rowstart"] = data.display_rowstart;
+    feat["encoder_invert"] = data.encoder_invert;
     feat["stream_watchdog"] = data.stream_watchdog;
     feat["alarm_fade_sec"] = data.alarm_fade_sec;
     feat["alarm_fallback_sound"] = data.alarm_fallback_sound;

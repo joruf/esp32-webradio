@@ -172,16 +172,22 @@ void checkRotaryEncoder() {
     return;
   }
 
+  // Per-device wiring / mount may reverse CLK/DT sense.
+  int16_t steps = rotationcount;
+  if (radioFeatures.encoder_invert) {
+    steps = (int16_t)(-steps);
+  }
+
   switch (enc_menu_mode) {
     case VOLUME:
       // Each detent changes the user-facing volume by 5 steps (0-100 range).
-      ini_block.reqvol = constrain(ini_block.reqvol + rotationcount * 5, 0, 100);
+      ini_block.reqvol = constrain(ini_block.reqvol + steps * 5, 0, 100);
       muteflag = false;
       nvsRequestSettingsSave(); // Persist the new volume shortly after the change
       break;
 
     case PRESET:
-      enc_preset += rotationcount;
+      enc_preset += steps;
       if (enc_preset < 0) {
         enc_preset = MAXPRESETS;
       }
@@ -200,7 +206,7 @@ void checkRotaryEncoder() {
 
     case TRACK:
       if (SD_okay) {
-        SD_currentnode = selectnextSDnode(SD_currentnode, rotationcount > 0 ? +1 : -1);
+        SD_currentnode = selectnextSDnode(SD_currentnode, steps > 0 ? +1 : -1);
         tmp = getSDfilename(SD_currentnode);
         inx = tmp.lastIndexOf('/');
         if (inx >= 0) {

@@ -46,6 +46,10 @@ const char display_html[] PROGMEM = R"=====(
 						<label><input type="checkbox" id="feat-display-rotate-180"> Rotate display 180&deg;</label>
 					</div>
 					<p class="config-help">Use 180&deg; rotation when the panel is mounted upside down. Takes effect immediately after saving.</p>
+					<div class="checkbox display-toggle">
+						<label><input type="checkbox" id="feat-encoder-invert"> Invert rotary encoder direction</label>
+					</div>
+					<p class="config-help">Per-device setting for reverse-wired or reverse-mounted encoders. Enable only on units where volume turns the wrong way.</p>
 					<div class="display-settings-grid">
 					<div class="form-group display-setting-card">
 						<label for="feat-display-colstart" title="ST7735 GRAM column start. In landscape this shifts the vertical origin. Leave 0 for aligned BLACKTAB panels.">TFT colstart</label>

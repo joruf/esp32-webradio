@@ -1694,6 +1694,9 @@ const char app_js[] PROGMEM = R"=====(
             if ($("#feat-display-rotate-180").length) {
                 $("#feat-display-rotate-180").prop("checked", !!feat.display_rotate_180);
             }
+            if ($("#feat-encoder-invert").length) {
+                $("#feat-encoder-invert").prop("checked", !!feat.encoder_invert);
+            }
             if ($("#feat-display-colstart").length) {
                 var cs = parseInt(feat.display_colstart, 10);
                 if (isNaN(cs) || cs < 0) {
@@ -1773,6 +1776,7 @@ const char app_js[] PROGMEM = R"=====(
                 alarm_fade_sec: parseInt($("#feat-alarm-fade").val(), 10) || 15,
                 vu_meter: $("#feat-vu-meter").is(":checked"),
                 display_rotate_180: $("#feat-display-rotate-180").is(":checked"),
+                encoder_invert: $("#feat-encoder-invert").is(":checked"),
                 stream_watchdog: $("#feat-watchdog").is(":checked"),
                 ota_check_url: $("#feat-ota-url").length ? ($("#feat-ota-url").val() || "") : (existingFeatures.ota_check_url || "")
             };
@@ -2059,6 +2063,7 @@ const char app_js[] PROGMEM = R"=====(
                 display_rotate_180: false,
                 display_colstart: 0,
                 display_rowstart: 0,
+                encoder_invert: false,
                 stream_watchdog: true,
                 ota_check_url: "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/version.json"
             }
@@ -2267,8 +2272,8 @@ const char app_js[] PROGMEM = R"=====(
         fillTftOffsetSelects();
 
         $(document)
-            .off("change.displaySettings", "#feat-dark-start, #feat-dark-end, #feat-vu-meter, #feat-display-rotate-180, #feat-display-colstart, #feat-display-rowstart")
-            .on("change.displaySettings", "#feat-dark-start, #feat-dark-end, #feat-vu-meter, #feat-display-rotate-180, #feat-display-colstart, #feat-display-rowstart", function() {
+            .off("change.displaySettings", "#feat-dark-start, #feat-dark-end, #feat-vu-meter, #feat-display-rotate-180, #feat-encoder-invert, #feat-display-colstart, #feat-display-rowstart")
+            .on("change.displaySettings", "#feat-dark-start, #feat-dark-end, #feat-vu-meter, #feat-display-rotate-180, #feat-encoder-invert, #feat-display-colstart, #feat-display-rowstart", function() {
                 persistDisplaySettings(true);
             });
 
@@ -2312,6 +2317,9 @@ const char app_js[] PROGMEM = R"=====(
         }
         if ($("#feat-display-rotate-180").length) {
             merged.display_rotate_180 = $("#feat-display-rotate-180").is(":checked");
+        }
+        if ($("#feat-encoder-invert").length) {
+            merged.encoder_invert = $("#feat-encoder-invert").is(":checked");
         }
         if ($("#feat-display-colstart").length) {
             merged.display_colstart = Math.max(0, Math.min(7, parseInt($("#feat-display-colstart").val(), 10) || 0));

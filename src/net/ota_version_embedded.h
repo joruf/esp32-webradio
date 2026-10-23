@@ -12,12 +12,17 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.88",
+  "version": "v2.89",
   "released": "2026-10-23",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.88.bin",
-  "notes": "Display colstart/rowstart offsets; WiFi credentials always-save; password visibility toggle; WebUI app.js fix.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.89.bin",
+  "notes": "Per-device rotary encoder invert; TFT colstart/rowstart offsets; WebUI display settings.",
   "history": [
+    {
+      "version": "v2.89",
+      "released": "2026-10-23",
+      "notes": "Per-device rotary encoder invert; TFT colstart/rowstart offsets; WebUI display settings."
+    },
     {
       "version": "v2.88",
       "released": "2026-10-23",
@@ -52,11 +57,6 @@ const char ota_version_embedded_json[] PROGMEM = R"=====(
       "version": "v2.68",
       "released": "2026-09-22",
       "notes": "Reduce stream stutter: SPI-safe VU render, skip idle volume SPI claims, soft-reconnect keeps audio queue."
-    },
-    {
-      "version": "v2.67",
-      "released": "2026-09-22",
-      "notes": "Fix Offline wake sound/interval NVS persistence (ArduinoJson |nullptr, feat_* boot load, feat_fb_int key length)."
     }
   ]
 }

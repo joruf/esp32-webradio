@@ -39,6 +39,9 @@ void applyFeatureNvsKeyOverrides(void) {
     radioFeatures.display_rowstart =
         (uint8_t)constrain(nvsGetValue("feat_rowstart").toInt(), 0, 7);
   }
+  if (nvsKeyExists("feat_enc_inv")) {
+    radioFeatures.encoder_invert = nvsGetValue("feat_enc_inv").toInt() != 0;
+  }
   if (nvsKeyExists("feat_watchdog")) {
     radioFeatures.stream_watchdog = nvsGetValue("feat_watchdog").toInt() != 0;
   }
@@ -412,6 +415,7 @@ static void ensureRadioConfigFeatures(JsonDocument &doc) {
   defaults.display_rotate_180 = false;
   defaults.display_colstart = 0;
   defaults.display_rowstart = 0;
+  defaults.encoder_invert = false;
   defaults.stream_watchdog = true;
   defaults.alarm_fade_sec = 15;
   defaults.alarm_fallback_sound = "beep";
@@ -438,6 +442,9 @@ static void ensureRadioConfigFeatures(JsonDocument &doc) {
   }
   if (feat["display_rowstart"].isNull()) {
     feat["display_rowstart"] = defaults.display_rowstart;
+  }
+  if (feat["encoder_invert"].isNull()) {
+    feat["encoder_invert"] = defaults.encoder_invert;
   }
   if (feat["stream_watchdog"].isNull()) {
     feat["stream_watchdog"] = defaults.stream_watchdog;
@@ -998,6 +1005,7 @@ static bool applyRadioConfigDoc(JsonDocument &doc, bool maskWifiPasswords, bool 
               String((int)constrain((int)(feat["display_colstart"] | 0), 0, 7)));
   nvsAddValue("feat_rowstart",
               String((int)constrain((int)(feat["display_rowstart"] | 0), 0, 7)));
+  nvsAddValue("feat_enc_inv", String((int)(feat["encoder_invert"] | false)));
   nvsAddValue("feat_watchdog", String((int)(feat["stream_watchdog"] | true)));
   nvsAddValue("feat_alarm_fade", String((int)(feat["alarm_fade_sec"] | 15)));
   {

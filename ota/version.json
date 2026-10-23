@@ -1,10 +1,15 @@
 {
-  "version": "v2.88",
+  "version": "v2.89",
   "released": "2026-10-23",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.88.bin",
-  "notes": "Display colstart/rowstart offsets; WiFi credentials always-save; password visibility toggle; WebUI app.js fix.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.89.bin",
+  "notes": "Per-device rotary encoder invert; TFT colstart/rowstart offsets; WebUI display settings.",
   "history": [
+    {
+      "version": "v2.89",
+      "released": "2026-10-23",
+      "notes": "Per-device rotary encoder invert; TFT colstart/rowstart offsets; WebUI display settings."
+    },
     {
       "version": "v2.88",
       "released": "2026-10-23",
