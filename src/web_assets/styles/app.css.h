@@ -233,6 +233,38 @@ const char app_css[] PROGMEM = R"=====(
 		transform-origin: 50% 55%;
 	}
 	.ota-modal-actions { justify-content: flex-end; }
+	.ota-modal-progress-wrap {
+		margin: 0 0 14px 0;
+	}
+	.ota-modal-progress-track {
+		width: 100%;
+		height: 14px;
+		border-radius: 999px;
+		background: #e6edf7;
+		overflow: hidden;
+		border: 1px solid #c9d7ea;
+	}
+	.ota-modal-progress-fill {
+		height: 100%;
+		width: 0%;
+		border-radius: inherit;
+		background: linear-gradient(90deg, #3b82f6, #2563eb);
+		transition: width 0.15s ease-out;
+	}
+	.ota-modal-progress-wrap.is-indeterminate .ota-modal-progress-fill {
+		width: 35% !important;
+		animation: ota-progress-indeterminate 1.1s ease-in-out infinite;
+	}
+	.ota-modal-progress-label {
+		margin: 6px 0 0 0;
+		font-size: 0.9em;
+		color: #445;
+		text-align: center;
+	}
+	@keyframes ota-progress-indeterminate {
+		0% { transform: translateX(-120%); }
+		100% { transform: translateX(320%); }
+	}
 	@keyframes ota-upload-tick {
 		0% { transform: rotate(0deg); }
 		100% { transform: rotate(360deg); }
@@ -510,6 +542,11 @@ const char app_css[] PROGMEM = R"=====(
 		background: #2a394c;
 		color: #d6e6f7;
 	}
+	body.theme-dark .ota-modal-progress-track {
+		background: #2a394c;
+		border-color: #38495d;
+	}
+	body.theme-dark .ota-modal-progress-label { color: #c5d4e6; }
 	body.theme-dark .webradio-volume-value { color: #e0e0e0; }
 	body.theme-dark .webradio-live-pill { background: #2f2f2f; color: #ddd; }
 	body.theme-dark #play.is-live-playing .btn-icon::before,

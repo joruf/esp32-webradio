@@ -123,6 +123,8 @@ volatile bool decoderStallRecoverReq = false;
 bool updatereq = false;                // Request to update software from remote host
 String pendingOtaBinUrl;               // Specific firmware bin URL to install (e.g. chosen older release)
 volatile bool otaActive = false;       // True while OTA/firmware update is running
+volatile uint8_t otaWebProgressPercent = 255;
+volatile bool otaWebProgressActive = false;
 bool NetworkFound = false;             // True if WiFi network connected
 bool wifiConfigApActive = false;       // True while configuration soft-AP is active
 String networks;                       // Found networks in the surrounding

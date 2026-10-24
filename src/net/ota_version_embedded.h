@@ -12,12 +12,22 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.91",
+  "version": "v2.93",
   "released": "2026-10-24",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.91.bin",
-  "notes": "YouTube title links copy search URL to clipboard instead of opening a new tab.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.93.bin",
+  "notes": "Fix OTA Please-wait dialog not closing after install; recover on offline-then-online.",
   "history": [
+    {
+      "version": "v2.93",
+      "released": "2026-10-24",
+      "notes": "Fix OTA Please-wait dialog not closing after install; recover on offline-then-online."
+    },
+    {
+      "version": "v2.92",
+      "released": "2026-10-24",
+      "notes": "OTA Please-wait dialog shows 0-100% upload/install progress bar."
+    },
     {
       "version": "v2.91",
       "released": "2026-10-24",
@@ -47,16 +57,6 @@ const char ota_version_embedded_json[] PROGMEM = R"=====(
       "version": "v2.79",
       "released": "2026-10-21",
       "notes": "About page: author Joachim Ruf / Loresoft first; remove duplicate footer (v2.78 credits reorder)."
-    },
-    {
-      "version": "v2.77",
-      "released": "2026-10-21",
-      "notes": "Display 180\u00b0 rotation setting in Display Settings; Playback panel above Webradio Control."
-    },
-    {
-      "version": "v2.75",
-      "released": "2026-10-10",
-      "notes": "YouTube links for all titles; ST7701 Touch-LCD and I2S/A2DP audio paths; WROOM TFT wiring (covers v2.72\u2013v2.76 session work)."
     }
   ]
 }

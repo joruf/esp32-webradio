@@ -2639,16 +2639,87 @@ const char app_js[] PROGMEM = R"=====(
         });
 
         var otaModalLocked = false;
+        var otaProgressPollTimer = null;
+
+        function stopOtaProgressPolling() {
+            if (otaProgressPollTimer) {
+                clearInterval(otaProgressPollTimer);
+                otaProgressPollTimer = null;
+            }
+        }
+
+        function setOtaModalProgressVisible(show) {
+            var wrap = document.getElementById("ota-modal-progress-wrap");
+            if (!wrap) {
+                return;
+            }
+            if (show) {
+                wrap.hidden = false;
+            } else {
+                wrap.hidden = true;
+                wrap.classList.remove("is-indeterminate");
+            }
+        }
+
+        /**
+         * @param {number|null} percent 0-100, or null for indeterminate
+         * @param {string=} labelOverride optional label text
+         */
+        function setOtaModalProgress(percent, labelOverride) {
+            var wrap = document.getElementById("ota-modal-progress-wrap");
+            var fill = document.getElementById("ota-modal-progress-fill");
+            var label = document.getElementById("ota-modal-progress-label");
+            var bar = document.getElementById("ota-modal-progressbar");
+            if (!wrap || !fill || !label || !bar) {
+                return;
+            }
+            wrap.hidden = false;
+            if (percent === null || percent === undefined || isNaN(percent) || percent < 0) {
+                wrap.classList.add("is-indeterminate");
+                fill.style.width = "35%";
+                bar.setAttribute("aria-valuenow", "0");
+                label.textContent = labelOverride || "Working...";
+                return;
+            }
+            var pct = Math.max(0, Math.min(100, Math.round(percent)));
+            wrap.classList.remove("is-indeterminate");
+            fill.style.width = pct + "%";
+            bar.setAttribute("aria-valuenow", String(pct));
+            label.textContent = labelOverride || (pct + "%");
+        }
+
+        function startOtaDeviceProgressPolling() {
+            stopOtaProgressPolling();
+            otaProgressPollTimer = setInterval(function() {
+                fetch("/?getotaprogress&_t=" + Date.now())
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (!data) {
+                            return;
+                        }
+                        if (typeof data.percent === "number" && data.percent >= 0) {
+                            setOtaModalProgress(data.percent, data.percent + "%");
+                        } else if (data.active || data.ota_active) {
+                            setOtaModalProgress(null, "Downloading / installing...");
+                        }
+                    })
+                    .catch(function() {
+                        // Device may be offline while flashing; keep last known bar state.
+                    });
+            }, 800);
+        }
 
         function hideOtaModal() {
             if (otaModalLocked) {
                 return;
             }
+            stopOtaProgressPolling();
+            setOtaModalProgressVisible(false);
             $("#ota-progress-modal").hide();
             $("#ota-modal-icon").removeClass("is-waiting");
         }
 
-        function showOtaModal(title, message, icon, locked) {
+        function showOtaModal(title, message, icon, locked, withProgress) {
             if (!$("#ota-progress-modal").length) {
                 return;
             }
@@ -2658,19 +2729,38 @@ const char app_js[] PROGMEM = R"=====(
             $("#ota-modal-icon").text(icon || " ");
             $("#ota-modal-icon").toggleClass("is-waiting", !!locked);
             $("#ota-modal-close").toggle(!locked);
+            if (withProgress) {
+                setOtaModalProgressVisible(true);
+            } else if (!locked) {
+                setOtaModalProgressVisible(false);
+                stopOtaProgressPolling();
+            }
             $("#ota-progress-modal").show();
         }
 
-        function showOtaUploadWait(show, text) {
+        function showOtaUploadWait(show, text, options) {
+            options = options || {};
             if (show) {
                 showOtaModal(
                     "Please wait",
                     text || "Firmware update is being installed...",
                     "\u{1F559}",
+                    true,
                     true
                 );
+                if (options.indeterminate) {
+                    setOtaModalProgress(null, options.progressLabel || "Working...");
+                } else if (typeof options.percent === "number") {
+                    setOtaModalProgress(options.percent);
+                } else {
+                    setOtaModalProgress(0, "0%");
+                }
+                if (options.pollDevice) {
+                    startOtaDeviceProgressPolling();
+                }
                 return;
             }
+            stopOtaProgressPolling();
             otaModalLocked = false;
             hideOtaModal();
         }
@@ -2687,6 +2777,7 @@ const char app_js[] PROGMEM = R"=====(
             if (type === "success") {
                 title = "Update successful";
                 icon = "\u{2705}";
+                setOtaModalProgress(100, "100%");
             } else if (type === "warning") {
                 title = "Update warning";
                 icon = "\u{26A0}";
@@ -2694,7 +2785,8 @@ const char app_js[] PROGMEM = R"=====(
                 title = "Update failed";
                 icon = "\u{274C}";
             }
-            showOtaModal(title, message, icon, false);
+            stopOtaProgressPolling();
+            showOtaModal(title, message, icon, false, type === "success");
         }
 
         $("#ota-modal-close").off("click.otaModalClose").on("click.otaModalClose", function() {
@@ -2702,32 +2794,91 @@ const char app_js[] PROGMEM = R"=====(
             hideOtaModal();
         });
 
+        /**
+         * Wait until the radio disappears (reboot/flash) and then answers again.
+         * A plain "first successful getJSON" is not enough: during online OTA the
+         * device often stays reachable for a while, and the trigger fetch may hang
+         * forever after the TCP drop - recovery must not depend on that fetch.
+         */
         function waitForOtaServiceRecovery(onRecovered, onTimeout) {
-            var maxAttempts = 90; // about 4.5 minutes with 3s interval
+            var maxAttempts = 120; // ~4 minutes at 2s
             var attempt = 0;
+            var sawOffline = false;
+            var baselineFirmware = null;
+            var done = false;
+            var startedAt = Date.now();
+
+            function finishOk(data) {
+                if (done) {
+                    return;
+                }
+                done = true;
+                onRecovered(data || {});
+            }
+
+            function finishTimeout() {
+                if (done) {
+                    return;
+                }
+                done = true;
+                onTimeout();
+            }
 
             function checkOnce() {
-                fetch("/?getJSON&_t=" + Date.now())
+                if (done) {
+                    return;
+                }
+                var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+                var timer = setTimeout(function() {
+                    if (ctrl) {
+                        ctrl.abort();
+                    }
+                }, 4000);
+
+                fetch("/?getJSON&_t=" + Date.now(), ctrl ? { signal: ctrl.signal } : undefined)
                     .then(function(response) {
+                        clearTimeout(timer);
                         if (!response.ok) {
                             throw new Error("HTTP " + response.status);
                         }
                         return response.json();
                     })
-                    .then(function() {
-                        onRecovered();
-                    })
-                    .catch(function() {
-                        attempt += 1;
-                        if (attempt >= maxAttempts) {
-                            onTimeout();
+                    .then(function(data) {
+                        var fw = data && data.firmware ? String(data.firmware) : "";
+                        if (baselineFirmware === null && fw) {
+                            baselineFirmware = fw;
+                        }
+                        if (sawOffline) {
+                            finishOk(data);
                             return;
                         }
-                        setTimeout(checkOnce, 3000);
+                        // Fast reboot can miss the offline window; treat a firmware
+                        // change after the update was started as recovery too.
+                        if (baselineFirmware && fw && fw !== baselineFirmware &&
+                            (Date.now() - startedAt) > 5000) {
+                            finishOk(data);
+                            return;
+                        }
+                        attempt += 1;
+                        if (attempt >= maxAttempts) {
+                            finishTimeout();
+                            return;
+                        }
+                        setTimeout(checkOnce, 2000);
+                    })
+                    .catch(function() {
+                        clearTimeout(timer);
+                        sawOffline = true;
+                        attempt += 1;
+                        if (attempt >= maxAttempts) {
+                            finishTimeout();
+                            return;
+                        }
+                        setTimeout(checkOnce, 2000);
                     });
             }
 
-            setTimeout(checkOnce, 3000);
+            setTimeout(checkOnce, 1500);
         }
 
         function setOtaActionButtonsEnabled(enabled) {
@@ -2739,9 +2890,31 @@ const char app_js[] PROGMEM = R"=====(
             $("#ota-version-select").prop("disabled", !enabled || !hasReleases);
         }
 
-        function startOtaRecoveryWaitFlow(waitStatusText, startLogText, timeoutResultText) {
+        /** Fire-and-forget OTA trigger; never block recovery on this request. */
+        function triggerOtaInstallRequest(url) {
+            var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+            var timer = setTimeout(function() {
+                if (ctrl) {
+                    ctrl.abort();
+                }
+            }, 8000);
+            fetch(url, ctrl ? { signal: ctrl.signal } : undefined)
+                .catch(function() { /* device often drops the connection mid-update */ })
+                .then(function() { clearTimeout(timer); });
+        }
+
+        function startOtaRecoveryWaitFlow(waitStatusText, startLogText, timeoutResultText, options) {
+            options = options || {};
             showOtaUploadResult("", "");
-            showOtaUploadWait(true, "Firmware update is being installed...");
+            showOtaUploadWait(true, "Firmware update is being installed...", {
+                indeterminate: !options.keepPercent,
+                percent: options.keepPercent ? 100 : undefined,
+                progressLabel: options.keepPercent ? "100% - waiting for restart..." : "Installing / restarting...",
+                pollDevice: !!options.pollDevice
+            });
+            if (options.keepPercent) {
+                setOtaModalProgress(100, "100% - waiting for restart...");
+            }
             $("#ota-status-text").removeClass("text-success text-danger").addClass("text-warning")
                 .text(waitStatusText || "Waiting for device to restart...");
             if (startLogText) {
@@ -2749,16 +2922,23 @@ const char app_js[] PROGMEM = R"=====(
             }
             setOtaActionButtonsEnabled(false);
 
-            waitForOtaServiceRecovery(function() {
-                showOtaUploadWait(false);
-                showOtaUploadResult("Firmware update was installed successfully.", "success");
+            waitForOtaServiceRecovery(function(data) {
+                stopOtaProgressPolling();
+                otaModalLocked = false;
+                var fw = (data && data.firmware) ? String(data.firmware) : "";
+                var okMsg = fw
+                    ? ("Firmware update was installed successfully.\nInstalled: " + fw)
+                    : "Firmware update was installed successfully.";
+                showOtaUploadResult(okMsg, "success");
                 $("#ota-status-text").removeClass("text-warning text-danger").addClass("text-success")
                     .text("Update completed successfully");
-                showCommandLog("Device is back online. Update completed successfully.");
+                showCommandLog("Device is back online. Update completed successfully." +
+                    (fw ? (" (" + fw + ")") : ""));
                 setOtaActionButtonsEnabled(true);
                 refreshOtaStatus(false).catch(function() {});
             }, function() {
-                showOtaUploadWait(false);
+                stopOtaProgressPolling();
+                otaModalLocked = false;
                 showOtaUploadResult(timeoutResultText || "Could not confirm update completion automatically. Please refresh and check firmware version.", "warning");
                 $("#ota-status-text").removeClass("text-success text-danger").addClass("text-warning")
                     .text("Recovery timeout - please verify manually");
@@ -2777,31 +2957,22 @@ const char app_js[] PROGMEM = R"=====(
             if (!window.confirm(confirmMsg)) {
                 return;
             }
-            showOtaUploadResult("", "");
             var startUrl = target
                 ? ("/?installversion=" + encodeURIComponent(target) + "&_t=" + Date.now())
                 : ("/?update&_t=" + Date.now());
             $("#ota-status-text").removeClass("text-success text-warning text-danger")
                 .text(target ? ("Starting install of " + target + "...") : "Starting online update...");
-            fetch(startUrl)
-                .then(function() {
-                    startOtaRecoveryWaitFlow(
-                        target ? ("Installing " + target + ". Waiting for device restart...")
-                            : "Online update started. Waiting for device restart...",
-                        target ? ("Install of " + target + " started. Waiting for restart...")
-                            : "Online update started. Waiting for restart...",
-                        "Online update was triggered, but service recovery timed out. Please verify firmware version manually."
-                    );
-                })
-                .catch(function() {
-                    startOtaRecoveryWaitFlow(
-                        target ? ("Installing " + target + ". Waiting for device restart...")
-                            : "Online update triggered. Waiting for device restart...",
-                        target ? ("Install of " + target + " started. Waiting for restart...")
-                            : "Online update request sent. Waiting for restart...",
-                        "Online update request was sent, but service recovery timed out. Please verify firmware version manually."
-                    );
-                });
+            // Start recovery immediately. Do not wait for the trigger fetch: after
+            // reboot that request often hangs and never resolves then/catch.
+            startOtaRecoveryWaitFlow(
+                target ? ("Installing " + target + ". Waiting for device restart...")
+                    : "Online update started. Waiting for device restart...",
+                target ? ("Install of " + target + " started. Waiting for restart...")
+                    : "Online update started. Waiting for restart...",
+                "Online update was triggered, but service recovery timed out. Please verify firmware version manually.",
+                { pollDevice: true }
+            );
+            triggerOtaInstallRequest(startUrl);
         });
 
         $("#ota-version-install-btn").off("click.otaVersionInstall")
@@ -2815,24 +2986,15 @@ const char app_js[] PROGMEM = R"=====(
                 if (!window.confirm("Install firmware " + version + " now? This can be an older release (downgrade). Do not disconnect power during the update.")) {
                     return;
                 }
-                showOtaUploadResult("", "");
                 $("#ota-status-text").removeClass("text-success text-warning text-danger")
                     .text("Starting install of " + version + "...");
-                fetch("/?installversion=" + encodeURIComponent(version) + "&_t=" + Date.now())
-                    .then(function() {
-                        startOtaRecoveryWaitFlow(
-                            "Installing " + version + ". Waiting for device restart...",
-                            "Install of " + version + " started. Waiting for restart...",
-                            "Install of " + version + " was triggered, but service recovery timed out. Please verify firmware version manually."
-                        );
-                    })
-                    .catch(function() {
-                        startOtaRecoveryWaitFlow(
-                            "Install of " + version + " triggered. Waiting for device restart...",
-                            "Install of " + version + " request sent. Waiting for restart...",
-                            "Install of " + version + " request was sent, but service recovery timed out. Please verify firmware version manually."
-                        );
-                    });
+                startOtaRecoveryWaitFlow(
+                    "Installing " + version + ". Waiting for device restart...",
+                    "Install of " + version + " started. Waiting for restart...",
+                    "Install of " + version + " was triggered, but service recovery timed out. Please verify firmware version manually.",
+                    { pollDevice: true }
+                );
+                triggerOtaInstallRequest("/?installversion=" + encodeURIComponent(version) + "&_t=" + Date.now());
             });
 
         function validateFirmwareFile(file, callback) {
@@ -2876,39 +3038,65 @@ const char app_js[] PROGMEM = R"=====(
             setOtaActionButtonsEnabled(false);
             $("#ota-status-text").removeClass("text-success text-warning text-danger").text("Uploading local firmware...");
             showCommandLog("Uploading firmware: " + file.name);
-            showOtaUploadWait(true, "Local firmware is being uploaded...");
+            showOtaUploadWait(true, "Local firmware is being uploaded...", { percent: 0 });
 
-            fetch("/?uploadfirmware=1&_t=" + Date.now(), {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/octet-stream"
-                },
-                body: file
-            })
-                .then(function(response) { return response.json(); })
-                .then(function(data) {
-                    if (data && data.ok) {
-                        startOtaRecoveryWaitFlow(
-                            "Firmware uploaded. Waiting for device to restart...",
-                            data.message || "Firmware upload successful. Waiting for restart...",
-                            "Upload finished, but service recovery timed out. Please reload this page."
-                        );
-                        return;
-                    }
-                    var msg = (data && data.message) ? data.message : "Upload failed";
-                    showOtaUploadWait(false);
-                    showOtaUploadResult("Firmware upload failed: " + msg, "error");
-                    $("#ota-status-text").addClass("text-danger").text(msg);
-                    showCommandLog("Firmware upload failed: " + msg, { type: "error" });
-                    setOtaActionButtonsEnabled(true);
-                })
-                .catch(function(err) {
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/?uploadfirmware=1&_t=" + Date.now(), true);
+            xhr.setRequestHeader("Content-Type", "application/octet-stream");
+            xhr.upload.onprogress = function(ev) {
+                if (!ev.lengthComputable || !ev.total) {
+                    setOtaModalProgress(null, "Uploading...");
+                    return;
+                }
+                var pct = Math.max(0, Math.min(100, Math.round((ev.loaded * 100) / ev.total)));
+                setOtaModalProgress(pct, pct + "% uploaded");
+                $("#ota-status-text").text("Uploading local firmware... " + pct + "%");
+            };
+            xhr.upload.onload = function() {
+                setOtaModalProgress(100, "100% uploaded");
+            };
+            xhr.onerror = function() {
+                startOtaRecoveryWaitFlow(
+                    "Upload sent. Waiting for device to return...",
+                    "Upload connection dropped. Checking service recovery...",
+                    "Could not confirm update completion automatically. Please refresh and check firmware version.",
+                    { keepPercent: true }
+                );
+            };
+            xhr.onload = function() {
+                var data = null;
+                try {
+                    data = JSON.parse(xhr.responseText || "{}");
+                } catch (err) {
+                    data = null;
+                }
+                if (xhr.status >= 200 && xhr.status < 300 && data && data.ok) {
+                    startOtaRecoveryWaitFlow(
+                        "Firmware uploaded. Waiting for device to restart...",
+                        data.message || "Firmware upload successful. Waiting for restart...",
+                        "Upload finished, but service recovery timed out. Please reload this page.",
+                        { keepPercent: true }
+                    );
+                    return;
+                }
+                // Connection often drops right as the device reboots after a good upload.
+                if (xhr.status === 0 || !xhr.responseText) {
                     startOtaRecoveryWaitFlow(
                         "Upload sent. Waiting for device to return...",
-                        "Upload connection dropped (" + err + "). Checking service recovery...",
-                        "Could not confirm update completion automatically. Please refresh and check firmware version."
+                        "Upload finished or connection dropped. Checking service recovery...",
+                        "Could not confirm update completion automatically. Please refresh and check firmware version.",
+                        { keepPercent: true }
                     );
-                });
+                    return;
+                }
+                var msg = (data && data.message) ? data.message : ("Upload failed (HTTP " + xhr.status + ")");
+                showOtaUploadWait(false);
+                showOtaUploadResult("Firmware upload failed: " + msg, "error");
+                $("#ota-status-text").addClass("text-danger").text(msg);
+                showCommandLog("Firmware upload failed: " + msg, { type: "error" });
+                setOtaActionButtonsEnabled(true);
+            };
+            xhr.send(file);
         }
 
         $("#ota-upload-btn").off("click.otaUpload").on("click.otaUpload", function() {

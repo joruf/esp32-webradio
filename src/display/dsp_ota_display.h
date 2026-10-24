@@ -225,6 +225,8 @@ inline void dspOtaDisplayBegin(const char *targetVersion, const char *currentFir
   dspOtaLastPercent = 255;
   dspOtaLastDrawMs = 0;
   dspOtaTargetVersion[0] = '\0';
+  otaWebProgressActive = true;
+  otaWebProgressPercent = 0;
 
   if (targetVersion && targetVersion[0] != '\0') {
     strncpy(dspOtaTargetVersion, targetVersion, sizeof(dspOtaTargetVersion) - 1);
@@ -362,6 +364,8 @@ inline void dspOtaDisplayProgress(size_t done, size_t total, const char *phaseLa
 
   dspOtaLastPercent = percent;
   dspOtaLastDrawMs = now;
+  otaWebProgressActive = true;
+  otaWebProgressPercent = percent;
 
 #if defined(RADIO_DASHBOARD_TFT)
   if (phaseLabel) {
@@ -395,6 +399,8 @@ inline void dspOtaDisplayProgress(size_t done, size_t total, const char *phaseLa
  * @param reason Short error description
  */
 inline void dspOtaDisplayFailed(const char *reason) {
+  otaWebProgressActive = false;
+  otaWebProgressPercent = 255;
   if (!tft) {
     return;
   }
@@ -424,6 +430,8 @@ inline void dspOtaDisplayFailed(const char *reason) {
  * @brief Show success screen before reboot.
  */
 inline void dspOtaDisplaySuccess(void) {
+  otaWebProgressActive = true;
+  otaWebProgressPercent = 100;
   if (!tft) {
     return;
   }

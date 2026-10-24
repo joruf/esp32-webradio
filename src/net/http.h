@@ -1095,6 +1095,23 @@ void handlehttp() {
     return;
   }
 
+  if (http_getcmd.startsWith("getotaprogress")) {
+    String json = "{";
+    json += "\"active\":";
+    json += otaWebProgressActive || otaActive ? "true" : "false";
+    json += ",\"percent\":";
+    if (otaWebProgressPercent <= 100) {
+      json += String((unsigned)otaWebProgressPercent);
+    } else {
+      json += "-1";
+    }
+    json += ",\"ota_active\":";
+    json += otaActive ? "true" : "false";
+    json += "}";
+    sendHttpJsonResponse(json);
+    return;
+  }
+
   if (http_getcmd.startsWith("uploadfirmware")) {
     String uploadMessage;
     bool ok = handleFirmwareUploadPost(http_post_content_length, uploadMessage);

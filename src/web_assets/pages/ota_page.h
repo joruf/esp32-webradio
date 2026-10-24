@@ -108,6 +108,12 @@ const char ota_html[] PROGMEM = R"=====(
 				<div class="ota-modal-icon" id="ota-modal-icon" aria-hidden="true">&#128339;</div>
 				<h3 id="ota-modal-title">Please wait</h3>
 				<p id="ota-modal-message">Firmware update is being installed...</p>
+				<div id="ota-modal-progress-wrap" class="ota-modal-progress-wrap" hidden>
+					<div class="ota-modal-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="ota-modal-progressbar">
+						<div class="ota-modal-progress-fill" id="ota-modal-progress-fill"></div>
+					</div>
+					<p class="ota-modal-progress-label" id="ota-modal-progress-label">0%</p>
+				</div>
 				<div class="maintenance-actions ota-modal-actions">
 					<button type="button" id="ota-modal-close" class="btn btn-primary">OK</button>
 				</div>

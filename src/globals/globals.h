@@ -105,6 +105,9 @@ extern volatile bool decoderStallRecoverReq;
 extern bool updatereq;
 extern String pendingOtaBinUrl;
 extern volatile bool otaActive;       // True while OTA/firmware update is running
+/** WebUI progress for online OTA (0-100). 255 = unknown / inactive. */
+extern volatile uint8_t otaWebProgressPercent;
+extern volatile bool otaWebProgressActive;
 extern bool NetworkFound;
 /** True while the configuration soft-AP is up (STA reconnect must not run). */
 extern bool wifiConfigApActive;
