@@ -61,7 +61,7 @@ const char index_html[] PROGMEM = R"=====(
 				</div>
 				<div class="panel-body">
 					<span id="statlabel" style="color: red;">Lade Sender...</span> |
-					<a id="youtubelink" class="youtube-title-link" href="#" target="_blank" rel="noopener noreferrer">
+					<a id="youtubelink" class="youtube-title-link" href="#" title="Click to copy YouTube search link" role="button">
 							<span id="songlabel">Lade Titel...</span>
 					</a>
 					<div id="title-history" class="title-history-table" aria-live="polite">

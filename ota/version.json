@@ -1,10 +1,15 @@
 {
-  "version": "v2.90",
-  "released": "2026-10-23",
+  "version": "v2.91",
+  "released": "2026-10-24",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.90.bin",
-  "notes": "Fix OTA status vs online releases list; parse large remote version.json; soft stream-stall recovery without reboot.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.91.bin",
+  "notes": "YouTube title links copy search URL to clipboard instead of opening a new tab.",
   "history": [
+    {
+      "version": "v2.91",
+      "released": "2026-10-24",
+      "notes": "YouTube title links copy search URL to clipboard instead of opening a new tab."
+    },
     {
       "version": "v2.90",
       "released": "2026-10-23",

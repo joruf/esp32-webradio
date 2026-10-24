@@ -4806,6 +4806,84 @@ const char app_js[] PROGMEM = R"=====(
         return "https://www.youtube.com/results?search_query=" + encodeURIComponent(q + " lyrics");
     }
 
+    function copyTextToClipboard(text) {
+        var value = String(text || "");
+        if (!value) {
+            return Promise.reject(new Error("empty"));
+        }
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+            return navigator.clipboard.writeText(value);
+        }
+        return new Promise(function(resolve, reject) {
+            var area = document.createElement("textarea");
+            area.value = value;
+            area.setAttribute("readonly", "");
+            area.style.position = "fixed";
+            area.style.left = "-9999px";
+            document.body.appendChild(area);
+            area.select();
+            try {
+                if (!document.execCommand("copy")) {
+                    throw new Error("copy failed");
+                }
+                resolve();
+            } catch (err) {
+                reject(err);
+            } finally {
+                document.body.removeChild(area);
+            }
+        });
+    }
+
+    function flashYoutubeCopyFeedback(link) {
+        if (!link) {
+            return;
+        }
+        var prev = link.getAttribute("data-copy-label");
+        if (!prev) {
+            link.setAttribute("data-copy-label", link.getAttribute("title") || "");
+        }
+        link.setAttribute("title", "Link copied");
+        link.classList.add("youtube-link-copied");
+        clearTimeout(link._youtubeCopyTimer);
+        link._youtubeCopyTimer = setTimeout(function() {
+            link.classList.remove("youtube-link-copied");
+            var restore = link.getAttribute("data-copy-label");
+            if (restore) {
+                link.setAttribute("title", restore);
+            } else {
+                link.setAttribute("title", "Click to copy YouTube search link");
+            }
+        }, 1500);
+    }
+
+    function bindYoutubeCopyLink(link, title) {
+        if (!link) {
+            return;
+        }
+        var url = youtubeSearchUrl(title);
+        link.href = url;
+        link.removeAttribute("target");
+        link.removeAttribute("rel");
+        link.setAttribute("title", "Click to copy YouTube search link");
+        link.setAttribute("role", "button");
+        link.onclick = function(ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            if (!url || url === "#") {
+                return false;
+            }
+            copyTextToClipboard(url)
+                .then(function() {
+                    flashYoutubeCopyFeedback(link);
+                })
+                .catch(function() {
+                    link.setAttribute("title", "Could not copy link");
+                });
+            return false;
+        };
+    }
+
     function renderTitleHistory(history) {
         var table = document.getElementById("title-history");
         if (!table) {
@@ -4836,10 +4914,8 @@ const char app_js[] PROGMEM = R"=====(
             if (title) {
                 var link = document.createElement("a");
                 link.className = "youtube-title-link";
-                link.href = youtubeSearchUrl(title);
-                link.target = "_blank";
-                link.rel = "noopener noreferrer";
                 link.textContent = title;
+                bindYoutubeCopyLink(link, title);
                 text.appendChild(link);
             }
 
@@ -4918,7 +4994,7 @@ const char app_js[] PROGMEM = R"=====(
 
             var linkElement = document.getElementById("youtubelink");
             if (linkElement && data.title) {
-                linkElement.href = youtubeSearchUrl(data.title);
+                bindYoutubeCopyLink(linkElement, data.title);
             }
 
             handleMp3StreamSessionLiveStatus(data);

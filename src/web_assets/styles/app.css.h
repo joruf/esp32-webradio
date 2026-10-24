@@ -317,6 +317,9 @@ const char app_css[] PROGMEM = R"=====(
 		color: #2563eb;
 		text-decoration: none;
 	}
+	.youtube-title-link.youtube-link-copied {
+		opacity: 0.75;
+	}
 	.youtube-title-link:hover,
 	.youtube-title-link:focus {
 		text-decoration: underline;

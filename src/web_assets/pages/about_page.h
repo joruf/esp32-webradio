@@ -79,7 +79,7 @@ const char about_html[] PROGMEM = R"=====(
 						<li><strong>Presets:</strong> Many station presets; supports <code>.m3u</code> playlist URLs.</li>
 						<li><strong>Volume:</strong> 0–100 in <strong>5-step</strong> increments (encoder and web UI).</li>
 						<li><strong>Equalizer:</strong> Treble and bass via Sound Settings.</li>
-						<li><strong>YouTube links:</strong> Current title and title history on the home page open a YouTube search.</li>
+						<li><strong>YouTube links:</strong> Clicking the current title or a title-history entry copies the YouTube search link to the clipboard.</li>
 					</ul>
 				</div>
 				<div class="col-md-6">

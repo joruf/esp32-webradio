@@ -12,12 +12,17 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.90",
-  "released": "2026-10-23",
+  "version": "v2.91",
+  "released": "2026-10-24",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.90.bin",
-  "notes": "Fix OTA status vs online releases list; parse large remote version.json; soft stream-stall recovery without reboot.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.91.bin",
+  "notes": "YouTube title links copy search URL to clipboard instead of opening a new tab.",
   "history": [
+    {
+      "version": "v2.91",
+      "released": "2026-10-24",
+      "notes": "YouTube title links copy search URL to clipboard instead of opening a new tab."
+    },
     {
       "version": "v2.90",
       "released": "2026-10-23",
@@ -52,11 +57,6 @@ const char ota_version_embedded_json[] PROGMEM = R"=====(
       "version": "v2.75",
       "released": "2026-10-10",
       "notes": "YouTube links for all titles; ST7701 Touch-LCD and I2S/A2DP audio paths; WROOM TFT wiring (covers v2.72\u2013v2.76 session work)."
-    },
-    {
-      "version": "v2.71",
-      "released": "2026-10-05",
-      "notes": "Fix alarm save: keep stable NVS namespace separate from hostname radio; gzip CSS/JS for OTA size; alarm UI version fixed."
     }
   ]
 }
