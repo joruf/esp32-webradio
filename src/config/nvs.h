@@ -164,14 +164,40 @@ static uint32_t settingsSaveRequestedAt = 0; // millis() of the most recent chan
  *
  * The periodic nvsAutoSave() only writes every 10 minutes, so a volume change
  * made shortly before a power cycle used to be lost. This marks the settings as
- * dirty; nvsProcessPendingSave() persists them a few seconds after the last
- * change, coalescing rapid encoder steps into a single flash write.
+ * dirty; nvsProcessPendingSave() persists them shortly after the last change,
+ * coalescing rapid encoder steps into a single flash write.
+ *
+ * @note nvs_set_str alone is not enough: without nvs_commit() a power cut loses
+ *       the new volume. Always pair writes with nvsFlushSettingsSave() on stop.
  *
  * @return void
  */
 void nvsRequestSettingsSave() {
   settingsSavePending = true;
   settingsSaveRequestedAt = millis();
+}
+
+/**
+ * @brief Write current volume/preset/tone to NVS and commit immediately.
+ *
+ * Used by the debounced path and by power-off / reboot so the last volume is
+ * not lost when the user turns the radio off right after adjusting it.
+ *
+ * @return void
+ */
+void nvsFlushSettingsSave() {
+  settingsSavePending = false;
+
+  nvsAddValue("volume", String(ini_block.reqvol)); // Persist current volume
+  if (currentpreset >= 0) {                         // Only store a valid preset
+    nvsAddValue("preset", String(currentpreset));
+  }
+  nvsAddValue("toneha", String(ini_block.rtone[0]));
+  nvsAddValue("tonehf", String(ini_block.rtone[1]));
+  nvsAddValue("tonela", String(ini_block.rtone[2]));
+  nvsAddValue("tonelf", String(ini_block.rtone[3]));
+  nvsCommit();
+  dbgprint("Runtime settings persisted (volume %d, preset %d)", ini_block.reqvol, currentpreset);
 }
 
 /**
@@ -186,21 +212,12 @@ void nvsProcessPendingSave() {
   if (!settingsSavePending) {
     return;
   }
-  if ((millis() - settingsSaveRequestedAt) < 4000) { // 4 s debounce
+  // Keep debounce short: wall-power-off right after a volume tweak used to lose
+  // the value when the old 4 s window had not committed yet.
+  if ((millis() - settingsSaveRequestedAt) < 800) {
     return;
   }
-  settingsSavePending = false;
-
-  nvsAddValue("volume", String(ini_block.reqvol)); // Persist current volume
-  if (currentpreset >= 0) {                         // Only store a valid preset
-    nvsAddValue("preset", String(currentpreset));
-  }
-  nvsAddValue("toneha", String(ini_block.rtone[0]));
-  nvsAddValue("tonehf", String(ini_block.rtone[1]));
-  nvsAddValue("tonela", String(ini_block.rtone[2]));
-  nvsAddValue("tonelf", String(ini_block.rtone[3]));
-  nvsCommit();
-  dbgprint("Runtime settings persisted (volume %d, preset %d)", ini_block.reqvol, currentpreset);
+  nvsFlushSettingsSave();
 }
 
 /**

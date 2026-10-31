@@ -24,6 +24,7 @@ void recoverHttpServerState();
 bool nvsKeyExists(const char *key);
 void nvsRequestSettingsSave();
 void nvsProcessPendingSave();
+void nvsFlushSettingsSave();
 void mp3loop();
 void tftlog(const char *str);
 void playStreamFromQueue(void *parameter); // Task to play the stream

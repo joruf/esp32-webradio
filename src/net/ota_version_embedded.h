@@ -12,12 +12,17 @@
 
 const char ota_version_embedded_json[] PROGMEM = R"=====(
 {
-  "version": "v2.93",
-  "released": "2026-10-24",
+  "version": "v2.94",
+  "released": "2026-10-31",
   "repository": "https://github.com/joruf/esp32-webradio",
-  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.93.bin",
-  "notes": "Fix OTA Please-wait dialog not closing after install; recover on offline-then-online.",
+  "bin_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/releases/esp32_webradio_v2.94.bin",
+  "notes": "Persist last volume on power-off; shorter settings save debounce (800 ms).",
   "history": [
+    {
+      "version": "v2.94",
+      "released": "2026-10-31",
+      "notes": "Persist last volume on power-off; shorter settings save debounce (800 ms)."
+    },
     {
       "version": "v2.93",
       "released": "2026-10-24",
@@ -52,11 +57,6 @@ const char ota_version_embedded_json[] PROGMEM = R"=====(
       "version": "v2.80",
       "released": "2026-10-21",
       "notes": "mDNS http + webradio services for LAN discovery (Android app 1.1.0 multi-radio)."
-    },
-    {
-      "version": "v2.79",
-      "released": "2026-10-21",
-      "notes": "About page: author Joachim Ruf / Loresoft first; remove duplicate footer (v2.78 credits reorder)."
     }
   ]
 }

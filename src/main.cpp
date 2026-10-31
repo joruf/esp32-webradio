@@ -230,6 +230,7 @@ void loop() {
 
   if (resetreq) // Reset requested?
   {
+    nvsFlushSettingsSave();   // Keep last volume across planned reboot
     eventLogRecordShutdown(); // Persist a planned shutdown entry before rebooting
     delay(1000);              // wait some time
     ESP.restart();            // Reboot

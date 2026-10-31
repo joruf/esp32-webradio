@@ -406,6 +406,10 @@ bool runStream(bool _runStream, int16_t _preset = 0) {
   } else {
     dbgprint("Stopping stream (soft fade)");
 
+    // Persist the volume that was set before power-off. A pending debounced
+    // save would otherwise be lost on a quick wall-power cut after stop.
+    nvsFlushSettingsSave();
+
 #if !defined(RADIO_DASHBOARD_TFT)
     showTextOnTFT(1, "Stream stopped");
 #endif
