@@ -770,7 +770,8 @@ void handlehttpreply() {
               //              datamode = STOPREQD ;                         //
               //              Stop playing
             }
-            sndstr += readprefs(true);                  // Read and send
+            fillkeylist();              // Refresh from NVS_NAMESPACE before dump
+            sndstr += readprefs(true); // Read and send
           } else if (http_getcmd.startsWith("getdefs")) // Is it a "Get default preferences"?
           {
             sndstr += String(defprefs_txt + 1);           // read initial values

@@ -110,9 +110,12 @@ void radioSetup() {
     while (true)
       ; // Impossible to continue
   }
-  namespace_ID = FindNamespaceId(NAME); // Find ID of our namespace in NVS
-  fillkeylist();                        // Fill keynames with all keys
-  dbgprint("BOOT: NVS namespace '%s' ready, %d key(s) found", NAME, countNvsKeys());
+  // Must use NVS_NAMESPACE ("ESP32Webradio"), not NAME ("radio"). Otherwise
+  // fillkeylist() matches zero keys, readprefs() skips volume/preset/tone, and
+  // after every power-cycle reqvol stays 0 from the memset below.
+  namespace_ID = FindNamespaceId(NVS_NAMESPACE);
+  fillkeylist(); // Fill keynames with all keys
+  dbgprint("BOOT: NVS namespace '%s' ready, %d key(s) found", NVS_NAMESPACE, countNvsKeys());
 
   checkAndInitConfig();
   migrateToRadioConfig();
@@ -304,7 +307,14 @@ void radioSetup() {
   WiFi.disconnect();      // After restart router could still
   delay(100);             // keep old connection
   listNetworks();         // Find WiFi networks
-  readprefs(false);       // Read preferences
+  readprefs(false);       // Read preferences (volume/preset/tone via NVS key list)
+  // Safety net: load volume directly even if the key list was incomplete.
+  if (nvsKeyExists("volume")) {
+    int vol = nvsGetValue("volume").toInt();
+    if (vol >= 0 && vol <= 100) {
+      ini_block.reqvol = (uint8_t)vol;
+    }
+  }
   setFeatureDefaults();
   {
     String cfg = nvsGetRadioConfig();
