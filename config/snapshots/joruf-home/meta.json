@@ -1,0 +1,24 @@
+{
+  "id": "joruf-home",
+  "description": "Canonical home radio config (stations, alarms, tone, display, GPIO).",
+  "captured_at": "2026-11-07T15:58:59+01:00",
+  "source_host": "192.168.178.33",
+  "source_firmware": "v2.91 2026-10-24",
+  "volume": 70,
+  "preset": 0,
+  "preset_count": 13,
+  "alarm_count": 3,
+  "wifi_ssids": [
+    "LS",
+    "OTA_FAKE_SSID_TEST"
+  ],
+  "password_placeholders": {
+    "WIFI_PASSWORD": "Password for SSID LS (required to apply WiFi)",
+    "OTA_FAKE_WIFI_PASSWORD": "Password for OTA_FAKE_SSID_TEST (optional; omit network if unset)"
+  },
+  "files": [
+    "radio_config.json",
+    "radio_prefs.txt"
+  ],
+  "apply": "./scripts/apply_radio_config.py --target <ip> --snapshot joruf-home"
+}

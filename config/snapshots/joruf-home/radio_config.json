@@ -1,0 +1,166 @@
+{
+  "version": 3,
+  "alarms": [
+    {
+      "id": 1,
+      "enabled": true,
+      "start": "5:40",
+      "stop": "6:11",
+      "days": [
+        "mon",
+        "tue",
+        "thu",
+        "fri"
+      ]
+    },
+    {
+      "id": 2,
+      "enabled": true,
+      "start": "10:00",
+      "stop": "18:30",
+      "days": [
+        "sun",
+        "sat"
+      ]
+    },
+    {
+      "id": 3,
+      "enabled": true,
+      "start": "6:20",
+      "stop": "6:55",
+      "days": [
+        "wed"
+      ]
+    }
+  ],
+  "clock": {
+    "server": "time.google.com",
+    "offset": 1,
+    "dst": 0
+  },
+  "volume": 70,
+  "preset": 0,
+  "tone": {
+    "ha": 2,
+    "hf": 2,
+    "la": 6,
+    "lf": 6
+  },
+  "wifi": [
+    {
+      "ssid": "LS",
+      "password": "{{WIFI_PASSWORD}}"
+    },
+    {
+      "ssid": "OTA_FAKE_SSID_TEST",
+      "password": "{{OTA_FAKE_WIFI_PASSWORD}}"
+    }
+  ],
+  "presets": [
+    {
+      "slot": 0,
+      "url": "charthits-high.rautemusik.fm",
+      "name": "0 - Rautemusik"
+    },
+    {
+      "slot": 1,
+      "url": "stream.sunshine-live.de/live/mp3-192",
+      "name": "1 - Sunshine Live"
+    },
+    {
+      "slot": 2,
+      "url": "listen.technobase.fm/tunein-mp3",
+      "name": "2 - Technobase.FM (HandsUp & Dance)"
+    },
+    {
+      "slot": 3,
+      "url": "stream.slam.nl/slam_mp3",
+      "name": "3 - SLAM Live"
+    },
+    {
+      "slot": 4,
+      "url": "ic.radiomonster.fm/dance.ultra",
+      "name": "4 - RadioMonster Dance"
+    },
+    {
+      "slot": 5,
+      "url": "ice1.somafm.com/groovesalad-128-mp3",
+      "name": "5 - SomaFM"
+    },
+    {
+      "slot": 6,
+      "url": "dancefm.net/listen.m3u",
+      "name": "6 - Dance FM (Global/US-Style)"
+    },
+    {
+      "slot": 7,
+      "url": "stream.antenne1.de/a1stg/livestream2.mp3",
+      "name": "7 - Antenne 1"
+    },
+    {
+      "slot": 8,
+      "url": "topradio-de-hz-fal-stream03-cluster01.radiohost.de/kissfm_128",
+      "name": "8 - Kiss FM"
+    },
+    {
+      "slot": 9,
+      "url": "streamhq.top100station.com/top100station-high.mp3",
+      "name": "9 - TOP 100 Station"
+    },
+    {
+      "slot": 10,
+      "url": "stream.antenne1.de/80er/livestream2.mp3",
+      "name": "10 - Antenne 1 80ger"
+    },
+    {
+      "slot": 11,
+      "url": "play.antenne.de/dance-xxl.m3u",
+      "name": "11 - Antenne 1 Dance"
+    },
+    {
+      "slot": 12,
+      "url": "liveradio.swr.de/sw331ch/swr3/play.aac",
+      "name": "12 - SWR3#"
+    }
+  ],
+  "gpio": [
+    {
+      "pin": 0,
+      "command": "uppreset = 1"
+    },
+    {
+      "pin": 12,
+      "command": "upvolume = 2"
+    },
+    {
+      "pin": 13,
+      "command": "downvolume = 2"
+    },
+    {
+      "pin": 14,
+      "command": "stop"
+    },
+    {
+      "pin": 17,
+      "command": "resume"
+    },
+    {
+      "pin": 34,
+      "command": "station = icecast.omroep.nl:80/radio1-bb-mp3"
+    }
+  ],
+  "features": {
+    "dark_start": 20,
+    "dark_end": 7,
+    "vu_meter": true,
+    "display_rotate_180": false,
+    "display_colstart": 0,
+    "display_rowstart": 0,
+    "encoder_invert": false,
+    "stream_watchdog": true,
+    "alarm_fade_sec": 30,
+    "alarm_fallback_sound": "water",
+    "alarm_fallback_interval_sec": 5,
+    "ota_check_url": "https://raw.githubusercontent.com/joruf/esp32-webradio/main/ota/version.json"
+  }
+}

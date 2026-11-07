@@ -1,0 +1,44 @@
+alrm_config = {"version":3,"alarms":[{"id":1,"enabled":true,"start":"5:40","stop":"6:11","days":["mon","tue","thu","fri"]},{"id":2,"enabled":true,"start":"10:00","stop":"18:30","days":["sun","sat"]},{"id":3,"enabled":true,"start":"6:20","stop":"6:55","days":["wed"]}]}
+#
+clk_dst = 0
+clk_offset = 1
+clk_server = time.google.com
+#
+feat_alarm_fade = 30
+feat_alarm_fb = water
+feat_dark_end = 7
+feat_dark_start = 20
+feat_fb_int = 5
+feat_vu_meter = 1
+feat_watchdog = 1
+#
+gpio_00 = uppreset = 1
+gpio_12 = upvolume = 2
+gpio_13 = downvolume = 2
+gpio_14 = stop
+gpio_17 = resume
+#
+preset = 0
+preset_00 = charthits-high.rautemusik.fm # 0 - Rautemusik
+preset_01 = stream.sunshine-live.de/live/mp3-192 # 1 - Sunshine Live
+preset_02 = listen.technobase.fm/tunein-mp3 # 2 - Technobase.FM (HandsUp & Dance)
+preset_03 = stream.slam.nl/slam_mp3 # 3 - SLAM Live
+preset_04 = ic.radiomonster.fm/dance.ultra # 4 - RadioMonster Dance
+preset_05 = ice1.somafm.com/groovesalad-128-mp3 # 5 - SomaFM
+preset_06 = dancefm.net/listen.m3u # 6 - Dance FM (Global/US-Style)
+preset_07 = stream.antenne1.de/a1stg/livestream2.mp3 # 7 - Antenne 1
+preset_08 = topradio-de-hz-fal-stream03-cluster01.radiohost.de/kissfm_128 # 8 - Kiss FM
+preset_09 = streamhq.top100station.com/top100station-high.mp3 # 9 - TOP 100 Station
+preset_10 = stream.antenne1.de/80er/livestream2.mp3 # 10 - Antenne 1 80ger
+preset_11 = play.antenne.de/dance-xxl.m3u # 11 - Antenne 1 Dance
+preset_12 = liveradio.swr.de/sw331ch/swr3/play.aac # 12 - SWR3#
+#
+toneha = 2
+tonehf = 2
+tonela = 6
+tonelf = 6
+#
+volume = 70
+#
+wifi_00 = LS/{{WIFI_PASSWORD}}
+

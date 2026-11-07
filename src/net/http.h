@@ -537,83 +537,79 @@ static bool handleFirmwareUploadPost(uint32_t contentLength, String &message) {
  * clears all existing preferences, and writes the new values to NVS.
  */
 void writeprefs() {
-  int inx;              // Position in inputstr
+  int inx;              // Position in preference line
   uint8_t winx;         // Index in wifilist
-  char c;               // Input character
-  String inputstr = ""; // Input regel
   String key, contents; // Pair for Preferences entry
   String dstr;          // Contents for debug
 
-  /*
-  timerAlarmDisable ( timer ) ;                               // Disable the
-  timer
-  */
+  // Prefer the already-buffered POST body. handlehttp() caches Content-Length
+  // bodies into http_post_body_cache; reading the socket again would see EOF,
+  // leave NVS empty after nvsClear(), and wipe WiFi on the next commit.
+  String body = readHttpPostBody(RADIO_CONFIG_MAX_LEN);
+  if (body.length() == 0) {
+    dbgprint("writeprefs: empty body, abort without clearing NVS");
+    return;
+  }
+
   timerStop(timer); // Disable the timer
 
   nvsClear(); // Remove all preferences
-  while (true) {
-    c = httpReadByte(false); // Get next inputcharacter
-    if (c == '\n')     // Newline?
-    {
-      if (inputstr.length() == 0)
-
-      {
-        dbgprint("End of writing preferences");
-        break; // End of contents
-      }
-      if (!inputstr.startsWith("#")) // Skip pure comment lines
-      {
-        inx = inputstr.indexOf("=");
-        if (inx >= 0) // Line with "="?
-        {
-          key = inputstr.substring(0, inx); // isolate the key
-          key.trim();
-          contents = inputstr.substring(inx + 1); // and contents
-          contents.trim();
-          dstr = contents;                 // Copy for debug
-          if ((key.indexOf("wifi_") == 0)) // Sensitive info?
-          {
-            winx = key.substring(5).toInt(); // Get index in wifilist
-            if ((winx < wifilist.size()) &&  // Existing wifi spec in wifilist?
-                (contents.indexOf(wifilist[winx].ssid) == 0) && (contents.indexOf("/****") > 0)) // Hidden password?
-            {
-              contents = String(wifilist[winx].ssid) + // Retrieve ssid and password
-                         String("/") + String(wifilist[winx].passphrase);
-              dstr = String(wifilist[winx].ssid) + String("/*******"); // Hide in debug line
-            }
-          }
-
-          dbgprint("writeprefs setstr %s = %s", key.c_str(), dstr.c_str());
-          nvsAddValue(key.c_str(), contents); // Save new pair (needs a restart
-                                              // to use it in the program)
-
-          // Save this values directly in the ini_block to make it available
-          // without restart!
-          if (key == "alrm_config") {
-            ini_block.alrm_config = contents;
-            if (applyAlarmConfig(contents)) {
-              syncAlarmsToRadioConfig(); // Keep the radio_config blob in sync
-            }
-            dbgprint("Alarm configuration saved from preferences");
-          }
-        }
-      }
-      inputstr = "";
+  int start = 0;
+  while (start <= (int)body.length()) {
+    int end = body.indexOf('\n', start);
+    String inputstr;
+    if (end < 0) {
+      inputstr = body.substring(start);
+      start = body.length() + 1;
     } else {
-      if (c != '\r') // Not newline.  Is is a CR?
-      {
-        inputstr += String(c); // No, normal char, add to string
+      inputstr = body.substring(start, end);
+      start = end + 1;
+    }
+    inputstr.replace("\r", "");
+    inputstr.trim();
+
+    if (inputstr.length() == 0) {
+      dbgprint("End of writing preferences");
+      break;
+    }
+    if (inputstr.startsWith("#")) {
+      continue;
+    }
+
+    inx = inputstr.indexOf("=");
+    if (inx < 0) {
+      continue;
+    }
+
+    key = inputstr.substring(0, inx);
+    key.trim();
+    contents = inputstr.substring(inx + 1);
+    contents.trim();
+    dstr = contents;
+    if (key.indexOf("wifi_") == 0) {
+      winx = key.substring(5).toInt();
+      if ((winx < wifilist.size()) && (contents.indexOf(wifilist[winx].ssid) == 0) &&
+          (contents.indexOf("/****") > 0)) {
+        contents = String(wifilist[winx].ssid) + String("/") + String(wifilist[winx].passphrase);
+        dstr = String(wifilist[winx].ssid) + String("/*******");
       }
+    }
+
+    dbgprint("writeprefs setstr %s = %s", key.c_str(), dstr.c_str());
+    nvsAddValue(key.c_str(), contents);
+
+    if (key == "alrm_config") {
+      ini_block.alrm_config = contents;
+      if (applyAlarmConfig(contents)) {
+        syncAlarmsToRadioConfig();
+      }
+      dbgprint("Alarm configuration saved from preferences");
     }
   }
 
-  /*
-  timerAlarmEnable ( timer ) ;                                // Enable the
-  timer
-  */
-  timerStart(timer); // Enable the timer
-
-  fillkeylist(); // Update list with keys
+  nvsCommit();
+  timerStart(timer);
+  fillkeylist();
 }
 
 /**
